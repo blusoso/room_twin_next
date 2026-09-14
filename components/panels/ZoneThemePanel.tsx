@@ -87,7 +87,7 @@ function resetZoneTheme(zuid: string) {
 }
 
 // ============================================================
-// Panel — ⭐ Fix: useRef แทน state, deps เฉพาะ selectedZoneUid
+// Panel
 // ============================================================
 
 export default function ZoneThemePanel() {
@@ -98,33 +98,34 @@ export default function ZoneThemePanel() {
 
   const [open, setOpen] = useState(false);
 
-  // ⭐ useRef แทน state — ไม่ trigger re-render ไม่เข้า deps
+  // ⭐ useRef แทน state — ไม่ trigger re-render
   const openedForRef = useRef<string | null>(null);
 
-  // ⭐ ปิด panel (ผู้ใช้กดปิด)
+  // ⭐ ปิด panel (ผู้ใช้กด ✕)
   const close = useCallback(() => {
     setOpen(false);
-    // ⚠️ ไม่ reset openedForRef ที่นี่ → ป้องกัน effect loop
+    // ⚠️ ไม่ reset openedForRef → ป้องกัน effect loop
+    // ⚠️ ไม่ deselect zone → ผู้ใช้ยังเลือกโซนอยู่ได้
   }, []);
 
-  // ⭐ Auto-open เมื่อ selectedZoneUid เปลี่ยน
+  // ⭐⭐⭐ Auto-open เมื่อ selectedZoneUid เปลี่ยน
+  //        + Auto-close เมื่อ selectedZoneUid = null
   useEffect(() => {
     if (!selectedZoneUid) {
-      // ไม่มีโซนเลือก → ปิด
+      // Zone ถูก deselect → ปิด panel
       setOpen(false);
       openedForRef.current = null;
       return;
     }
 
-    // มีโซนเลือกใหม่ (ไม่ใช่โซนเดิมที่เคยเปิดแล้ว) → เปิด
+    // Zone ใหม่ (ไม่ใช่โซนเดิมที่เคยเปิด) → เปิด
     if (openedForRef.current !== selectedZoneUid) {
       openedForRef.current = selectedZoneUid;
       setOpen(true);
     }
-    // ⭐ ถ้า openedForRef === selectedZoneUid → ไม่ทำอะไร (ผู้ใช้ปิดไปแล้ว)
-  }, [selectedZoneUid]); // ⭐ deps เฉพาะ selectedZoneUid
+  }, [selectedZoneUid]);
 
-  // Escape key
+  // Escape key → close
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -158,12 +159,7 @@ export default function ZoneThemePanel() {
 
   return (
     <>
-      {/* ⭐ Backdrop — z-29 (ต่ำกว่า panel z-30) */}
-      <div
-        className={`panel-backdrop z-29${open ? " show" : ""}`}
-        onClick={close}
-        aria-hidden="true"
-      />
+      {/* ⭐⭐⭐ ไม่มี backdrop แล้ว — ไม่มีอะไรมาปิด panel เวลาคลิกนอก */}
 
       <aside
         className={`zone-theme-panel${open ? " show" : ""}`}

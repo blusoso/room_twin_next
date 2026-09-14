@@ -12,7 +12,7 @@ import {
   reinstantiateItem,
   instantiate,
 } from "@/lib/three/instantiate";
-import { resolveRestHeights } from "@/lib/three/placement";
+import { resolveRestHeights, footprintOf } from "@/lib/three/placement";
 import { rebuildBaseboards } from "@/lib/three/roomShell";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
@@ -41,18 +41,14 @@ export default function FloatingToolbar() {
 
   const zoneMode = !!selectedZoneUid;
 
-  // ============================================================
-  // Compute position (RAF loop)
-  // ============================================================
+  // ===== Position RAF loop =====
   useEffect(() => {
     if (!renderer) return;
-
     let raf = 0;
     const box = new THREE.Box3();
     const topPoint = new THREE.Vector3();
 
     const tick = () => {
-      // ===== Zone mode =====
       if (zoneMode && selectedZoneUid) {
         const b = getZoneBounds(selectedZoneUid);
         if (!b) {
@@ -75,14 +71,12 @@ export default function FloatingToolbar() {
         return;
       }
 
-      // ===== No selection =====
       if (!selectedUid) {
         setPos((p) => (p.show ? { ...p, show: false } : p));
         raf = requestAnimationFrame(tick);
         return;
       }
 
-      // ===== Item mode =====
       const obj = objectsByUid.get(selectedUid);
       if (!obj || !obj.visible) {
         setPos((p) => (p.show ? { ...p, show: false } : p));
@@ -121,18 +115,12 @@ export default function FloatingToolbar() {
     return () => cancelAnimationFrame(raf);
   }, [selectedUid, selectedZoneUid, zoneMode, placedItems]);
 
-  // ============================================================
-  // Handlers: Item
-  // ============================================================
-
+  // ===== Item handlers =====
   const handleRotLeft = () => {
     if (!selectedUid || (item && item.locked)) return;
     const wasDoor = item?.productId === "door";
     rotateItemBy90(selectedUid, -1);
-    // ⭐ Rebuild baseboards ถ้าหมุนประตู
-    if (wasDoor) {
-      rebuildBaseboards();
-    }
+    if (wasDoor) rebuildBaseboards();
     saveState();
   };
 
@@ -140,10 +128,7 @@ export default function FloatingToolbar() {
     if (!selectedUid || (item && item.locked)) return;
     const wasDoor = item?.productId === "door";
     rotateItemBy90(selectedUid, 1);
-    // ⭐ Rebuild baseboards ถ้าหมุนประตู
-    if (wasDoor) {
-      rebuildBaseboards();
-    }
+    if (wasDoor) rebuildBaseboards();
     saveState();
   };
 
@@ -161,18 +146,11 @@ export default function FloatingToolbar() {
 
   const handleDelete = () => {
     if (!item) return;
-
-    // ⭐ ถ้าเป็นประตู → rebuild baseboards หลังลบ
     const wasDoor = item.productId === "door";
-
     removeInstantiated(item.uid);
     removeItem(item.uid);
     closeItemPanel();
-
-    if (wasDoor) {
-      rebuildBaseboards();
-    }
-
+    if (wasDoor) rebuildBaseboards();
     saveState();
   };
 
@@ -181,10 +159,7 @@ export default function FloatingToolbar() {
     selectZone(item.zoneUid);
   };
 
-  // ============================================================
-  // Handlers: Zone
-  // ============================================================
-
+  // ===== Zone handlers =====
   const handleZoneRotate = (dir: -1 | 1) => {
     if (!selectedZoneUid) return;
     rotateZone(selectedZoneUid, dir);
@@ -202,25 +177,15 @@ export default function FloatingToolbar() {
     openConfirm(
       `ลบทั้งโซน "${meta.name || "โซน"}" (${zoneItems.length} ชิ้น)?`,
       () => {
-        // ⭐ ถ้าโซนมีประตู → rebuild baseboards
         const hasDoor = zoneItems.some((i) => i.productId === "door");
-
         removeZoneFull(selectedZoneUid);
         closeItemPanel();
         deselectZone();
-
-        if (hasDoor) {
-          rebuildBaseboards();
-        }
-
+        if (hasDoor) rebuildBaseboards();
         saveState();
       },
     );
   };
-
-  // ============================================================
-  // Render
-  // ============================================================
 
   if (!pos.show) {
     return <div className="floating-toolbar" id="floatingToolbar" />;
@@ -245,7 +210,6 @@ export default function FloatingToolbar() {
       >
         ⟲
       </button>
-
       <button
         type="button"
         className="ft-btn item-btn"
@@ -256,7 +220,6 @@ export default function FloatingToolbar() {
       >
         ⟳
       </button>
-
       <button
         type="button"
         className={`ft-btn item-btn${item?.locked ? " locked" : ""}`}
@@ -266,7 +229,6 @@ export default function FloatingToolbar() {
       >
         {item?.locked ? "🔒" : "🔓"}
       </button>
-
       <button
         type="button"
         className="ft-btn item-btn customize"
@@ -276,7 +238,6 @@ export default function FloatingToolbar() {
       >
         🎨
       </button>
-
       <button
         type="button"
         className="ft-btn item-btn swap"
@@ -286,7 +247,6 @@ export default function FloatingToolbar() {
       >
         ⇄
       </button>
-
       <button
         type="button"
         className="ft-btn item-btn"
@@ -296,7 +256,6 @@ export default function FloatingToolbar() {
       >
         ⧉
       </button>
-
       {item?.zoneUid && (
         <button
           type="button"
@@ -308,7 +267,6 @@ export default function FloatingToolbar() {
           📦
         </button>
       )}
-
       <button
         type="button"
         className="ft-btn item-btn danger"
@@ -331,7 +289,6 @@ export default function FloatingToolbar() {
       >
         ✨
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only"
@@ -341,7 +298,6 @@ export default function FloatingToolbar() {
       >
         ⟲
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only"
@@ -351,7 +307,6 @@ export default function FloatingToolbar() {
       >
         ⟳
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only"
@@ -363,7 +318,6 @@ export default function FloatingToolbar() {
       >
         ✏️
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only danger"
@@ -373,7 +327,6 @@ export default function FloatingToolbar() {
       >
         🗑
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only"
@@ -403,7 +356,6 @@ function duplicateItem(uid: string) {
   const clonedParams = JSON.parse(JSON.stringify(item.params));
   const newUid = "i" + Math.random().toString(36).slice(2, 10);
 
-  // ===== Wall items =====
   if (item.wallMount) {
     const newItem: PlacedItem = {
       uid: newUid,
@@ -420,17 +372,11 @@ function duplicateItem(uid: string) {
     };
     store.addItem(newItem);
     instantiate(newItem);
-
-    // ⭐ ถ้าเป็นประตู → rebuild baseboards
-    if (item.productId === "door") {
-      rebuildBaseboards();
-    }
-
+    if (item.productId === "door") rebuildBaseboards();
     store.selectItem(newUid);
     return;
   }
 
-  // ===== Ceiling items =====
   if (item.ceilingMount) {
     const newItem: PlacedItem = {
       uid: newUid,
@@ -449,7 +395,6 @@ function duplicateItem(uid: string) {
     return;
   }
 
-  // ===== Floor items =====
   const newItem: PlacedItem = {
     uid: newUid,
     productId: item.productId,
@@ -468,48 +413,160 @@ function duplicateItem(uid: string) {
   store.selectItem(newUid);
 }
 
+// ============================================================
+// ⭐ rotateZone — Debug + Fix
+// ============================================================
+
 function rotateZone(zuid: string, dir: -1 | 1) {
   const store = useRoomTwin.getState();
-  const items = store.placedItems.filter((i) => i.zoneUid === zuid);
-  if (items.length === 0) return;
+  const allItems = store.placedItems;
+
+  // ===== 1. Zone items =====
+  const zoneItems = allItems.filter((i) => i.zoneUid === zuid);
+  if (zoneItems.length === 0) {
+    console.log("[rotateZone] no zone items");
+    return;
+  }
+
+  // ===== 2. Descendants (recursive) =====
+  const groupUids = new Set<string>(zoneItems.map((i) => i.uid));
+  let changed = true;
+  let iter = 0;
+  while (changed && iter < 10) {
+    changed = false;
+    iter++;
+    allItems.forEach((i) => {
+      if (
+        i.parentUid &&
+        groupUids.has(i.parentUid) &&
+        !groupUids.has(i.uid)
+      ) {
+        groupUids.add(i.uid);
+        changed = true;
+      }
+    });
+  }
+
+  const itemsToRotate = allItems.filter((i) => groupUids.has(i.uid));
+  if (itemsToRotate.length === 0) return;
+
+  // ===== 3. Zone bbox center =====
+  const floorItems = itemsToRotate.filter(
+    (i) =>
+      !i.wallMount &&
+      !i.ceilingMount &&
+      i.x !== undefined &&
+      i.z !== undefined,
+  );
 
   let cx = 0;
   let cz = 0;
-  items.forEach((i) => {
-    cx += i.x || 0;
-    cz += i.z || 0;
-  });
-  cx /= items.length;
-  cz /= items.length;
 
-  const ang = (dir * Math.PI) / 2;
-  const c = Math.cos(ang);
-  const s = Math.sin(ang);
+  if (floorItems.length > 0) {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
 
-  items.forEach((it) => {
-    const dx = (it.x || 0) - cx;
-    const dz = (it.z || 0) - cz;
-    const nx = cx + (dx * c - dz * s);
-    const nz = cz + (dx * s + dz * c);
-    const nrot = (it.rotY || 0) + ang;
-
-    store.updateItem(it.uid, {
-      x: nx,
-      z: nz,
-      rotY: nrot,
+    floorItems.forEach((it) => {
+      const fp = footprintOf(it.params, it.rotY || 0);
+      minX = Math.min(minX, it.x! - fp.w / 2);
+      maxX = Math.max(maxX, it.x! + fp.w / 2);
+      minZ = Math.min(minZ, it.z! - fp.d / 2);
+      maxZ = Math.max(maxZ, it.z! + fp.d / 2);
     });
 
+    cx = (minX + maxX) / 2;
+    cz = (minZ + maxZ) / 2;
+  } else {
+    const ceilItems = itemsToRotate.filter(
+      (i) => i.ceilingMount && i.x !== undefined,
+    );
+    if (ceilItems.length === 0) return;
+    ceilItems.forEach((i) => {
+      cx += i.x || 0;
+      cz += i.z || 0;
+    });
+    cx /= ceilItems.length;
+    cz /= ceilItems.length;
+  }
+
+  // ===== 4. ⭐ Rotation Matrix =====
+  //
+  //  Position (top-down X-right, Z-down view):
+  //    ⟳ (dir=1) = CW = (dx, dz) → (-dz, dx)
+  //    ⟲ (dir=-1) = CCW = (dx, dz) → (dz, -dx)
+  //
+  //  Three.js Object rotY (Y-axis up):
+  //    ⟳ (CW in top-down view) = rotY -= π/2
+  //    ⟲ (CCW) = rotY += π/2
+  //
+  //  → ใช้ theta_rot = -dir·π/2 สำหรับ rotY
+
+  const thetaRot = -(dir * Math.PI) / 2;
+  const cosR = Math.cos(thetaRot);
+  const sinR = Math.sin(thetaRot);
+
+  // Position: 2D CW rotation matrix (screen coords X-right, Z-down)
+  //   nx = cx + dx·cos(θ) - dz·sin(θ)     ⭐ ใช้ θ = +dir·π/2
+  //   nz = cz + dx·sin(θ) + dz·cos(θ)
+  const thetaPos = (dir * Math.PI) / 2;
+  const cosP = Math.cos(thetaPos);
+  const sinP = Math.sin(thetaPos);
+
+  console.log("[rotateZone]", {
+    dir: dir === 1 ? "⟳ CW" : "⟲ CCW",
+    center: { cx: cx.toFixed(3), cz: cz.toFixed(3) },
+    itemCount: itemsToRotate.length,
+    thetaPos_deg: ((thetaPos * 180) / Math.PI).toFixed(1),
+    thetaRot_deg: ((thetaRot * 180) / Math.PI).toFixed(1),
+  });
+
+  // ===== 5. Apply =====
+  itemsToRotate.forEach((it) => {
+    // Skip wall items
+    if (it.wallMount) return;
+    if (it.x === undefined || it.z === undefined) return;
+
+    const dx = it.x - cx;
+    const dz = it.z - cz;
+
+    // Position
+    const nx = cx + dx * cosP - dz * sinP;
+    const nz = cz + dx * sinP + dz * cosP;
+
+    // Object rotY
+    const nrotY = (it.rotY || 0) + thetaRot;
+
+    if (process.env.NODE_ENV === "development") {
+      if (it.zoneUid === zuid) {
+        console.log("  ↻", it.productId, {
+          before: {
+            x: it.x.toFixed(3),
+            z: it.z.toFixed(3),
+            rotY_deg: (((it.rotY || 0) * 180) / Math.PI).toFixed(1),
+          },
+          after: {
+            x: nx.toFixed(3),
+            z: nz.toFixed(3),
+            rotY_deg: ((nrotY * 180) / Math.PI).toFixed(1),
+          },
+        });
+      }
+    }
+
+    // Update state
+    store.updateItem(it.uid, { x: nx, z: nz, rotY: nrotY });
+
+    // ⭐ Force update object immediately (do not wait for effect)
     const obj = objectsByUid.get(it.uid);
     if (obj) {
       obj.position.x = nx;
       obj.position.z = nz;
-      obj.rotation.y = nrot;
+      obj.rotation.y = nrotY;
     }
   });
 
-  // ⭐ ถ้าโซนมีประตู → rebuild baseboards
-  const hasDoor = items.some((i) => i.productId === "door");
-  if (hasDoor) {
-    rebuildBaseboards();
-  }
+  // ===== 6. Re-resolve rest heights =====
+  resolveRestHeights();
 }

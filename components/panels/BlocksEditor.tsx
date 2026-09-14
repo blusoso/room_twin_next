@@ -138,6 +138,7 @@ export default function BlocksEditor() {
   // ⭐ handleApply — เรียบง่าย: แค่ setRoom ให้ effects จัดการ
   // ============================================================
   // BlocksEditor.tsx — handleApply
+  // components/panels/BlocksEditor.tsx — handleApply
   const handleApply = () => {
     if (draft.size === 0) return;
 
@@ -146,7 +147,7 @@ export default function BlocksEditor() {
     // ⭐ แค่ setRoom — Canvas3D effect 2 จะ:
     //   1. Capture openings (style + relative position)
     //   2. rebuildRoomShell
-    //   3. restoreOpeningsRelative (ที่ตำแหน่ง relative เดิม)
+    //   3. restoreOpeningsRelative (ตำแหน่ง relative เดิม)
     //   4. Effect 3: skip seed (hasDoor/hasWindow = true หลัง restore)
     //   5. Effect 5: instantiate
 

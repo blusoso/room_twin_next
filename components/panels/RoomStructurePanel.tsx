@@ -14,18 +14,16 @@ import { makeFloorCanvas } from "@/lib/three/surfaceTextures";
 import {
   applySurface as applySurfaceToThree,
   rebuildRoomShell,
-  rebuildBaseboards,
   getWallRotY,
 } from "@/lib/three/roomShell";
 import { reclampAllToRoom } from "@/lib/three/reclamp";
-import { objectsByUid, roomGroup } from "@/lib/three/scene";
 import { useSaveState } from "@/hooks/useSaveState";
 
 type Tab = "size" | "surfaces";
 type RectSize = { w: number; d: number; h: number };
 
 // ============================================================
-// Last Rect Size — localStorage
+// Last Rect Size — localStorage (h shared ระหว่าง 2 โหมด)
 // ============================================================
 
 const LAST_RECT_KEY = "roomtwin_last_rect_size_v1";
@@ -58,22 +56,30 @@ function loadLastRectSize(): RectSize {
 }
 
 // ============================================================
-// Switch to Rect — ใช้ขนาดล่าสุด
+// Switch to Rect — ใช้ขนาดล่าสุด + h ปัจจุบัน
 // ============================================================
 
 async function switchToRectShape() {
   const store = useRoomTwin.getState();
 
-  // ⭐ แค่ setRoom — effects จัดการ capture/restore ให้
-
+  // ⭐ ใช้ขนาดล่าสุดของ rect (w, d)
   const last = loadLastRectSize();
+
+  // ⭐⭐⭐ ใช้ h ปัจจุบัน — เพราะ h shared ระหว่าง 2 โหมด
+  const currentH = store.room.h;
 
   store.setRoom({
     shape: "rect",
     blocks: null,
     w: last.w,
     d: last.d,
-    h: last.h,
+    h: currentH, // ⭐ h ปัจจุบัน ไม่ใช่ last.h
+  });
+
+  console.log("[switchToRectShape] set room", {
+    w: last.w,
+    d: last.d,
+    h: currentH,
   });
 }
 
@@ -233,10 +239,19 @@ function SizeTab() {
   const setRoom = useRoomTwin((s) => s.setRoom);
   const { saveState, saveStateDebounced } = useSaveState();
 
-  // ⭐ Auto-save lastRectSize เมื่อ rect mode
+  // ⭐⭐⭐ Sync lastRectSize — h shared ระหว่าง 2 โหมด
   useEffect(() => {
     if (room.shape === "rect") {
+      // rect mode → save ทั้งหมด (w, d, h)
       saveLastRectSize({ w: room.w, d: room.d, h: room.h });
+    } else {
+      // blocks mode → save แค่ h (ใช้ w/d ล่าสุดของ rect)
+      const last = loadLastRectSize();
+      saveLastRectSize({
+        w: last.w,
+        d: last.d,
+        h: room.h, // ⭐ เก็บ h ปัจจุบันของ blocks
+      });
     }
   }, [room.shape, room.w, room.d, room.h]);
 
@@ -310,6 +325,7 @@ function SizeTab() {
             : key === "d"
               ? "📏 ลึก (หน้า–หลัง)"
               : "📏 สูงฝ้าเพดาน";
+        // ⭐ h ไม่ disabled ใน blocks mode — เพราะ shared
         const disabled = room.shape === "blocks" && key !== "h";
         const value = room[key];
         const decimals = key === "h" ? 2 : 1;
@@ -612,7 +628,6 @@ export default function RoomStructurePanel() {
 
   return (
     <>
-      {/* ⭐ Backdrop */}
       <div
         className={`panel-backdrop z-29${open ? " show" : ""}`}
         onClick={closePanel}

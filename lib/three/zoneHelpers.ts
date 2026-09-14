@@ -1,17 +1,26 @@
 // lib/three/zoneHelpers.ts
 import { useRoomTwin } from "@/lib/state/store";
 import { getZoneBounds } from "./zoneBounds";
+import { raycastFloorPoint } from "./raycast";
 
 export interface ZoneHit {
   zoneUid: string;
   dist: number;
-  bounds: { minX: number; maxX: number; minZ: number; maxZ: number; cx: number; cz: number };
+  bounds: {
+    minX: number;
+    maxX: number;
+    minZ: number;
+    maxZ: number;
+    cx: number;
+    cz: number;
+  };
 }
 
 export function findNearbyZonesAt(x: number, z: number): ZoneHit[] {
   const { placedItems } = useRoomTwin.getState();
   const res: ZoneHit[] = [];
   const seen = new Set<string>();
+
   placedItems.forEach((i) => {
     if (!i.zoneUid || seen.has(i.zoneUid)) return;
     seen.add(i.zoneUid);
@@ -22,6 +31,7 @@ export function findNearbyZonesAt(x: number, z: number): ZoneHit[] {
     const dist = Math.hypot(dx, dz);
     res.push({ zoneUid: i.zoneUid, dist, bounds: b });
   });
+
   res.sort((a, b) => a.dist - b.dist);
   return res;
 }
@@ -47,9 +57,12 @@ export function assignItemToZone(uid: string, zuid: string | null) {
   }
 }
 
+/**
+ * ⭐ ตรวจว่าจุด (cx, cy) อยู่บน zone หรือไม่
+ * ใช้สำหรับ hover detection + click detection
+ */
 export function hitTestZoneBounds(cx: number, cy: number): string | null {
   const { placedItems } = useRoomTwin.getState();
-  const { raycastFloorPoint } = require("./raycast");
   const p = raycastFloorPoint(cx, cy);
   if (!p) return null;
 
@@ -57,6 +70,7 @@ export function hitTestZoneBounds(cx: number, cy: number): string | null {
   placedItems.forEach((i) => {
     if (i.zoneUid) zuids.add(i.zoneUid);
   });
+
   for (const z of zuids) {
     const b = getZoneBounds(z);
     if (!b) continue;

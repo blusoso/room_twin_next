@@ -18,7 +18,7 @@ import {
   getMergedWalls,
   getWallGeom,
   wallPointXZ,
-  rebuildBaseboards,        // ⭐ เพิ่ม
+  rebuildBaseboards,
   MergedWall,
 } from "@/lib/three/roomShell";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
@@ -28,7 +28,7 @@ import type { PlacedItem } from "@/lib/state/types";
 let _seedingInProgress = false;
 
 // ============================================================
-// Opening Snapshot
+// Opening Snapshot — เก็บ style + ตำแหน่ง relative
 // ============================================================
 
 export interface OpeningSnapshot {
@@ -153,10 +153,11 @@ function findBestWallForSide(side: "N" | "S" | "E" | "W"): {
   };
 }
 
-// ============================================================
-// ⭐ restoreOpeningsRelative — เพิ่ม rebuildBaseboards ตอนท้าย
-// ============================================================
-
+/**
+ * ⭐ Restore — วางช่องเปิดกลับตาม side + relative position
+ * อัปเดตเฉพาะ position ไม่แตะ params/theme
+ * เรียก rebuildBaseboards() ที่ท้ายเพื่อให้บัวมีช่องตรงประตู
+ */
 export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
   if (snapshots.length === 0) return;
 
@@ -199,7 +200,7 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
       product.groundAnchor || false,
     );
 
-    // ⭐ updateItem — คง style เดิม
+    // ⭐ updateItem — คง style เดิม (params/themeOverride/displayName ไม่แตะ)
     store.updateItem(item.uid, {
       wallId: wall.id,
       u: c.u,
@@ -321,7 +322,7 @@ export function useRoomTwinInit() {
 }
 
 // ============================================================
-// ensureDefaultOpenings
+// ensureDefaultOpenings — seed เฉพาะเมื่อไม่มี
 // ============================================================
 
 export function ensureDefaultOpenings() {

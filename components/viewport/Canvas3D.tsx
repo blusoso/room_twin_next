@@ -34,6 +34,7 @@ export default function Canvas3D() {
   const surface = useRoomTwin((s) => s.surface);
   const placedItems = useRoomTwin((s) => s.placedItems);
 
+  // ⭐ Ref เก็บ room ก่อนหน้า เพื่อตรวจการเปลี่ยนแปลง
   const prevRoomRef = useRef<{
     w: number;
     d: number;
@@ -41,7 +42,7 @@ export default function Canvas3D() {
     shape: string;
   } | null>(null);
 
-  // 1. Init scene
+  // ===== 1. Init scene =====
   useEffect(() => {
     if (!holderRef.current) return;
     if (isInitialized()) {
@@ -68,18 +69,14 @@ export default function Canvas3D() {
     };
   }, []);
 
-  // 2. Rebuild + Capture/Restore openings
+  // ===== 2. Rebuild + Capture/Restore openings =====
   useEffect(() => {
     if (!sceneReady) return;
 
     const prev = prevRoomRef.current;
-    const curr = {
-      w: room.w,
-      d: room.d,
-      h: room.h,
-      shape: room.shape,
-    };
+    const curr = { w: room.w, d: room.d, h: room.h, shape: room.shape };
 
+    // ตรวจว่ามีการเปลี่ยนหรือไม่
     let capture = false;
     if (prev) {
       const sizeChanged =
@@ -90,20 +87,22 @@ export default function Canvas3D() {
       if (sizeChanged || shapeChanged) capture = true;
     }
 
+    // ⭐ Capture snapshot ก่อน
     let snapshots: ReturnType<typeof captureOpeningsRelative> = [];
     if (capture) {
       snapshots = captureOpeningsRelative();
     }
 
+    // ⭐ Rebuild shell
     console.log(
       "[Canvas3D] Effect 2: rebuild shell",
       prev ? "(changed)" : "(init)",
     );
     rebuildRoomShell();
 
+    // ⭐ Restore openings หลัง rebuild
     if (snapshots.length > 0) {
       restoreOpeningsRelative(snapshots);
-      // ⭐ rebuildBaseboards ถูกเรียกใน restoreOpeningsRelative แล้ว
     }
 
     prevRoomRef.current = curr;
@@ -116,7 +115,7 @@ export default function Canvas3D() {
     room.blocks?.size,
   ]);
 
-  // 3. Seed
+  // ===== 3. Seed (กรณีไม่มีเลย) =====
   useEffect(() => {
     if (!sceneReady) return;
     const r = useRoomTwin.getState().room;
@@ -125,7 +124,7 @@ export default function Canvas3D() {
     }
   }, [sceneReady, room.shape, room.blocks?.size]);
 
-  // 4. Reclamp
+  // ===== 4. Reclamp =====
   useEffect(() => {
     if (!sceneReady) return;
     reclampAllToRoom();
@@ -138,7 +137,7 @@ export default function Canvas3D() {
     room.blocks?.size,
   ]);
 
-  // 5. Instantiate
+  // ===== 5. Instantiate =====
   useEffect(() => {
     if (!sceneReady) return;
     const items = useRoomTwin.getState().placedItems;
@@ -158,7 +157,7 @@ export default function Canvas3D() {
     }
   }, [sceneReady, placedItems.length]);
 
-  // 6. Surface
+  // ===== 6. Surface =====
   useEffect(() => {
     if (!sceneReady) return;
     applySurface();
@@ -171,7 +170,7 @@ export default function Canvas3D() {
     JSON.stringify(surface.walls),
   ]);
 
-  // 7. Sync transforms (floor/ceiling)
+  // ===== 7. Sync transforms (เฉพาะ floor/ceiling) =====
   useEffect(() => {
     if (!sceneReady) return;
     placedItems.forEach((item) => {
