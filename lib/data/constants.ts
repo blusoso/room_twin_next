@@ -12,7 +12,7 @@ export const CATEGORIES = [
 
 export const CELL_SIZE = 0.5;
 export const GRID = 0.1;
-export const STORAGE_KEY = "roomtwin_state_v9";
+export const STORAGE_KEY = "roomtwin_state_v10";
 
 export const WALL_COLORS = [0xf2e9dc, 0xdce6dd, 0xe7d6cc, 0xd7dee6];
 

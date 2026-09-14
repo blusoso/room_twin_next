@@ -1,6 +1,6 @@
 // components/panels/CustomizePanel.tsx
 "use client";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { PARAM_SCHEMA } from "@/lib/data/schemas";
@@ -23,39 +23,62 @@ export default function CustomizePanel() {
     : null;
   const open = !!item;
 
-  const close = () => {
+  const close = useCallback(() => {
     setTarget(null);
     saveState();
-  };
+  }, [setTarget, saveState]);
+
+  // ⭐ Escape key → close
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, close]);
 
   return (
-    <aside
-      className={`customize-panel${open ? " show" : ""}`}
-      aria-hidden={!open}
-    >
-      <div className="cz-head">
-        <div className="cz-head-main">
-          <div className="cz-title">
-            {item
-              ? `🎨 ${item.displayName || PRODUCT_BY_ID.get(item.productId)?.name || ""}`
-              : "ปรับแต่ง"}
-          </div>
-          <div className="cz-subtitle">
-            ปรับขนาด สี และตัวเลือก — เห็นผลทันทีในห้อง
-          </div>
-        </div>
-        <button
-          type="button"
-          className="cz-close"
-          onClick={close}
-          title="ปิด"
-        >
-          ✕
-        </button>
-      </div>
+    <>
+      {/* ⭐ Backdrop */}
+      <div
+        className={`panel-backdrop z-29${open ? " show" : ""}`}
+        onClick={close}
+        aria-hidden="true"
+      />
 
-      {item && <CustomizeBody item={item} onSave={close} />}
-    </aside>
+      <aside
+        className={`customize-panel${open ? " show" : ""}`}
+        aria-hidden={!open}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="cz-head">
+          <div className="cz-head-main">
+            <div className="cz-title">
+              {item
+                ? `🎨 ${item.displayName || PRODUCT_BY_ID.get(item.productId)?.name || ""}`
+                : "ปรับแต่ง"}
+            </div>
+            <div className="cz-subtitle">
+              ปรับขนาด สี และตัวเลือก — เห็นผลทันทีในห้อง
+            </div>
+          </div>
+          <button
+            type="button"
+            className="cz-close"
+            onClick={close}
+            title="ปิด"
+          >
+            ✕
+          </button>
+        </div>
+
+        {item && <CustomizeBody item={item} onSave={close} />}
+      </aside>
+    </>
   );
 }
 
@@ -151,18 +174,15 @@ function applyParamEdit(item: PlacedItem, key: string, value: any) {
   if (!product) return;
 
   const newParams: Params = { ...item.params, [key]: value };
-
   useRoomTwin.getState().updateItem(item.uid, { params: newParams });
 
   const isDim = key === "w" || key === "d" || key === "h";
 
   if (isDim) {
-    // re-resolve position first, then reinstantiate
     resolveRestHeights();
-    // For collision re-resolve
     import("@/lib/three/placement").then(
       ({ footprintOf, resolvePlacement, resolveRestHeights: rrh }) => {
-        const { placedItems, updateItem, room } = useRoomTwin.getState();
+        const { placedItems, updateItem } = useRoomTwin.getState();
         const it = placedItems.find((i) => i.uid === item.uid);
         if (!it) return;
         const fp = footprintOf(newParams, it.rotY || 0);

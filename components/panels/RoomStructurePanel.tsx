@@ -7,14 +7,17 @@ import {
   WALL_CHIP_COLORS,
   WALL_LABEL_FULL,
   ROOM_LIMITS,
+  ROOM_DEFAULT,
 } from "@/lib/data/constants";
 import { hexOf, numOf } from "@/lib/utils/format";
 import { makeFloorCanvas } from "@/lib/three/surfaceTextures";
 import {
   applySurface as applySurfaceToThree,
   rebuildRoomShell,
+  rebuildBaseboards,
   getWallRotY,
   wallSpan,
+  getWallGeom,
 } from "@/lib/three/roomShell";
 import { reclampAllToRoom } from "@/lib/three/reclamp";
 import { instantiate } from "@/lib/three/instantiate";
@@ -23,10 +26,46 @@ import {
   wallFootprint,
 } from "@/lib/three/wallPlacement";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+import { ensureDefaultOpenings } from "@/hooks/useRoomTwinInit";
 import { useSaveState } from "@/hooks/useSaveState";
+import { objectsByUid, roomGroup } from "@/lib/three/scene";
 import type { PlacedItem } from "@/lib/state/types";
 
 type Tab = "size" | "surfaces" | "openings";
+type RectSize = { w: number; d: number; h: number };
+
+// ============================================================
+// ⭐ Last Rect Size — localStorage
+// ============================================================
+
+const LAST_RECT_KEY = "roomtwin_last_rect_size_v1";
+
+function saveLastRectSize(size: RectSize) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LAST_RECT_KEY, JSON.stringify(size));
+  } catch {}
+}
+
+function loadLastRectSize(): RectSize {
+  if (typeof window === "undefined") {
+    return { w: ROOM_DEFAULT.w, d: ROOM_DEFAULT.d, h: ROOM_DEFAULT.h };
+  }
+  try {
+    const raw = localStorage.getItem(LAST_RECT_KEY);
+    if (!raw) {
+      return { w: ROOM_DEFAULT.w, d: ROOM_DEFAULT.d, h: ROOM_DEFAULT.h };
+    }
+    const parsed = JSON.parse(raw) as Partial<RectSize>;
+    return {
+      w: parsed.w ?? ROOM_DEFAULT.w,
+      d: parsed.d ?? ROOM_DEFAULT.d,
+      h: parsed.h ?? ROOM_DEFAULT.h,
+    };
+  } catch {
+    return { w: ROOM_DEFAULT.w, d: ROOM_DEFAULT.d, h: ROOM_DEFAULT.h };
+  }
+}
 
 // ============================================================
 // Helpers
@@ -75,9 +114,7 @@ function addOpeningOfType(pid: string) {
   instantiate(item);
 
   if (pid === "door") {
-    import("@/lib/three/roomShell").then(({ rebuildBaseboards }) =>
-      rebuildBaseboards(),
-    );
+    rebuildBaseboards();
   }
 }
 
@@ -112,12 +149,10 @@ function updateWallItemPosition(
     rotY,
   });
 
-  import("@/lib/three/scene").then(({ objectsByUid }) => {
-    const obj = objectsByUid.get(uid);
-    if (!obj) return;
-    import("@/lib/three/roomShell").then(({ getWallGeom }) => {
-      const g = getWallGeom(wallId);
-      if (!g) return;
+  const obj = objectsByUid.get(uid);
+  if (obj) {
+    const g = getWallGeom(wallId);
+    if (g) {
       const outward = 0.012;
       obj.position.set(
         g.cx + g.dx * c.u - g.nx * outward,
@@ -125,14 +160,61 @@ function updateWallItemPosition(
         g.cz + g.dz * c.u - g.nz * outward,
       );
       obj.rotation.y = rotY;
-    });
-  });
+    }
+  }
 
   if (product.id === "door") {
-    import("@/lib/three/roomShell").then(({ rebuildBaseboards }) =>
-      rebuildBaseboards(),
-    );
+    rebuildBaseboards();
   }
+}
+
+// ============================================================
+// ⭐ Switch to Rect — ใช้ขนาดล่าสุด
+// ============================================================
+
+async function switchToRectShape() {
+  const store = useRoomTwin.getState();
+
+  // 1. ลบ wall items เก่า
+  store.placedItems.forEach((item) => {
+    if (item.wallMount) {
+      const obj = objectsByUid.get(item.uid);
+      if (obj) roomGroup.remove(obj);
+      objectsByUid.delete(item.uid);
+    }
+  });
+  store.replaceItems(store.placedItems.filter((i) => !i.wallMount));
+
+  // 2. ใช้ขนาดล่าสุด
+  const last = loadLastRectSize();
+
+  store.setRoom({
+    shape: "rect",
+    blocks: null,
+    w: last.w,
+    d: last.d,
+    h: last.h,
+  });
+
+  // 3. รอ tick
+  await new Promise((r) => setTimeout(r, 0));
+
+  // 4. Rebuild shell
+  rebuildRoomShell();
+
+  // 5. Seed openings
+  ensureDefaultOpenings();
+
+  // 6. Instantiate items
+  useRoomTwin.getState().placedItems.forEach((item) => {
+    if (!objectsByUid.has(item.uid)) {
+      instantiate(item);
+    }
+  });
+
+  // 7. Reclamp
+  reclampAllToRoom();
+  rebuildBaseboards();
 }
 
 // ============================================================
@@ -144,6 +226,24 @@ const PREVIEW_MAX_D = 128;
 
 function RoomPreviewSvg() {
   const room = useRoomTwin((s) => s.room);
+
+  const handleOpenBlocks = useCallback(() => {
+    // ⭐ Save ขนาดปัจจุบันก่อนสลับไป blocks
+    if (room.shape === "rect") {
+      saveLastRectSize({ w: room.w, d: room.d, h: room.h });
+    }
+    window.dispatchEvent(new CustomEvent("roomtwin:openBlocksEditor"));
+  }, [room]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleOpenBlocks();
+      }
+    },
+    [handleOpenBlocks],
+  );
 
   let rects: Array<{ x0: number; z0: number; x1: number; z1: number }> = [];
 
@@ -184,10 +284,21 @@ function RoomPreviewSvg() {
   const sx = (x: number) => x * scale + ox;
   const sy = (z: number) => z * scale + oy;
 
+  const isBlocksMode = room.shape === "blocks";
+
   return (
-    <div className="rsp-preview">
+    <div
+      className="rsp-preview"
+      onClick={handleOpenBlocks}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      title={
+        isBlocksMode ? "คลิกเพื่อแก้ไขผังบล็อก" : "คลิกเพื่อวาดบล็อกผนังห้อง"
+      }
+    >
       <svg viewBox="0 0 240 158" width="100%" height="132">
-        {room.shape === "blocks" ? (
+        {isBlocksMode ? (
           <>
             <g fill="#fbf8f2">
               {rects.map((r, i) => (
@@ -238,6 +349,15 @@ function RoomPreviewSvg() {
         >
           {rd.toFixed(1)} ม.
         </text>
+        <text
+          className="rsp-preview-label"
+          textAnchor="middle"
+          x="120"
+          y="150"
+          style={{ fontSize: 9, fill: "#8a8275", opacity: 0.8 }}
+        >
+          {isBlocksMode ? "▦ คลิกเพื่อแก้ไขผัง" : "▦ คลิกเพื่อวาดบล็อก"}
+        </text>
       </svg>
     </div>
   );
@@ -252,24 +372,37 @@ function SizeTab() {
   const setRoom = useRoomTwin((s) => s.setRoom);
   const { saveState, saveStateDebounced } = useSaveState();
 
-  // ⭐ ใช้ reclamp + rebuild เมื่อเปลี่ยน dimension
+  // ⭐ Auto-save lastRectSize เมื่อ rect mode
+  useEffect(() => {
+    if (room.shape === "rect") {
+      saveLastRectSize({ w: room.w, d: room.d, h: room.h });
+    }
+  }, [room.shape, room.w, room.d, room.h]);
+
   const handleDimChange = (key: "w" | "d" | "h", value: number) => {
     const lim = ROOM_LIMITS[key];
     const v = Math.max(lim.min, Math.min(lim.max, value));
     setRoom({ [key]: v } as any);
-    // Canvas3D effect จะ rebuild + reclamp ให้
     saveStateDebounced();
   };
 
   const handlePresetClick = (w: number, d: number, h: number) => {
     setRoom({ w, d, h, shape: "rect", blocks: null });
+    saveLastRectSize({ w, d, h });
     rebuildRoomShell();
     reclampAllToRoom();
     saveState();
   };
 
   const handleOpenBlocks = () => {
+    saveLastRectSize({ w: room.w, d: room.d, h: room.h });
     window.dispatchEvent(new CustomEvent("roomtwin:openBlocksEditor"));
+  };
+
+  const handleSwitchToRect = async () => {
+    if (room.shape === "rect") return;
+    await switchToRectShape();
+    saveState();
   };
 
   return (
@@ -279,18 +412,10 @@ function SizeTab() {
         <div className="rsp-shape-row">
           <button
             type="button"
-            className={`rsp-shape-btn${room.shape === "rect" ? " active" : ""}`}
-            onClick={() => {
-              if (room.shape === "rect") return;
-              const store = useRoomTwin.getState();
-              store.replaceItems(
-                store.placedItems.filter((i) => !i.wallMount),
-              );
-              setRoom({ shape: "rect", blocks: null });
-              rebuildRoomShell();
-              reclampAllToRoom();
-              saveState();
-            }}
+            className={`rsp-shape-btn${
+              room.shape === "rect" ? " active" : ""
+            }`}
+            onClick={handleSwitchToRect}
           >
             <span className="sc-icon">▭</span>
             <span className="sc-text">
@@ -300,7 +425,9 @@ function SizeTab() {
           </button>
           <button
             type="button"
-            className={`rsp-shape-btn${room.shape === "blocks" ? " active" : ""}`}
+            className={`rsp-shape-btn${
+              room.shape === "blocks" ? " active" : ""
+            }`}
             onClick={handleOpenBlocks}
           >
             <span className="sc-icon">▦</span>
@@ -772,7 +899,7 @@ function OpeningItem({
 }
 
 // ============================================================
-// Root Panel — ⭐ Fix 6: position ใต้ปุ่ม roomSizeBtn
+// Root Panel
 // ============================================================
 
 export default function RoomStructurePanel() {
@@ -780,7 +907,10 @@ export default function RoomStructurePanel() {
   const [tab, setTab] = useState<Tab>("size");
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // ⭐ คำนวณ position ของ panel ให้อยู่ใต้ปุ่ม 📐
+  const closePanel = useCallback(() => {
+    setOpen(false);
+  }, []);
+
   const positionPanel = useCallback(() => {
     if (!panelRef.current) return;
     const btn = document.getElementById("roomSizeBtn");
@@ -806,6 +936,18 @@ export default function RoomStructurePanel() {
   }, [open, positionPanel]);
 
   useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closePanel();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, closePanel]);
+
+  useEffect(() => {
     const onOpen = () => setOpen(true);
     const onClose = () => setOpen(false);
     const onToggle = () => setOpen((v) => !v);
@@ -820,52 +962,61 @@ export default function RoomStructurePanel() {
   }, []);
 
   return (
-    <div
-      ref={panelRef}
-      className={`room-size-panel${open ? " show" : ""}`}
-      aria-hidden={!open}
-      style={{ position: "fixed" }}
-    >
-      <div className="rsp-header">
-        <b>🏗️ ปรับแต่งโครงสร้างห้อง</b>
-        <button
-          type="button"
-          className="rsp-close"
-          onClick={() => setOpen(false)}
-        >
-          ✕
-        </button>
-      </div>
+    <>
+      <div
+        className={`panel-backdrop z-29${open ? " show" : ""}`}
+        onClick={closePanel}
+        aria-hidden="true"
+      />
 
-      <div className="rsp-tabs">
-        <button
-          type="button"
-          className={`rsp-tab${tab === "size" ? " active" : ""}`}
-          onClick={() => setTab("size")}
-        >
-          📐 ขนาด
-        </button>
-        <button
-          type="button"
-          className={`rsp-tab${tab === "surfaces" ? " active" : ""}`}
-          onClick={() => setTab("surfaces")}
-        >
-          🎨 พื้นผิว
-        </button>
-        <button
-          type="button"
-          className={`rsp-tab${tab === "openings" ? " active" : ""}`}
-          onClick={() => setTab("openings")}
-        >
-          🚪 ช่องเปิด
-        </button>
-      </div>
+      <div
+        ref={panelRef}
+        className={`room-size-panel${open ? " show" : ""}`}
+        aria-hidden={!open}
+        style={{ position: "fixed" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="rsp-header">
+          <b>🏗️ ปรับแต่งโครงสร้างห้อง</b>
+          <button
+            type="button"
+            className="rsp-close"
+            onClick={closePanel}
+          >
+            ✕
+          </button>
+        </div>
 
-      <div className="rsp-body">
-        {tab === "size" && <SizeTab />}
-        {tab === "surfaces" && <SurfacesTab />}
-        {tab === "openings" && <OpeningsTab />}
+        <div className="rsp-tabs">
+          <button
+            type="button"
+            className={`rsp-tab${tab === "size" ? " active" : ""}`}
+            onClick={() => setTab("size")}
+          >
+            📐 ขนาด
+          </button>
+          <button
+            type="button"
+            className={`rsp-tab${tab === "surfaces" ? " active" : ""}`}
+            onClick={() => setTab("surfaces")}
+          >
+            🎨 พื้นผิว
+          </button>
+          <button
+            type="button"
+            className={`rsp-tab${tab === "openings" ? " active" : ""}`}
+            onClick={() => setTab("openings")}
+          >
+            🚪 ช่องเปิด
+          </button>
+        </div>
+
+        <div className="rsp-body">
+          {tab === "size" && <SizeTab />}
+          {tab === "surfaces" && <SurfacesTab />}
+          {tab === "openings" && <OpeningsTab />}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

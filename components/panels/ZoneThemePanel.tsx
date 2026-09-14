@@ -1,6 +1,6 @@
 // components/panels/ZoneThemePanel.tsx
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { ZONE_THEMES, THEME_BY_ID } from "@/lib/data/themes";
 import { hexOf } from "@/lib/utils/format";
@@ -37,7 +37,6 @@ function applyThemeToZone(zuid: string, themeId: string) {
 
   const existing = store.zoneMeta.get(zuid) || {};
 
-  // Snapshot baseline if not already
   if (!existing.themeBaseline) {
     const bl: Record<string, { params: any; displayName: string | null }> = {};
     items.forEach((it) => {
@@ -88,28 +87,55 @@ function resetZoneTheme(zuid: string) {
 }
 
 // ============================================================
-// Panel
+// Panel — ⭐ Fix: useRef แทน state, deps เฉพาะ selectedZoneUid
 // ============================================================
 
 export default function ZoneThemePanel() {
   const selectedZoneUid = useRoomTwin((s) => s.selectedZoneUid);
   const zoneMeta = useRoomTwin((s) => s.zoneMeta);
+  const deselectZone = useRoomTwin((s) => s.deselectZone);
   const { saveState } = useSaveState();
 
   const [open, setOpen] = useState(false);
-  const [lastZuid, setLastZuid] = useState<string | null>(null);
 
-  // Auto-open when selectedZoneUid changes
+  // ⭐ useRef แทน state — ไม่ trigger re-render ไม่เข้า deps
+  const openedForRef = useRef<string | null>(null);
+
+  // ⭐ ปิด panel (ผู้ใช้กดปิด)
+  const close = useCallback(() => {
+    setOpen(false);
+    // ⚠️ ไม่ reset openedForRef ที่นี่ → ป้องกัน effect loop
+  }, []);
+
+  // ⭐ Auto-open เมื่อ selectedZoneUid เปลี่ยน
   useEffect(() => {
     if (!selectedZoneUid) {
-      if (open) setOpen(false);
+      // ไม่มีโซนเลือก → ปิด
+      setOpen(false);
+      openedForRef.current = null;
       return;
     }
-    if (selectedZoneUid !== lastZuid) {
-      setLastZuid(selectedZoneUid);
+
+    // มีโซนเลือกใหม่ (ไม่ใช่โซนเดิมที่เคยเปิดแล้ว) → เปิด
+    if (openedForRef.current !== selectedZoneUid) {
+      openedForRef.current = selectedZoneUid;
       setOpen(true);
     }
-  }, [selectedZoneUid, lastZuid, open]);
+    // ⭐ ถ้า openedForRef === selectedZoneUid → ไม่ทำอะไร (ผู้ใช้ปิดไปแล้ว)
+  }, [selectedZoneUid]); // ⭐ deps เฉพาะ selectedZoneUid
+
+  // Escape key
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, close]);
 
   // Custom events
   useEffect(() => {
@@ -123,19 +149,7 @@ export default function ZoneThemePanel() {
     };
   }, []);
 
-  if (!selectedZoneUid) {
-    return (
-      <aside className="zone-theme-panel" aria-hidden="true">
-        <div className="ztp-head">
-          <div className="ztp-title">
-            ✨ ธีมสำหรับ <span>โซน</span>
-          </div>
-          <button className="ztp-close" type="button">✕</button>
-        </div>
-        <div className="ztp-themes" />
-      </aside>
-    );
-  }
+  if (!selectedZoneUid) return null;
 
   const meta = getZoneMeta(selectedZoneUid);
   const currentMeta = zoneMeta.get(selectedZoneUid) || {};
@@ -143,71 +157,80 @@ export default function ZoneThemePanel() {
   const showReset = !!(currentMeta.themeBaseline || current);
 
   return (
-    <aside
-      className={`zone-theme-panel${open ? " show" : ""}`}
-      aria-hidden={!open}
-    >
-      <div className="ztp-head">
-        <div className="ztp-title">
-          ✨ ธีมสำหรับ{" "}
-          <span>
-            "{meta.icon} {meta.name}"
-          </span>
-        </div>
-        {showReset && (
-          <button
-            type="button"
-            className="ztp-reset"
-            onClick={() => {
-              resetZoneTheme(selectedZoneUid);
-              saveState();
-            }}
-          >
-            ↺ คืนค่าเดิม
-          </button>
-        )}
-        <button
-          type="button"
-          className="ztp-close"
-          onClick={() => setOpen(false)}
-          title="ปิด"
-        >
-          ✕
-        </button>
-      </div>
+    <>
+      {/* ⭐ Backdrop — z-29 (ต่ำกว่า panel z-30) */}
+      <div
+        className={`panel-backdrop z-29${open ? " show" : ""}`}
+        onClick={close}
+        aria-hidden="true"
+      />
 
-      <div className="ztp-themes">
-        {ZONE_THEMES.map((theme) => (
-          <button
-            key={theme.id}
-            type="button"
-            className={`ztp-card${current === theme.id ? " active" : ""}`}
-            onClick={() => {
-              applyThemeToZone(selectedZoneUid, theme.id);
-              saveState();
-            }}
-          >
-            <div
-              className="ztp-swatch"
-              style={
-                {
-                  "--c1": hexOf(theme.swatch[0]),
-                  "--c2": hexOf(theme.swatch[1]),
-                  "--c3": hexOf(theme.swatch[2]),
-                  "--c4": hexOf(theme.swatch[3]),
-                } as React.CSSProperties
-              }
+      <aside
+        className={`zone-theme-panel${open ? " show" : ""}`}
+        aria-hidden={!open}
+      >
+        <div className="ztp-head">
+          <div className="ztp-title">
+            ✨ ธีมสำหรับ{" "}
+            <span>
+              "{meta.icon} {meta.name}"
+            </span>
+          </div>
+          {showReset && (
+            <button
+              type="button"
+              className="ztp-reset"
+              onClick={() => {
+                resetZoneTheme(selectedZoneUid);
+                saveState();
+              }}
             >
-              <span />
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="ztp-card-name">{theme.name}</div>
-            <div className="ztp-card-desc">{theme.desc}</div>
+              ↺ คืนค่าเดิม
+            </button>
+          )}
+          <button
+            type="button"
+            className="ztp-close"
+            onClick={close}
+            title="ปิด"
+          >
+            ✕
           </button>
-        ))}
-      </div>
-    </aside>
+        </div>
+
+        <div className="ztp-themes">
+          {ZONE_THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              type="button"
+              className={`ztp-card${current === theme.id ? " active" : ""}`}
+              onClick={() => {
+                applyThemeToZone(selectedZoneUid, theme.id);
+                saveState();
+              }}
+            >
+              <div
+                className="ztp-swatch"
+                style={
+                  {
+                    "--c1": hexOf(theme.swatch[0]),
+                    "--c2": hexOf(theme.swatch[1]),
+                    "--c3": hexOf(theme.swatch[2]),
+                    "--c4": hexOf(theme.swatch[3]),
+                  } as React.CSSProperties
+                }
+              >
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="ztp-card-name">{theme.name}</div>
+              <div className="ztp-card-desc">{theme.desc}</div>
+            </button>
+          ))}
+        </div>
+      </aside>
+    </>
   );
 }

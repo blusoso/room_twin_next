@@ -69,23 +69,36 @@ export default function Header() {
   };
 
   // ============================================================
-  // Reset — ลบ scene objects + reset store + seed default
+  // ⭐ Reset — เก็บโครงสร้าง (ขนาด, สี, ประตู, หน้าต่าง)
+  //          ลบแค่เฟอร์นิเจอร์ + โซน
   // ============================================================
   const handleReset = () => {
     openConfirm(
-      "รีเซ็ตห้องกลับเป็นค่าเริ่มต้น? ของที่วางไว้ทั้งหมดจะถูกลบ (ขนาดห้องจะคงอยู่)",
+      "ลบเฟอร์นิเจอร์และของแต่งทั้งหมดออก? " +
+        "(ขนาดห้อง สี และประตู/หน้าต่างจะคงอยู่)",
       async () => {
-        // ⭐ 1. ลบ Three.js objects ทั้งหมด
-        const {
-          objectsByUid,
-          roomGroup,
-          surfaceColliders,
-          wallItemMaterials,
-        } = await import("@/lib/three/scene");
+        const store = useRoomTwin.getState();
+        const { objectsByUid, roomGroup, surfaceColliders, wallItemMaterials } =
+          await import("@/lib/three/scene");
 
-        const uids = Array.from(objectsByUid.keys());
-        uids.forEach((uid) => {
-          const obj = objectsByUid.get(uid);
+        // ⭐ 1. แยก items เป็น 2 กลุ่ม
+        const openings: typeof store.placedItems = [];
+        const toRemove: typeof store.placedItems = [];
+
+        store.placedItems.forEach((item) => {
+          if (
+            item.productId === "door" ||
+            item.productId === "window"
+          ) {
+            openings.push(item);
+          } else {
+            toRemove.push(item);
+          }
+        });
+
+        // ⭐ 2. ลบ Three.js objects ของ items ที่จะลบ
+        toRemove.forEach((item) => {
+          const obj = objectsByUid.get(item.uid);
           if (obj) {
             roomGroup.remove(obj);
             obj.traverse((child: any) => {
@@ -99,47 +112,46 @@ export default function Header() {
               }
             });
           }
+          objectsByUid.delete(item.uid);
+          surfaceColliders.delete(item.uid);
+          wallItemMaterials.delete(item.uid);
         });
-        objectsByUid.clear();
-        surfaceColliders.clear();
-        wallItemMaterials.clear();
 
-        // ⭐ 2. Reset store (คงขนาดห้องเดิมไว้)
-        const store = useRoomTwin.getState();
-        const keepRoom = store.room;
+        // ⭐ 3. Reset store — เก็บ openings ไว้
+        const keptRoom = store.room;
+        const keptSurface = store.surface;
 
         store.resetAll();
 
+        // ⭐ 4. คืนค่า room + surface + openings
         useRoomTwin.setState({
-          room: keepRoom,
-          surface: {
-            floor: "wood",
-            wallUniform: true,
-            wallAll: WALL_COLORS[0],
-            walls: {},
-            ceiling: 0xf7f3ea,
-          },
+          room: keptRoom,
+          surface: keptSurface,
+          placedItems: openings,
         });
 
-        // ⭐ 3. รอ tick ให้ store propagate
+        // ⭐ 5. รอ tick ให้ store propagate
         await new Promise((r) => setTimeout(r, 0));
 
-        // ⭐ 4. Rebuild shell
-        const {
-          rebuildRoomShell,
-          applySurface: apply,
-          rebuildBaseboards,
-        } = await import("@/lib/three/roomShell");
+        // ⭐ 6. Rebuild shell + baseboards
+        const { rebuildRoomShell, applySurface: apply, rebuildBaseboards } =
+          await import("@/lib/three/roomShell");
         rebuildRoomShell();
         apply();
 
-        // ⭐ 5. Seed default door + window
-        const { seedDefaultRoom } = await import("@/hooks/useRoomTwinInit");
-        seedDefaultRoom();
+        // ⭐ 7. Instantiate openings (ถ้ายังไม่มีใน scene)
+        const { instantiate } = await import("@/lib/three/instantiate");
+        const { objectsByUid: objMap } = await import("@/lib/three/scene");
+
+        openings.forEach((item) => {
+          if (!objMap.has(item.uid)) {
+            instantiate(item);
+          }
+        });
 
         rebuildBaseboards();
 
-        // ⭐ 6. Save
+        // ⭐ 8. Save
         saveState();
       },
     );
@@ -194,7 +206,6 @@ export default function Header() {
         type="button"
         className="cart-btn"
         id="cartBtn"
-        title="ของที่อยู่ในห้อง"
         onClick={handleToggleCart}
       >
         <span className="cart-icon">
@@ -216,7 +227,6 @@ export default function Header() {
         type="button"
         className="reset-btn"
         id="roomSizeBtn"
-        title="ปรับขนาดห้อง"
         onClick={handleToggleRoomSize}
       >
         📐 <span className="rsp-btn-label">ขนาดห้อง</span>

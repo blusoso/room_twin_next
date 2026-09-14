@@ -49,32 +49,20 @@ export default function ZoneChooser() {
   const setPending = useRoomTwin((s) => s.setPendingZoneChooser);
   const placedItems = useRoomTwin((s) => s.placedItems);
 
+  const open = !!pendingUid;
+
+  // ⭐ ยกเลิก (ไม่ผูกโซน)
+  const handleCancel = () => {
+    setPending(null);
+  };
+
   if (!pendingUid) {
-    return (
-      <div className="zone-chooser" aria-hidden="true">
-        <div className="zone-chooser-label">วางไว้ที่โซนไหน?</div>
-        <div className="zone-chooser-list" />
-      </div>
-    );
+    return null;
   }
 
   const item = placedItems.find((i) => i.uid === pendingUid);
   if (!item || item.x === undefined || item.z === undefined) {
-    return (
-      <div className="zone-chooser show" aria-hidden="false">
-        <div className="zone-chooser-label">วางไว้ที่โซนไหน?</div>
-        <div className="zone-chooser-list">
-          <button
-            type="button"
-            className="zone-chooser-btn skip"
-            onClick={() => setPending(null)}
-          >
-            <span className="zc-icon">📌</span>
-            <span>ปิด</span>
-          </button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const zones = findNearbyZonesAt(item.x, item.z, 0.7);
@@ -101,34 +89,47 @@ export default function ZoneChooser() {
   };
 
   return (
-    <div className="zone-chooser show" aria-hidden="false">
-      <div className="zone-chooser-label">วางไว้ที่โซนไหน?</div>
-      <div className="zone-chooser-list">
-        {zones.map((z) => (
+    <>
+      {/* ⭐ Backdrop — z-34 (ต่ำกว่า panel z-35) */}
+      <div
+        className={`panel-backdrop z-34${open ? " show" : ""}`}
+        onClick={handleCancel}
+        aria-hidden="true"
+      />
+
+      <div
+        className="zone-chooser show"
+        aria-hidden="false"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="zone-chooser-label">วางไว้ที่โซนไหน?</div>
+        <div className="zone-chooser-list">
+          {zones.map((z) => (
+            <button
+              key={z.zoneUid}
+              type="button"
+              className="zone-chooser-btn"
+              style={
+                {
+                  "--zc-color": hexOf(z.color),
+                } as React.CSSProperties
+              }
+              onClick={() => assign(z.zoneUid)}
+            >
+              <span className="zc-icon">{z.icon}</span>
+              <span>{z.name}</span>
+            </button>
+          ))}
           <button
-            key={z.zoneUid}
             type="button"
-            className="zone-chooser-btn"
-            style={
-              {
-                "--zc-color": hexOf(z.color),
-              } as React.CSSProperties
-            }
-            onClick={() => assign(z.zoneUid)}
+            className="zone-chooser-btn skip"
+            onClick={() => assign(null)}
           >
-            <span className="zc-icon">{z.icon}</span>
-            <span>{z.name}</span>
+            <span className="zc-icon">📌</span>
+            <span>ลอย (ไม่มีโซน)</span>
           </button>
-        ))}
-        <button
-          type="button"
-          className="zone-chooser-btn skip"
-          onClick={() => assign(null)}
-        >
-          <span className="zc-icon">📌</span>
-          <span>ลอย (ไม่มีโซน)</span>
-        </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

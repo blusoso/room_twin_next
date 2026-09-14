@@ -8,12 +8,11 @@ import {
   WALL_COLORS,
   CELL_SIZE,
 } from "@/lib/data/constants";
-import { instantiate } from "@/lib/three/instantiate";
 import {
   wallFootprint,
   resolveWallPlacement,
 } from "@/lib/three/wallPlacement";
-import { getWallRotY } from "@/lib/three/roomShell";
+import { getWallRotY, getPolyWalls } from "@/lib/three/roomShell";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 
 export function useRoomTwinInit() {
@@ -79,12 +78,6 @@ export function useRoomTwinInit() {
       });
     }
 
-    // ⭐ ถ้าไม่มี items → seed default door/window
-    const items = useRoomTwin.getState().placedItems;
-    if (items.length === 0) {
-      seedDefaultRoom();
-    }
-
     // History snapshot
     const s = useRoomTwin.getState();
     const snapshot = JSON.stringify({
@@ -98,76 +91,216 @@ export function useRoomTwinInit() {
       },
     });
     resetHistory(snapshot);
+    // ⚠️ ไม่เรียก ensureDefaultOpenings ที่นี่ — Canvas3D effect จะเรียกให้
   }, []);
 }
 
 // ============================================================
-// Seed default room — ประตูหน้าผนังหลัง, หน้าต่างผนังหลัง
-// ⭐ export เพื่อให้ Header เรียกตอน reset ได้
+// ⭐ Ensure default openings — รองรับทั้ง rect และ blocks
+// ============================================================
+
+export function ensureDefaultOpenings() {
+  const store = useRoomTwin.getState();
+  const room = store.room;
+
+  const items = store.placedItems;
+  const hasDoor = items.some((i) => i.productId === "door");
+  const hasWindow = items.some((i) => i.productId === "window");
+
+  if (room.shape === "rect") {
+    if (!hasDoor) seedDoorRect();
+    if (!hasWindow) seedWindowRect();
+  } else if (room.shape === "blocks") {
+    if (!hasDoor) seedDoorBlocks();
+    if (!hasWindow) seedWindowBlocks();
+  }
+}
+
+// ============================================================
+// RECT MODE
+// ============================================================
+
+function seedDoorRect() {
+  const doorP = PRODUCT_BY_ID.get("door");
+  if (!doorP) return;
+
+  const store = useRoomTwin.getState();
+  const dp = defaultParamsFor(doorP);
+  const { halfU, halfV } = wallFootprint(dp, 0);
+
+  const c = resolveWallPlacement(
+    null,
+    "front",
+    -1.35,
+    0,
+    halfU,
+    halfV,
+    doorP.groundAnchor || false,
+  );
+
+  const uid = "i" + Math.random().toString(36).slice(2, 10);
+  store.addItem({
+    uid,
+    productId: "door",
+    params: dp,
+    wallMount: true,
+    wallId: "front",
+    u: c.u,
+    v: c.v,
+    rotY: getWallRotY("front"),
+    rotZ: 0,
+  });
+}
+
+function seedWindowRect() {
+  const winP = PRODUCT_BY_ID.get("window");
+  if (!winP) return;
+
+  const store = useRoomTwin.getState();
+  const wp = defaultParamsFor(winP);
+  const { halfU, halfV } = wallFootprint(wp, 0);
+
+  const c = resolveWallPlacement(
+    null,
+    "back",
+    1.15,
+    1.55,
+    halfU,
+    halfV,
+    false,
+  );
+
+  const uid = "i" + Math.random().toString(36).slice(2, 10);
+  store.addItem({
+    uid,
+    productId: "window",
+    params: wp,
+    wallMount: true,
+    wallId: "back",
+    u: c.u,
+    v: c.v,
+    rotY: getWallRotY("back"),
+    rotZ: 0,
+  });
+}
+
+// ============================================================
+// ⭐ BLOCKS MODE — หา wall ที่ยาวพอ
+// ============================================================
+
+function pickLongestWall(
+  minLen: number,
+  exclude: string[] = [],
+): any | null {
+  const walls = getPolyWalls();
+  if (!walls || walls.length === 0) return null;
+
+  const candidates = walls
+    .filter((w) => w.len >= minLen && !exclude.includes(w.id))
+    .sort((a, b) => b.len - a.len);
+
+  return candidates[0] || null;
+}
+
+function seedDoorBlocks() {
+  const doorP = PRODUCT_BY_ID.get("door");
+  if (!doorP) return;
+
+  const dp = defaultParamsFor(doorP);
+  const doorWidth = dp.w / 100;
+  const { halfU, halfV } = wallFootprint(dp, 0);
+
+  const wall = pickLongestWall(doorWidth + 0.2);
+  if (!wall) {
+    console.warn(
+      "[seedDoorBlocks] no wall long enough for door",
+      doorWidth,
+    );
+    return;
+  }
+
+  const c = resolveWallPlacement(
+    null,
+    wall.id,
+    0,
+    0,
+    halfU,
+    halfV,
+    doorP.groundAnchor || false,
+  );
+
+  const uid = "i" + Math.random().toString(36).slice(2, 10);
+  useRoomTwin.getState().addItem({
+    uid,
+    productId: "door",
+    params: dp,
+    wallMount: true,
+    wallId: wall.id,
+    u: c.u,
+    v: c.v,
+    rotY: wall.rotY,
+    rotZ: 0,
+  });
+
+  console.log("[seedDoorBlocks] placed door on wall", wall.id);
+}
+
+function seedWindowBlocks() {
+  const winP = PRODUCT_BY_ID.get("window");
+  if (!winP) return;
+
+  const wp = defaultParamsFor(winP);
+  const winWidth = wp.w / 100;
+  const { halfU, halfV } = wallFootprint(wp, 0);
+
+  const store = useRoomTwin.getState();
+  const usedWallIds = store.placedItems
+    .filter((i) => i.wallMount && i.wallId)
+    .map((i) => i.wallId!);
+
+  let wall = pickLongestWall(winWidth + 0.2, usedWallIds);
+
+  if (!wall) {
+    wall = pickLongestWall(winWidth + 0.2);
+  }
+  if (!wall) {
+    console.warn(
+      "[seedWindowBlocks] no wall long enough for window",
+      winWidth,
+    );
+    return;
+  }
+
+  const c = resolveWallPlacement(
+    null,
+    wall.id,
+    0,
+    1.55,
+    halfU,
+    halfV,
+    false,
+  );
+
+  const uid = "i" + Math.random().toString(36).slice(2, 10);
+  store.addItem({
+    uid,
+    productId: "window",
+    params: wp,
+    wallMount: true,
+    wallId: wall.id,
+    u: c.u,
+    v: c.v,
+    rotY: wall.rotY,
+    rotZ: 0,
+  });
+
+  console.log("[seedWindowBlocks] placed window on wall", wall.id);
+}
+
+// ============================================================
+// Alias
 // ============================================================
 
 export function seedDefaultRoom() {
-  const store = useRoomTwin.getState();
-  const room = store.room;
-  if (room.shape !== "rect") return;
-
-  // ===== Door (front wall, ground anchor) =====
-  const doorP = PRODUCT_BY_ID.get("door");
-  if (doorP) {
-    const dp = defaultParamsFor(doorP);
-    const { halfU, halfV } = wallFootprint(dp, 0);
-    const c = resolveWallPlacement(
-      null,
-      "front",
-      -1.35,
-      0,                              // ⭐ v = 0 (ground anchor)
-      halfU,
-      halfV,
-      doorP.groundAnchor || false,
-    );
-    const uid = "i" + Math.random().toString(36).slice(2, 10);
-    const item = {
-      uid,
-      productId: "door",
-      params: dp,
-      wallMount: true,
-      wallId: "front",
-      u: c.u,
-      v: c.v,
-      rotY: getWallRotY("front"),
-      rotZ: 0,
-    };
-    store.addItem(item);
-    instantiate(item);
-  }
-
-  // ===== Window (back wall) =====
-  const winP = PRODUCT_BY_ID.get("window");
-  if (winP) {
-    const wp = defaultParamsFor(winP);
-    const { halfU, halfV } = wallFootprint(wp, 0);
-    const c = resolveWallPlacement(
-      null,
-      "back",
-      1.15,
-      1.55,
-      halfU,
-      halfV,
-      false,
-    );
-    const uid = "i" + Math.random().toString(36).slice(2, 10);
-    const item = {
-      uid,
-      productId: "window",
-      params: wp,
-      wallMount: true,
-      wallId: "back",
-      u: c.u,
-      v: c.v,
-      rotY: getWallRotY("back"),
-      rotZ: 0,
-    };
-    store.addItem(item);
-    instantiate(item);
-  }
+  ensureDefaultOpenings();
 }

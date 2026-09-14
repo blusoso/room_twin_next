@@ -2,10 +2,12 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
-import { ROOM_DEFAULT } from "@/lib/data/constants";
-import { rebuildRoomShell } from "@/lib/three/roomShell";
+import { rebuildRoomShell, rebuildBaseboards } from "@/lib/three/roomShell";
 import { reclampAllToRoom } from "@/lib/three/reclamp";
+import { instantiate } from "@/lib/three/instantiate";
+import { ensureDefaultOpenings } from "@/hooks/useRoomTwinInit";
 import { useSaveState } from "@/hooks/useSaveState";
+import { objectsByUid, roomGroup } from "@/lib/three/scene";
 
 const CELL_PX_BASE = 22;
 const MIN_ZOOM = 0.5;
@@ -60,7 +62,6 @@ export default function BlocksEditor() {
   const [paintMode, setPaintMode] = useState<"add" | "remove" | null>(null);
 
   const room = useRoomTwin((s) => s.room);
-  const setRoom = useRoomTwin((s) => s.setRoom);
   const { saveState } = useSaveState();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -136,33 +137,73 @@ export default function BlocksEditor() {
     });
   };
 
-  const handleApply = () => {
+  // ============================================================
+  // ⭐ Apply — Seed ประตู/หน้าต่างบนผนัง blocks
+  // ============================================================
+  const handleApply = async () => {
     if (draft.size === 0) return;
+
     const store = useRoomTwin.getState();
 
-    // remove wall items
-    const hadWallItems = store.placedItems.some((i) => i.wallMount);
-    if (hadWallItems) {
-      store.replaceItems(store.placedItems.filter((i) => !i.wallMount));
-    }
+    // 1. ลบ Three.js objects ของ wall items เก่า
+    store.placedItems.forEach((item) => {
+      if (item.wallMount) {
+        const obj = objectsByUid.get(item.uid);
+        if (obj) {
+          roomGroup.remove(obj);
+          obj.traverse((child: any) => {
+            child.geometry?.dispose?.();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((m: any) => m?.dispose?.());
+              } else {
+                child.material.dispose?.();
+              }
+            }
+          });
+        }
+        objectsByUid.delete(item.uid);
+      }
+    });
 
+    // 2. ลบ state ของ wall items เก่า
+    store.replaceItems(store.placedItems.filter((i) => !i.wallMount));
+
+    // 3. Set room = blocks
     const bb = computeBBox(draft, room.cellSize);
     if (!bb) return;
 
-    setRoom({
+    store.setRoom({
       shape: "blocks",
       blocks: new Set(draft),
       w: bb.w,
       d: bb.d,
     });
 
-    // Wait a tick for store to update
-    setTimeout(() => {
-      rebuildRoomShell();
-      reclampAllToRoom();
-      saveState();
-      setOpen(false);
-    }, 0);
+    // 4. รอ tick
+    await new Promise((r) => setTimeout(r, 0));
+
+    // 5. Rebuild shell — สร้าง polyWalls
+    rebuildRoomShell();
+
+    // 6. ⭐ Seed ประตู/หน้าต่าง
+    ensureDefaultOpenings();
+
+    // 7. Instantiate items ที่ยังไม่มี
+    const s = useRoomTwin.getState();
+    s.placedItems.forEach((item) => {
+      if (!objectsByUid.has(item.uid)) {
+        instantiate(item);
+      }
+    });
+
+    // 8. Reclamp
+    reclampAllToRoom();
+    rebuildBaseboards();
+
+    // 9. Save
+    saveState();
+    setOpen(false);
   };
 
   const handleClear = () => {
@@ -266,7 +307,18 @@ export default function BlocksEditor() {
 
           <div className="blocks-canvas" ref={canvasRef}>
             <div className="blocks-grid-wrap">
-              <div className="blocks-grid" style={{ display: "grid", gridTemplateColumns: `repeat(${N}, ${cellPx}px)`, gridAutoRows: `${cellPx}px`, background: "#e6dfce", gap: 1, padding: 1, borderRadius: 4 }}>
+              <div
+                className="blocks-grid"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${N}, ${cellPx}px)`,
+                  gridAutoRows: `${cellPx}px`,
+                  background: "#e6dfce",
+                  gap: 1,
+                  padding: 1,
+                  borderRadius: 4,
+                }}
+              >
                 {Array.from({ length: N * N }).map((_, idx) => {
                   const j = Math.floor(idx / N) - extent;
                   const i = (idx % N) - extent;

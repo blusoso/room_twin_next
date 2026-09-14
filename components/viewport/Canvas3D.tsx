@@ -13,12 +13,14 @@ import {
   initRoomShell,
   rebuildRoomShell,
   applySurface,
+  rebuildBaseboards,
 } from "@/lib/three/roomShell";
 import { instantiate } from "@/lib/three/instantiate";
 import { resolveRestHeights } from "@/lib/three/placement";
 import { reclampAllToRoom } from "@/lib/three/reclamp";
 import { useAnimationLoop } from "@/hooks/useAnimationLoop";
 import { useRoomTwin } from "@/lib/state/store";
+import { ensureDefaultOpenings } from "@/hooks/useRoomTwinInit";
 
 export default function Canvas3D() {
   const holderRef = useRef<HTMLDivElement>(null);
@@ -59,9 +61,16 @@ export default function Canvas3D() {
     };
   }, []);
 
-  // ===== 2. Instantiate items หลัง sceneReady ⭐ =====
+  // ===== 2. ⭐ Instantiate items ที่ยังไม่มีใน scene =====
+  //     deps = room ด้วย (เพื่อ re-instantiate เมื่อ room เปลี่ยนรูปทรง)
   useEffect(() => {
     if (!sceneReady) return;
+
+    // ⭐⭐⭐ เพิ่มประตู/หน้าต่างที่ขาด ก่อน instantiate
+    const room = useRoomTwin.getState().room;
+    if (room.shape === "rect" || room.shape === "blocks") {
+      ensureDefaultOpenings();
+    }
 
     const items = useRoomTwin.getState().placedItems;
     let changed = false;
@@ -76,13 +85,16 @@ export default function Canvas3D() {
 
     if (changed) {
       resolveRestHeights();
+      rebuildBaseboards();
       console.log("[Canvas3D] total objects:", objectsByUid.size);
     }
-  }, [sceneReady, placedItems.length]);
+  }, [sceneReady, placedItems.length, room.shape]);
 
   // ===== 3. Rebuild shell + reclamp เมื่อ room เปลี่ยน =====
   useEffect(() => {
     if (!sceneReady) return;
+
+    console.log("[Canvas3D] room changed → rebuild + reclamp");
     rebuildRoomShell();
     reclampAllToRoom();
   }, [
