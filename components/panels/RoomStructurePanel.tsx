@@ -1,0 +1,873 @@
+// components/panels/RoomStructurePanel.tsx
+"use client";
+import { useEffect, useState } from "react";
+import { useRoomTwin } from "@/lib/state/store";
+import {
+  FLOOR_STYLES,
+  WALL_CHIP_COLORS,
+  WALL_LABEL_FULL,
+  ROOM_LIMITS,
+  ROOM_DEFAULT,
+} from "@/lib/data/constants";
+import { hexOf, numOf } from "@/lib/utils/format";
+import { makeFloorCanvas } from "@/lib/three/surfaceTextures";
+import {
+  applySurface as applySurfaceToThree,
+  rebuildRoomShell,
+  getWallRotY,
+  getWallGeom,
+  wallSpan,
+} from "@/lib/three/roomShell";
+import { reclampAllToRoom } from "@/lib/three/reclamp";
+import { instantiate, reinstantiateItem } from "@/lib/three/instantiate";
+import { resolveWallPlacement, wallFootprint } from "@/lib/three/wallPlacement";
+import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+import { useSaveState } from "@/hooks/useSaveState";
+import type { PlacedItem } from "@/lib/state/types";
+
+type Tab = "size" | "surfaces" | "openings";
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function pickVisibleWall(): string {
+  const { room } = useRoomTwin.getState();
+  if (room.shape !== "rect") return "back";
+  // เลือกผนังที่มองจากด้านหน้าก่อน (fallback)
+  return "front";
+}
+
+function addOpeningOfType(pid: string) {
+  const store = useRoomTwin.getState();
+  const p = PRODUCT_BY_ID.get(pid);
+  if (!p) return;
+
+  const wallId = pickVisibleWall();
+  const params = defaultParamsFor(p);
+  const { halfU, halfV } = wallFootprint(params, 0);
+
+  const v = p.groundAnchor
+    ? halfV
+    : Math.round(store.room.h * 60) / 100;
+
+  const c = resolveWallPlacement(
+    null,
+    wallId,
+    0,
+    v,
+    halfU,
+    halfV,
+    p.groundAnchor || false,
+  );
+
+  const uid = "i" + Math.random().toString(36).slice(2, 10);
+  const item: PlacedItem = {
+    uid,
+    productId: pid,
+    params,
+    wallMount: true,
+    wallId,
+    u: c.u,
+    v: c.v,
+    rotY: getWallRotY(wallId),
+    rotZ: 0,
+  };
+
+  store.addItem(item);
+  instantiate(item);
+
+  // rebuild baseboards ถ้าเป็นประตู
+  if (pid === "door") {
+    import("@/lib/three/roomShell").then(({ rebuildBaseboards }) =>
+      rebuildBaseboards(),
+    );
+  }
+}
+
+function updateWallItemPosition(
+  uid: string,
+  patch: { u?: number; v?: number; wallId?: string },
+) {
+  const store = useRoomTwin.getState();
+  const item = store.placedItems.find((i) => i.uid === uid);
+  if (!item) return;
+  const product = PRODUCT_BY_ID.get(item.productId);
+  if (!product) return;
+
+  const wallId = patch.wallId ?? item.wallId!;
+  const rotY = getWallRotY(wallId);
+  const { halfU, halfV } = wallFootprint(item.params, item.rotZ || 0);
+
+  const c = resolveWallPlacement(
+    uid,
+    wallId,
+    patch.u ?? item.u!,
+    patch.v ?? item.v!,
+    halfU,
+    halfV,
+    product.groundAnchor || false,
+  );
+
+  store.updateItem(uid, {
+    wallId,
+    u: c.u,
+    v: c.v,
+    rotY,
+  });
+
+  // update object position
+  import("@/lib/three/scene").then(({ objectsByUid }) => {
+    const obj = objectsByUid.get(uid);
+    if (!obj) return;
+    const g = getWallGeom(wallId);
+    if (!g) return;
+    const outward = 0.012;
+    obj.position.set(
+      g.cx + g.dx * c.u - g.nx * outward,
+      c.v,
+      g.cz + g.dz * c.u - g.nz * outward,
+    );
+    obj.rotation.y = rotY;
+  });
+
+  if (product.id === "door") {
+    import("@/lib/three/roomShell").then(({ rebuildBaseboards }) =>
+      rebuildBaseboards(),
+    );
+  }
+}
+
+// ============================================================
+// Preview SVG
+// ============================================================
+
+const PREVIEW_MAX_W = 200;
+const PREVIEW_MAX_D = 128;
+
+function RoomPreviewSvg() {
+  const room = useRoomTwin((s) => s.room);
+
+  let rects: Array<{ x0: number; z0: number; x1: number; z1: number }> = [];
+
+  if (room.shape === "blocks" && room.blocks && room.blocks.size > 0) {
+    room.blocks.forEach((k) => {
+      const [i, j] = k.split(",").map(Number);
+      const cs = room.cellSize;
+      rects.push({
+        x0: i * cs - cs / 2,
+        z0: j * cs - cs / 2,
+        x1: i * cs + cs / 2,
+        z1: j * cs + cs / 2,
+      });
+    });
+  } else {
+    rects = [
+      { x0: -room.w / 2, z0: -room.d / 2, x1: room.w / 2, z1: room.d / 2 },
+    ];
+  }
+
+  if (rects.length === 0) return null;
+
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  rects.forEach((r) => {
+    minX = Math.min(minX, r.x0);
+    maxX = Math.max(maxX, r.x1);
+    minZ = Math.min(minZ, r.z0);
+    maxZ = Math.max(maxZ, r.z1);
+  });
+
+  const rw = maxX - minX;
+  const rd = maxZ - minZ;
+  if (rw <= 0 || rd <= 0) return null;
+
+  const scale = Math.min(PREVIEW_MAX_W / rw, PREVIEW_MAX_D / rd);
+  const ox = 120 - ((minX + maxX) / 2) * scale;
+  const oy = 79 - ((minZ + maxZ) / 2) * scale;
+  const sx = (x: number) => x * scale + ox;
+  const sy = (z: number) => z * scale + oy;
+
+  return (
+    <div className="rsp-preview">
+      <svg viewBox="0 0 240 158" width="100%" height="132">
+        {room.shape === "blocks" ? (
+          <>
+            <g fill="#fbf8f2">
+              {rects.map((r, i) => (
+                <polygon
+                  key={i}
+                  points={`${sx(r.x0)},${sy(r.z0)} ${sx(r.x1)},${sy(r.z0)} ${sx(r.x1)},${sy(r.z1)} ${sx(r.x0)},${sy(r.z1)}`}
+                />
+              ))}
+            </g>
+            <g fill="none" stroke="#b8752e" strokeWidth="0.8" opacity="0.5">
+              {rects.map((r, i) => (
+                <polygon
+                  key={i}
+                  points={`${sx(r.x0)},${sy(r.z0)} ${sx(r.x1)},${sy(r.z0)} ${sx(r.x1)},${sy(r.z1)} ${sx(r.x0)},${sy(r.z1)}`}
+                />
+              ))}
+            </g>
+          </>
+        ) : (
+          <>
+            <polygon
+              points={`${sx(minX)},${sy(minZ)} ${sx(maxX)},${sy(minZ)} ${sx(maxX)},${sy(maxZ)} ${sx(minX)},${sy(maxZ)}`}
+              fill="#fbf8f2"
+            />
+            <polygon
+              points={`${sx(minX)},${sy(minZ)} ${sx(maxX)},${sy(minZ)} ${sx(maxX)},${sy(maxZ)} ${sx(minX)},${sy(maxZ)}`}
+              fill="none"
+              stroke="#b8752e"
+              strokeWidth="2"
+              strokeDasharray="5 4"
+            />
+          </>
+        )}
+        <text
+          className="rsp-preview-label"
+          textAnchor="middle"
+          x="120"
+          y={sy(minZ) - 9}
+        >
+          {rw.toFixed(1)} ม.
+        </text>
+        <text
+          className="rsp-preview-label"
+          textAnchor="middle"
+          x={sx(minX) - 16}
+          y="79"
+          transform={`rotate(-90 ${sx(minX) - 16} 79)`}
+        >
+          {rd.toFixed(1)} ม.
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+// ============================================================
+// Tab 1: Size
+// ============================================================
+
+function SizeTab() {
+  const room = useRoomTwin((s) => s.room);
+  const setRoom = useRoomTwin((s) => s.setRoom);
+  const { saveState, saveStateDebounced } = useSaveState();
+
+  const handleDimChange = (key: "w" | "d" | "h", value: number) => {
+    const lim = ROOM_LIMITS[key];
+    const v = Math.max(lim.min, Math.min(lim.max, value));
+    setRoom({ [key]: v } as any);
+    saveStateDebounced();
+  };
+
+  const handlePresetClick = (w: number, d: number, h: number) => {
+    setRoom({ w, d, h, shape: "rect", blocks: null });
+    rebuildRoomShell();
+    reclampAllToRoom();
+    saveState();
+  };
+
+  const handleOpenBlocks = () => {
+    window.dispatchEvent(new CustomEvent("roomtwin:openBlocksEditor"));
+  };
+
+  return (
+    <div className="rsp-tab-panel active">
+      <div className="rsp-dim">
+        <span className="rsp-dim-label">🏠 รูปทรงห้อง</span>
+        <div className="rsp-shape-row">
+          <button
+            type="button"
+            className={`rsp-shape-btn${room.shape === "rect" ? " active" : ""}`}
+            onClick={() => {
+              if (room.shape === "rect") return;
+              const store = useRoomTwin.getState();
+              // remove wall items
+              store.replaceItems(
+                store.placedItems.filter((i) => !i.wallMount),
+              );
+              setRoom({ shape: "rect", blocks: null });
+              rebuildRoomShell();
+              reclampAllToRoom();
+              saveState();
+            }}
+          >
+            <span className="sc-icon">▭</span>
+            <span className="sc-text">
+              <span className="sc-name">สี่เหลี่ยม</span>
+              <span className="sc-desc">ปรับด้วยสไลเดอร์</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`rsp-shape-btn${room.shape === "blocks" ? " active" : ""}`}
+            onClick={handleOpenBlocks}
+          >
+            <span className="sc-icon">▦</span>
+            <span className="sc-text">
+              <span className="sc-name">วาดบล็อก</span>
+              <span className="sc-desc">อิสระ เพิ่ม-ลบช่อง</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <RoomPreviewSvg />
+
+      {(["w", "d", "h"] as const).map((key) => {
+        const lim = ROOM_LIMITS[key];
+        const label =
+          key === "w" ? "📏 กว้าง (ซ้าย–ขวา)"
+          : key === "d" ? "📏 ลึก (หน้า–หลัง)"
+          : "📏 สูงฝ้าเพดาน";
+        const disabled = room.shape === "blocks" && key !== "h";
+        const value = room[key];
+        const decimals = key === "h" ? 2 : 1;
+
+        return (
+          <div
+            key={key}
+            className={`rsp-dim${disabled ? " in-blocks" : ""}`}
+          >
+            <span className="rsp-dim-label">{label}</span>
+            <div className="rsp-stepper">
+              <button
+                type="button"
+                className="rsp-step-btn"
+                onClick={() => handleDimChange(key, value - lim.step)}
+              >
+                −
+              </button>
+              <div className="rsp-input-wrap">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={lim.min}
+                  max={lim.max}
+                  step={lim.step}
+                  value={value.toFixed(decimals)}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    if (!isNaN(v)) handleDimChange(key, v);
+                  }}
+                />
+                <span className="rsp-unit">ม.</span>
+              </div>
+              <button
+                type="button"
+                className="rsp-step-btn"
+                onClick={() => handleDimChange(key, value + lim.step)}
+              >
+                +
+              </button>
+            </div>
+            <input
+              type="range"
+              className="rsp-slider"
+              min={lim.min}
+              max={lim.max}
+              step={lim.step}
+              value={value}
+              onChange={(e) =>
+                handleDimChange(key, parseFloat(e.target.value))
+              }
+              onMouseUp={saveState}
+              onTouchEnd={saveState}
+            />
+          </div>
+        );
+      })}
+
+      {room.shape !== "blocks" && (
+        <div className="rsp-presets">
+          <div
+            className={`rsp-preset-card${
+              Math.abs(room.w - 3.4) < 0.01 &&
+              Math.abs(room.d - 3.0) < 0.01 &&
+              Math.abs(room.h - 2.5) < 0.01
+                ? " active"
+                : ""
+            }`}
+            onClick={() => handlePresetClick(3.4, 3.0, 2.5)}
+          >
+            <div className="pc-icon">🔹</div>
+            <div className="pc-name">ห้องเล็ก</div>
+            <div className="pc-dims">3.4×3.0 ม.</div>
+          </div>
+          <div
+            className={`rsp-preset-card${
+              Math.abs(room.w - 4.2) < 0.01 &&
+              Math.abs(room.d - 3.6) < 0.01 &&
+              Math.abs(room.h - 2.6) < 0.01
+                ? " active"
+                : ""
+            }`}
+            onClick={() => handlePresetClick(4.2, 3.6, 2.6)}
+          >
+            <div className="pc-icon">🔷</div>
+            <div className="pc-name">ห้องกลาง</div>
+            <div className="pc-dims">4.2×3.6 ม.</div>
+          </div>
+          <div
+            className={`rsp-preset-card${
+              Math.abs(room.w - 5.6) < 0.01 &&
+              Math.abs(room.d - 4.6) < 0.01 &&
+              Math.abs(room.h - 2.8) < 0.01
+                ? " active"
+                : ""
+            }`}
+            onClick={() => handlePresetClick(5.6, 4.6, 2.8)}
+          >
+            <div className="pc-icon">🔶</div>
+            <div className="pc-name">ห้องใหญ่</div>
+            <div className="pc-dims">5.6×4.6 ม.</div>
+          </div>
+        </div>
+      )}
+
+      <div className="rsp-note">
+        {room.shape === "blocks"
+          ? "▦ โหมดวาดบล็อก — ขนาดถูกกำหนดจากบล็อกโดยอัตโนมัติ • กดปุ่ม ▦ ด้านบนเพื่อแก้ไข"
+          : "💡 พิมพ์ตัวเลข ลากแถบ หรือกด −/+ — เห็นผลในห้อง 3D ทันที"}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Tab 2: Surfaces
+// ============================================================
+
+function SurfacesTab() {
+  const room = useRoomTwin((s) => s.room);
+  const surface = useRoomTwin((s) => s.surface);
+  const setSurface = useRoomTwin((s) => s.setSurface);
+  const { saveState } = useSaveState();
+
+  const commit = (patch: Partial<typeof surface>) => {
+    setSurface(patch);
+    applySurfaceToThree();
+    saveState();
+  };
+
+  return (
+    <div className="rsp-tab-panel active">
+      {/* ---- Floor ---- */}
+      <div className="rsp-subsec">
+        <div className="rsp-subsec-title">🟫 วัสดุพื้น</div>
+        <div className="floor-grid">
+          {FLOOR_STYLES.map((st) => (
+            <div
+              key={st.id}
+              className={`floor-swatch${
+                surface.floor === st.id ? " active" : ""
+              }`}
+              style={{
+                backgroundImage: `url(${makeFloorCanvas(st.id, 96).toDataURL()})`,
+              }}
+              onClick={() => commit({ floor: st.id })}
+            >
+              <div className="fl-name">{st.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ---- Walls ---- */}
+      <div className="rsp-subsec">
+        <div className="rsp-subsec-title">🧱 สีผนัง</div>
+
+        <div className="wall-uniform-toggle">
+          <div>
+            <span className="wut-label">🎨 ใช้สีเดียวกันทุกผนัง</span>
+            <span className="wut-sub">ปิดเพื่อกำหนดสีแยกแต่ละด้าน</span>
+          </div>
+          <label className="cz-toggle">
+            <input
+              type="checkbox"
+              checked={surface.wallUniform}
+              onChange={(e) => {
+                const uniform = e.target.checked;
+                if (!uniform) {
+                  const walls: Record<string, number> = {};
+                  ["back", "front", "side", "right"].forEach((id) => {
+                    walls[id] = surface.wallAll;
+                  });
+                  commit({ wallUniform: false, walls });
+                } else {
+                  commit({ wallUniform: true });
+                }
+              }}
+            />
+            <span className="cz-toggle-track" />
+          </label>
+        </div>
+
+        {surface.wallUniform ? (
+          <>
+            <div className="wall-color-grid">
+              {WALL_CHIP_COLORS.map((c) => (
+                <div
+                  key={c}
+                  className={`wall-color-chip${
+                    surface.wallAll === c ? " active" : ""
+                  }`}
+                  style={{ background: hexOf(c) }}
+                  onClick={() => commit({ wallAll: c })}
+                />
+              ))}
+            </div>
+            <div className="cz-row">
+              <label className="cz-row-label">เลือกเอง</label>
+              <div className="cz-row-control">
+                <input
+                  type="color"
+                  className="cz-color-input"
+                  value={hexOf(surface.wallAll)}
+                  onChange={(e) =>
+                    commit({ wallAll: numOf(e.target.value) })
+                  }
+                />
+                <span className="cz-color-hex">
+                  {hexOf(surface.wallAll).toUpperCase()}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="wall-per-wall-list">
+            {(["back", "front", "side", "right"] as const).map((id) => (
+              <div key={id} className="wall-per-wall-row">
+                <span className="wp-label">{WALL_LABEL_FULL[id]}</span>
+                <input
+                  type="color"
+                  value={hexOf(
+                    surface.walls[id] !== undefined
+                      ? surface.walls[id]
+                      : surface.wallAll,
+                  )}
+                  onChange={(e) => {
+                    commit({
+                      walls: {
+                        ...surface.walls,
+                        [id]: numOf(e.target.value),
+                      },
+                    });
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ---- Ceiling ---- */}
+      <div className="rsp-subsec">
+        <div className="rsp-subsec-title">⬜ เพดาน</div>
+        <div className="cz-row">
+          <label className="cz-row-label">สีเพดาน</label>
+          <div className="cz-row-control">
+            <input
+              type="color"
+              className="cz-color-input"
+              value={hexOf(surface.ceiling)}
+              onChange={(e) => commit({ ceiling: numOf(e.target.value) })}
+            />
+            <span className="cz-color-hex">
+              {hexOf(surface.ceiling).toUpperCase()}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Tab 3: Openings
+// ============================================================
+
+function OpeningsTab() {
+  const room = useRoomTwin((s) => s.room);
+  const placedItems = useRoomTwin((s) => s.placedItems);
+  const { saveState } = useSaveState();
+
+  const [openUid, setOpenUid] = useState<string | null>(null);
+
+  const openings = placedItems.filter(
+    (i) =>
+      i.wallMount &&
+      (i.productId === "door" || i.productId === "window"),
+  );
+
+  return (
+    <div className="rsp-tab-panel active">
+      <div className="opening-actions">
+        <button
+          type="button"
+          className="opening-add-btn"
+          onClick={() => {
+            addOpeningOfType("door");
+            saveState();
+          }}
+        >
+          🚪 + ประตู
+        </button>
+        <button
+          type="button"
+          className="opening-add-btn"
+          onClick={() => {
+            addOpeningOfType("window");
+            saveState();
+          }}
+        >
+          🪟 + หน้าต่าง
+        </button>
+      </div>
+
+      <div className="opening-list">
+        {openings.length === 0 ? (
+          <div className="opening-empty">
+            ยังไม่มีประตู/หน้าต่าง
+            <br />
+            <small>กดปุ่มด้านบนเพื่อเพิ่ม</small>
+          </div>
+        ) : (
+          openings.map((o) => (
+            <OpeningItem
+              key={o.uid}
+              item={o}
+              isOpen={openUid === o.uid}
+              onToggle={() =>
+                setOpenUid((cur) => (cur === o.uid ? null : o.uid))
+              }
+              roomShape={room.shape}
+              onDelete={() => {
+                useRoomTwin.getState().removeItem(o.uid);
+                setOpenUid(null);
+                saveState();
+              }}
+              onUpdate={saveState}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OpeningItem({
+  item,
+  isOpen,
+  onToggle,
+  roomShape,
+  onDelete,
+  onUpdate,
+}: {
+  item: PlacedItem;
+  isOpen: boolean;
+  onToggle: () => void;
+  roomShape: "rect" | "blocks";
+  onDelete: () => void;
+  onUpdate: () => void;
+}) {
+  const product = PRODUCT_BY_ID.get(item.productId);
+  if (!product) return null;
+
+  const wallLabel = WALL_LABEL_FULL[item.wallId!] || "ผนัง";
+  const offsetCm = Math.round((item.u || 0) * 100);
+  const heightCm = Math.round((item.v || 0) * 100);
+
+  const subLine =
+    item.productId === "door"
+      ? `${wallLabel} • ${offsetCm >= 0 ? "+" : ""}${offsetCm} ซม.`
+      : `${wallLabel} • ${offsetCm >= 0 ? "+" : ""}${offsetCm} ซม. • สูง ${heightCm} ซม.`;
+
+  const half = wallFootprint(item.params, item.rotZ || 0);
+  const span = wallSpan(item.wallId!);
+  const minU = Math.round((-span / 2 + 0.05 + half.halfU) * 100);
+  const maxU = Math.round((span / 2 - 0.05 - half.halfU) * 100);
+  const minV = Math.round((0.55 + half.halfV) * 100);
+  const maxV = Math.round(
+    (useRoomTwin.getState().room.h - 0.15 - half.halfV) * 100,
+  );
+
+  return (
+    <div className={`opening-item${isOpen ? " open" : ""}`}>
+      <div className="opening-head" onClick={onToggle}>
+        <div className="oi-icon">
+          {item.productId === "door" ? "🚪" : "🪟"}
+        </div>
+        <div className="oi-main">
+          <div className="oi-name">
+            {item.displayName || product.name}
+          </div>
+          <div className="oi-sub">{subLine}</div>
+        </div>
+        <div className="oi-chev">▼</div>
+      </div>
+
+      {isOpen && (
+        <div className="opening-body">
+          {/* Wall picker */}
+          {roomShape === "rect" && (
+            <div className="opening-field">
+              <div className="opening-field-label">
+                <span>ผนัง</span>
+              </div>
+              <div className="wall-side-row">
+                {(["back", "front", "side", "right"] as const).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`wall-side-btn${
+                      item.wallId === id ? " active" : ""
+                    }`}
+                    onClick={() => {
+                      updateWallItemPosition(item.uid, {
+                        wallId: id,
+                        u: 0,
+                      });
+                      onUpdate();
+                    }}
+                  >
+                    {WALL_LABEL_FULL[id].replace("ผนัง", "")}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* U slider */}
+          <div className="opening-field">
+            <div className="opening-field-label">
+              <span>ตำแหน่งตามแนวผนัง</span>
+              <span className="val">{Math.round(item.u! * 100)} ซม.</span>
+            </div>
+            <input
+              type="range"
+              className="opening-slider"
+              min={minU}
+              max={maxU}
+              step={1}
+              value={Math.round(item.u! * 100)}
+              onChange={(e) => {
+                updateWallItemPosition(item.uid, {
+                  u: parseFloat(e.target.value) / 100,
+                });
+              }}
+              onMouseUp={onUpdate}
+              onTouchEnd={onUpdate}
+            />
+          </div>
+
+          {/* V slider (windows only) */}
+          {!product.groundAnchor && (
+            <div className="opening-field">
+              <div className="opening-field-label">
+                <span>สูงจากพื้น</span>
+                <span className="val">{Math.round(item.v! * 100)} ซม.</span>
+              </div>
+              <input
+                type="range"
+                className="opening-slider"
+                min={minV}
+                max={maxV}
+                step={1}
+                value={Math.round(item.v! * 100)}
+                onChange={(e) => {
+                  updateWallItemPosition(item.uid, {
+                    v: parseFloat(e.target.value) / 100,
+                  });
+                }}
+                onMouseUp={onUpdate}
+                onTouchEnd={onUpdate}
+              />
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="opening-remove"
+            onClick={onDelete}
+          >
+            🗑 ลบช่องเปิดนี้
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Root Panel
+// ============================================================
+
+export default function RoomStructurePanel() {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>("size");
+
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    const onClose = () => setOpen(false);
+    const onToggle = () => setOpen((v) => !v);
+    window.addEventListener("roomtwin:openRoomStructure", onOpen);
+    window.addEventListener("roomtwin:closeRoomStructure", onClose);
+    window.addEventListener("roomtwin:toggleRoomStructure", onToggle);
+    return () => {
+      window.removeEventListener("roomtwin:openRoomStructure", onOpen);
+      window.removeEventListener("roomtwin:closeRoomStructure", onClose);
+      window.removeEventListener("roomtwin:toggleRoomStructure", onToggle);
+    };
+  }, []);
+
+  return (
+    <div
+      className={`room-size-panel${open ? " show" : ""}`}
+      aria-hidden={!open}
+    >
+      <div className="rsp-header">
+        <b>🏗️ ปรับแต่งโครงสร้างห้อง</b>
+        <button
+          type="button"
+          className="rsp-close"
+          onClick={() => setOpen(false)}
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="rsp-tabs">
+        <button
+          type="button"
+          className={`rsp-tab${tab === "size" ? " active" : ""}`}
+          onClick={() => setTab("size")}
+        >
+          📐 ขนาด
+        </button>
+        <button
+          type="button"
+          className={`rsp-tab${tab === "surfaces" ? " active" : ""}`}
+          onClick={() => setTab("surfaces")}
+        >
+          🎨 พื้นผิว
+        </button>
+        <button
+          type="button"
+          className={`rsp-tab${tab === "openings" ? " active" : ""}`}
+          onClick={() => setTab("openings")}
+        >
+          🚪 ช่องเปิด
+        </button>
+      </div>
+
+      <div className="rsp-body">
+        {tab === "size" && <SizeTab />}
+        {tab === "surfaces" && <SurfacesTab />}
+        {tab === "openings" && <OpeningsTab />}
+      </div>
+    </div>
+  );
+}

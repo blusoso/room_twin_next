@@ -1,0 +1,15 @@
+export function priceStr(n: number) {
+  return "฿" + n.toLocaleString("th-TH");
+}
+
+export function hexOf(num: number) {
+  return "#" + (num >>> 0).toString(16).padStart(6, "0");
+}
+
+export function numOf(hex: string) {
+  return parseInt(hex.replace("#", ""), 16);
+}
+
+export function affiliateUrl(p: { id: string }) {
+  return `https://example-shop.com/product/${p.id}?ref=roomtwin_aff`;
+}

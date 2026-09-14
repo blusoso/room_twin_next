@@ -1,7 +1,12 @@
+// next.config.ts
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: false,
+  turbopack: {},
+  outputFileTracingRoot: path.join(__dirname, "./"),
+  transpilePackages: ["three"],
 };
 
 export default nextConfig;
