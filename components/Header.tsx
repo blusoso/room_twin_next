@@ -16,11 +16,9 @@ export default function Header() {
   const cartExcluded = useRoomTwin((s) => s.cartExcluded);
   const history = useRoomTwin((s) => s.history);
   const historyIndex = useRoomTwin((s) => s.historyIndex);
-  const resetAll = useRoomTwin((s) => s.resetAll);
 
   const { saveState } = useSaveState();
 
-  // ===== Cart counts / total =====
   const activeItems = placedItems.filter(
     (i) => !cartExcluded.has(i.productId),
   );
@@ -33,7 +31,6 @@ export default function Header() {
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
-  // ===== Handlers =====
   const handleWallColor = (idx: number, color: number) => {
     setCurrentWallIdx(idx);
     setSurface({ wallAll: color, wallUniform: true });
@@ -71,12 +68,78 @@ export default function Header() {
     );
   };
 
+  // ============================================================
+  // Reset — ลบ scene objects + reset store + seed default
+  // ============================================================
   const handleReset = () => {
     openConfirm(
       "รีเซ็ตห้องกลับเป็นค่าเริ่มต้น? ของที่วางไว้ทั้งหมดจะถูกลบ (ขนาดห้องจะคงอยู่)",
-      () => {
-        resetAll();
-        rebuildAfterReset();
+      async () => {
+        // ⭐ 1. ลบ Three.js objects ทั้งหมด
+        const {
+          objectsByUid,
+          roomGroup,
+          surfaceColliders,
+          wallItemMaterials,
+        } = await import("@/lib/three/scene");
+
+        const uids = Array.from(objectsByUid.keys());
+        uids.forEach((uid) => {
+          const obj = objectsByUid.get(uid);
+          if (obj) {
+            roomGroup.remove(obj);
+            obj.traverse((child: any) => {
+              child.geometry?.dispose?.();
+              if (child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach((m: any) => m?.dispose?.());
+                } else {
+                  child.material.dispose?.();
+                }
+              }
+            });
+          }
+        });
+        objectsByUid.clear();
+        surfaceColliders.clear();
+        wallItemMaterials.clear();
+
+        // ⭐ 2. Reset store (คงขนาดห้องเดิมไว้)
+        const store = useRoomTwin.getState();
+        const keepRoom = store.room;
+
+        store.resetAll();
+
+        useRoomTwin.setState({
+          room: keepRoom,
+          surface: {
+            floor: "wood",
+            wallUniform: true,
+            wallAll: WALL_COLORS[0],
+            walls: {},
+            ceiling: 0xf7f3ea,
+          },
+        });
+
+        // ⭐ 3. รอ tick ให้ store propagate
+        await new Promise((r) => setTimeout(r, 0));
+
+        // ⭐ 4. Rebuild shell
+        const {
+          rebuildRoomShell,
+          applySurface: apply,
+          rebuildBaseboards,
+        } = await import("@/lib/three/roomShell");
+        rebuildRoomShell();
+        apply();
+
+        // ⭐ 5. Seed default door + window
+        const { seedDefaultRoom } = await import("@/hooks/useRoomTwinInit");
+        seedDefaultRoom();
+
+        rebuildBaseboards();
+
+        // ⭐ 6. Save
         saveState();
       },
     );
@@ -89,16 +152,13 @@ export default function Header() {
         <span>ลองแต่งก่อนซื้อจริง</span>
       </div>
 
-      {/* ===== Wall color picker ===== */}
       <div className="wall-picker">
         <span className="lbl">สีผนัง</span>
         {WALL_COLORS.map((c, i) => (
           <div
             key={i}
             className={`swatch${
-              surface.wallUniform && surface.wallAll === c
-                ? " active"
-                : ""
+              surface.wallUniform && surface.wallAll === c ? " active" : ""
             }`}
             data-wall={i}
             style={{ background: hexOf(c) }}
@@ -107,7 +167,6 @@ export default function Header() {
         ))}
       </div>
 
-      {/* ===== Undo / Redo ===== */}
       <div className="history-controls">
         <button
           type="button"
@@ -131,7 +190,6 @@ export default function Header() {
         </button>
       </div>
 
-      {/* ===== Cart ===== */}
       <button
         type="button"
         className="cart-btn"
@@ -154,7 +212,6 @@ export default function Header() {
         </span>
       </button>
 
-      {/* ===== Room size ===== */}
       <button
         type="button"
         className="reset-btn"
@@ -165,7 +222,6 @@ export default function Header() {
         📐 <span className="rsp-btn-label">ขนาดห้อง</span>
       </button>
 
-      {/* ===== Reset ===== */}
       <button
         type="button"
         className="reset-btn"
@@ -176,80 +232,4 @@ export default function Header() {
       </button>
     </header>
   );
-}
-
-// ============================================================
-// Rebuild after reset
-// ============================================================
-
-function rebuildAfterReset() {
-  // ลบ Three.js objects ทั้งหมด + rebuild shell + seed default
-  Promise.all([
-    import("@/lib/three/instantiate"),
-    import("@/lib/three/roomShell"),
-  ]).then(([{ removeInstantiated, instantiate }, { rebuildRoomShell, applySurface, rebuildBaseboards }]) => {
-    const store = useRoomTwin.getState();
-
-    // 1. Remove all objects
-    store.placedItems.forEach((item) => {
-      removeInstantiated(item.uid);
-    });
-
-    // 2. Rebuild shell
-    rebuildRoomShell();
-    applySurface();
-
-    // 3. Seed default door + window
-    const room = store.room;
-    if (room.shape === "rect") {
-      // Door on front wall
-      const doorUid = "i" + Math.random().toString(36).slice(2, 10);
-      const doorItem = {
-        uid: doorUid,
-        productId: "door",
-        params: {
-          w: 95,
-          d: 6,
-          h: 205,
-          color: 0xc9a776,
-          frameColor: 0xf7f3ea,
-        },
-        wallMount: true,
-        wallId: "front",
-        u: -1.35,
-        v: 0.03,
-        rotY: Math.PI,
-        rotZ: 0,
-      };
-      store.addItem(doorItem as any);
-      instantiate(doorItem);
-
-      // Window on back wall
-      const winUid = "i" + Math.random().toString(36).slice(2, 10);
-      const winItem = {
-        uid: winUid,
-        productId: "window",
-        params: {
-          w: 110,
-          d: 6,
-          h: 130,
-          color: 0xcfe0e8,
-          frameColor: 0xf7f3ea,
-          glassColor: 0xcfe0e8,
-          hasCurtains: false,
-          curtainColor: 0xd8b7ae,
-        },
-        wallMount: true,
-        wallId: "back",
-        u: 1.15,
-        v: 1.55,
-        rotY: 0,
-        rotZ: 0,
-      };
-      store.addItem(winItem as any);
-      instantiate(winItem);
-    }
-
-    rebuildBaseboards();
-  });
 }

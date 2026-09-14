@@ -1,8 +1,7 @@
 // hooks/usePointerInteraction.ts
 "use client";
 import { useEffect, useRef } from "react";
-import * as THREE from "three";
-import { renderer, controls } from "@/lib/three/scene";
+import { renderer, controls, objectsByUid } from "@/lib/three/scene";
 import { useRoomTwin } from "@/lib/state/store";
 import { usePlacement } from "./usePlacement";
 import { useSaveState } from "./useSaveState";
@@ -12,15 +11,23 @@ import {
   raycastWallPlacement,
   raycastCeilingPlacement,
   raycastFloorPoint,
-  isOverCanvas,
 } from "@/lib/three/raycast";
 import { hitTestZoneBounds } from "@/lib/three/zoneHelpers";
-import { getZoneBounds } from "@/lib/three/zoneBounds";
-import { footprintOf, resolvePlacement, snap, computeRestY, applyTransformToDescendants, clampToRoom } from "@/lib/three/placement";
-import { resolveWallPlacement, wallFootprint, wallItemWorldXZ } from "@/lib/three/wallPlacement";
+import {
+  footprintOf,
+  resolvePlacement,
+  snap,
+  computeRestY,
+  applyTransformToDescendants,
+  clampToRoom,
+} from "@/lib/three/placement";
+import {
+  resolveWallPlacement,
+  wallFootprint,
+  wallItemWorldXZ,
+} from "@/lib/three/wallPlacement";
 import { resolveCeilingPlacement } from "@/lib/three/ceilingPlacement";
 import { getWallRotY } from "@/lib/three/roomShell";
-import { objectsByUid } from "@/lib/three/scene";
 import {
   hitTestGizmoHandle,
   beginGizmoRotate,
@@ -28,9 +35,12 @@ import {
   endGizmoRotate,
   isGizmoDragging,
 } from "@/lib/three/gizmo";
-import { setItemDragging, setZoneDragging } from "@/lib/three/interactionState";
+import {
+  setItemDragging,
+  setZoneDragging,
+} from "@/lib/three/interactionState";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
-import { WALL_OUTWARD, GRID } from "@/lib/data/constants";
+import { GRID } from "@/lib/data/constants";
 
 const DRAG_THRESHOLD = 8;
 
@@ -62,28 +72,24 @@ export function usePointerInteraction() {
     if (!renderer) return;
     const el = renderer.domElement;
 
-    // ===== Helper =====
-    const getSelectedItem = () => {
-      const { selectedUid, placedItems } = useRoomTwin.getState();
-      if (!selectedUid) return null;
-      return placedItems.find((i) => i.uid === selectedUid) || null;
-    };
-
     const isLocked = (uid: string) => {
       const { placedItems } = useRoomTwin.getState();
       const item = placedItems.find((i) => i.uid === uid);
       return !!(item && item.locked);
     };
 
-    // ===== POINTER DOWN =====
+    const DEBUG = process.env.NODE_ENV === "development";
+
+    // ============================================================
+    // POINTER DOWN
+    // ============================================================
     const onDown = (e: PointerEvent) => {
       pointerDownPos.current = { x: e.clientX, y: e.clientY };
       const store = useRoomTwin.getState();
 
-      // 1. ถ้ากำลัง placing → จัดการที่ pointerup แทน
       if (store.placingProductId || store.placingZoneId) return;
 
-      // 2. Gizmo handle?
+      // Gizmo handle?
       if (
         store.selectedUid &&
         !isLocked(store.selectedUid) &&
@@ -96,7 +102,15 @@ export function usePointerInteraction() {
       const itemUid = hitTestPlacedItems(e.clientX, e.clientY);
       const zoneAtPoint = hitTestZoneBounds(e.clientX, e.clientY);
 
-      // 3. Zone selected → ลากทั้งโซน
+      if (DEBUG) {
+        console.log("[pointer down]", {
+          itemUid,
+          zoneAtPoint,
+          objectsCount: objectsByUid.size,
+        });
+      }
+
+      // Zone selected → drag zone
       if (store.selectedZoneUid) {
         const it = itemUid
           ? store.placedItems.find((i) => i.uid === itemUid)
@@ -122,7 +136,7 @@ export function usePointerInteraction() {
         store.deselectZone();
       }
 
-      // 4. คลิกไอเทม → เริ่ม drag
+      // Click item → item drag ref
       if (itemUid && !isLocked(itemUid)) {
         itemDragRef.current = {
           uid: itemUid,
@@ -135,7 +149,7 @@ export function usePointerInteraction() {
         return;
       }
 
-      // 5. คลิกโซน (แต่ไม่มี item ตรงจุด) → เลือกโซน + เริ่ม drag
+      // Click zone (no item)
       if (zoneAtPoint) {
         store.selectZone(zoneAtPoint);
         zoneDragRef.current = {
@@ -153,7 +167,6 @@ export function usePointerInteraction() {
         return;
       }
 
-      // 6. คลิกที่ว่าง → ปิด panel
       if (store.pendingZoneChooserUid) {
         store.setPendingZoneChooser(null);
         return;
@@ -162,16 +175,17 @@ export function usePointerInteraction() {
       if (store.selectedZoneUid) store.deselectZone();
     };
 
-    // ===== POINTER MOVE =====
+    // ============================================================
+    // POINTER MOVE
+    // ============================================================
     const onMove = (e: PointerEvent) => {
-      // 1. Zone drag
+      // Zone drag
       if (zoneDragRef.current) {
         const zd = zoneDragRef.current;
         const dx = e.clientX - zd.startX;
         const dy = e.clientY - zd.startY;
 
         if (!zd.started && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-          // Start zone drag
           const sp = raycastFloorPoint(zd.startX, zd.startY);
           if (!sp) return;
           const { placedItems } = useRoomTwin.getState();
@@ -214,13 +228,13 @@ export function usePointerInteraction() {
         return;
       }
 
-      // 2. Gizmo drag
+      // Gizmo drag
       if (isGizmoDragging()) {
         updateGizmoRotateDrag(e.clientX, e.clientY);
         return;
       }
 
-      // 3. Item drag
+      // Item drag
       if (itemDragRef.current) {
         const id = itemDragRef.current;
         const dx = e.clientX - id.startX;
@@ -234,12 +248,11 @@ export function usePointerInteraction() {
           try {
             el.setPointerCapture(id.pointerId);
           } catch {}
-          // Lift item
           const obj = objectsByUid.get(id.uid);
           const { placedItems } = useRoomTwin.getState();
           const item = placedItems.find((i) => i.uid === id.uid);
           if (obj && item) {
-            if (item.ceilingMount) obj.position.y = 4; // lift
+            if (item.ceilingMount) obj.position.y = 4;
             else if (!item.wallMount) obj.position.y = 0.02;
           }
           el.style.cursor = "grabbing";
@@ -275,18 +288,9 @@ export function usePointerInteraction() {
           });
           const obj = objectsByUid.get(item.uid);
           if (obj) {
-            const p = {
-              x: 0, z: 0,
-            };
-            const gg = require("@/lib/three/roomShell").getWallGeom(hit.wallId);
-            // คำนวณ position ใหม่จาก u,v
-            import("@/lib/three/wallPlacement").then(({ wallItemWorldXZ }) => {
-              const w = wallItemWorldXZ({
-                wallId: hit.wallId, u: c.u,
-              });
-              obj.position.set(w.x, c.v, w.z);
-              obj.rotation.y = getWallRotY(hit.wallId);
-            });
+            const w = wallItemWorldXZ({ wallId: hit.wallId, u: c.u });
+            obj.position.set(w.x, c.v, w.z);
+            obj.rotation.y = getWallRotY(hit.wallId);
           }
           return;
         }
@@ -339,15 +343,13 @@ export function usePointerInteraction() {
         return;
       }
 
-      // 4. Cursor feedback
-      if (
-        useRoomTwin.getState().placingProductId ||
-        useRoomTwin.getState().placingZoneId
-      ) {
+      // Cursor feedback
+      const store = useRoomTwin.getState();
+      if (store.placingProductId || store.placingZoneId) {
         el.style.cursor = "crosshair";
         return;
       }
-      if (useRoomTwin.getState().selectedUid && hitTestGizmoHandle(e.clientX, e.clientY)) {
+      if (store.selectedUid && hitTestGizmoHandle(e.clientX, e.clientY)) {
         el.style.cursor = "grab";
         return;
       }
@@ -359,11 +361,13 @@ export function usePointerInteraction() {
       el.style.cursor = "auto";
     };
 
-    // ===== POINTER UP =====
+    // ============================================================
+    // POINTER UP — ⭐ Fix: ถ้า tap (ไม่ drag) → selectItem
+    // ============================================================
     const onUp = (e: PointerEvent) => {
       const store = useRoomTwin.getState();
 
-      // 1. Zone drag
+      // Zone drag
       if (zoneDragRef.current) {
         const zd = zoneDragRef.current;
         const { started, itemUid, zoneUid } = zd;
@@ -386,14 +390,14 @@ export function usePointerInteraction() {
         return;
       }
 
-      // 2. Gizmo drag
+      // Gizmo drag
       if (isGizmoDragging()) {
         endGizmoRotate(e);
         saveState();
         return;
       }
 
-      // 3. Item drag
+      // ⭐⭐ ITEM — แก้แล้ว ⭐⭐
       if (itemDragRef.current) {
         const id = itemDragRef.current;
         controls.enabled = true;
@@ -404,7 +408,7 @@ export function usePointerInteraction() {
         } catch {}
 
         if (id.moved) {
-          // Snap back y position
+          // ===== ลากจริง =====
           const obj = objectsByUid.get(id.uid);
           const { placedItems } = useRoomTwin.getState();
           const item = placedItems.find((i) => i.uid === id.uid);
@@ -415,19 +419,28 @@ export function usePointerInteraction() {
           }
           saveState();
           store.selectItem(id.uid);
+          if (DEBUG) {
+            console.log("[pointer up] drag → selectItem", id.uid);
+          }
+        } else {
+          // ⭐ คลิกเฉยๆ → select (นี่คือ fix!)
+          store.selectItem(id.uid);
+          if (DEBUG) {
+            console.log("[pointer up] tap → selectItem", id.uid);
+          }
         }
         itemDragRef.current = null;
         return;
       }
 
-      // 4. Click (ตรวจระยะ)
+      // Click (moved ตรวจระยะ)
       const moved =
         pointerDownPos.current &&
         (Math.abs(e.clientX - pointerDownPos.current.x) > 6 ||
           Math.abs(e.clientY - pointerDownPos.current.y) > 6);
       if (moved) return;
 
-      // 5. Placing zone
+      // Placing zone
       if (store.placingZoneId) {
         placeZone(store.placingZoneId, e.clientX, e.clientY);
         store.cancelPlacing();
@@ -435,7 +448,7 @@ export function usePointerInteraction() {
         return;
       }
 
-      // 6. Placing product
+      // Placing product
       if (store.placingProductId) {
         const pid = store.placingProductId;
         const tid = store.placingThemeId;
@@ -448,16 +461,23 @@ export function usePointerInteraction() {
         return;
       }
 
-      // 7. Select item / close panel
+      // Click empty space
       const uid = hitTestPlacedItems(e.clientX, e.clientY);
-      if (uid) store.selectItem(uid);
-      else {
+      if (DEBUG) {
+        console.log("[pointer up]", {
+          uid,
+          objectsCount: objectsByUid.size,
+        });
+      }
+      if (uid) {
+        store.selectItem(uid);
+      } else {
         store.closeItemPanel();
         store.deselectZone();
       }
     };
 
-    // ===== POINTER CANCEL =====
+    // Pointer cancel
     const onCancel = () => {
       if (zoneDragRef.current) {
         controls.enabled = true;
@@ -481,7 +501,6 @@ export function usePointerInteraction() {
       }
     };
 
-    // ===== Attach =====
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp);

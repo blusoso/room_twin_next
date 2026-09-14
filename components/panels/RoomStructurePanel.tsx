@@ -1,13 +1,12 @@
 // components/panels/RoomStructurePanel.tsx
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import {
   FLOOR_STYLES,
   WALL_CHIP_COLORS,
   WALL_LABEL_FULL,
   ROOM_LIMITS,
-  ROOM_DEFAULT,
 } from "@/lib/data/constants";
 import { hexOf, numOf } from "@/lib/utils/format";
 import { makeFloorCanvas } from "@/lib/three/surfaceTextures";
@@ -15,12 +14,14 @@ import {
   applySurface as applySurfaceToThree,
   rebuildRoomShell,
   getWallRotY,
-  getWallGeom,
   wallSpan,
 } from "@/lib/three/roomShell";
 import { reclampAllToRoom } from "@/lib/three/reclamp";
-import { instantiate, reinstantiateItem } from "@/lib/three/instantiate";
-import { resolveWallPlacement, wallFootprint } from "@/lib/three/wallPlacement";
+import { instantiate } from "@/lib/three/instantiate";
+import {
+  resolveWallPlacement,
+  wallFootprint,
+} from "@/lib/three/wallPlacement";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
@@ -34,7 +35,6 @@ type Tab = "size" | "surfaces" | "openings";
 function pickVisibleWall(): string {
   const { room } = useRoomTwin.getState();
   if (room.shape !== "rect") return "back";
-  // เลือกผนังที่มองจากด้านหน้าก่อน (fallback)
   return "front";
 }
 
@@ -46,10 +46,7 @@ function addOpeningOfType(pid: string) {
   const wallId = pickVisibleWall();
   const params = defaultParamsFor(p);
   const { halfU, halfV } = wallFootprint(params, 0);
-
-  const v = p.groundAnchor
-    ? halfV
-    : Math.round(store.room.h * 60) / 100;
+  const v = p.groundAnchor ? 0 : Math.round(store.room.h * 60) / 100;
 
   const c = resolveWallPlacement(
     null,
@@ -77,7 +74,6 @@ function addOpeningOfType(pid: string) {
   store.addItem(item);
   instantiate(item);
 
-  // rebuild baseboards ถ้าเป็นประตู
   if (pid === "door") {
     import("@/lib/three/roomShell").then(({ rebuildBaseboards }) =>
       rebuildBaseboards(),
@@ -116,19 +112,20 @@ function updateWallItemPosition(
     rotY,
   });
 
-  // update object position
   import("@/lib/three/scene").then(({ objectsByUid }) => {
     const obj = objectsByUid.get(uid);
     if (!obj) return;
-    const g = getWallGeom(wallId);
-    if (!g) return;
-    const outward = 0.012;
-    obj.position.set(
-      g.cx + g.dx * c.u - g.nx * outward,
-      c.v,
-      g.cz + g.dz * c.u - g.nz * outward,
-    );
-    obj.rotation.y = rotY;
+    import("@/lib/three/roomShell").then(({ getWallGeom }) => {
+      const g = getWallGeom(wallId);
+      if (!g) return;
+      const outward = 0.012;
+      obj.position.set(
+        g.cx + g.dx * c.u - g.nx * outward,
+        c.v,
+        g.cz + g.dz * c.u - g.nz * outward,
+      );
+      obj.rotation.y = rotY;
+    });
   });
 
   if (product.id === "door") {
@@ -255,10 +252,12 @@ function SizeTab() {
   const setRoom = useRoomTwin((s) => s.setRoom);
   const { saveState, saveStateDebounced } = useSaveState();
 
+  // ⭐ ใช้ reclamp + rebuild เมื่อเปลี่ยน dimension
   const handleDimChange = (key: "w" | "d" | "h", value: number) => {
     const lim = ROOM_LIMITS[key];
     const v = Math.max(lim.min, Math.min(lim.max, value));
     setRoom({ [key]: v } as any);
+    // Canvas3D effect จะ rebuild + reclamp ให้
     saveStateDebounced();
   };
 
@@ -284,7 +283,6 @@ function SizeTab() {
             onClick={() => {
               if (room.shape === "rect") return;
               const store = useRoomTwin.getState();
-              // remove wall items
               store.replaceItems(
                 store.placedItems.filter((i) => !i.wallMount),
               );
@@ -319,9 +317,11 @@ function SizeTab() {
       {(["w", "d", "h"] as const).map((key) => {
         const lim = ROOM_LIMITS[key];
         const label =
-          key === "w" ? "📏 กว้าง (ซ้าย–ขวา)"
-          : key === "d" ? "📏 ลึก (หน้า–หลัง)"
-          : "📏 สูงฝ้าเพดาน";
+          key === "w"
+            ? "📏 กว้าง (ซ้าย–ขวา)"
+            : key === "d"
+              ? "📏 ลึก (หน้า–หลัง)"
+              : "📏 สูงฝ้าเพดาน";
         const disabled = room.shape === "blocks" && key !== "h";
         const value = room[key];
         const decimals = key === "h" ? 2 : 1;
@@ -382,48 +382,27 @@ function SizeTab() {
 
       {room.shape !== "blocks" && (
         <div className="rsp-presets">
-          <div
-            className={`rsp-preset-card${
-              Math.abs(room.w - 3.4) < 0.01 &&
-              Math.abs(room.d - 3.0) < 0.01 &&
-              Math.abs(room.h - 2.5) < 0.01
-                ? " active"
-                : ""
-            }`}
-            onClick={() => handlePresetClick(3.4, 3.0, 2.5)}
-          >
-            <div className="pc-icon">🔹</div>
-            <div className="pc-name">ห้องเล็ก</div>
-            <div className="pc-dims">3.4×3.0 ม.</div>
-          </div>
-          <div
-            className={`rsp-preset-card${
-              Math.abs(room.w - 4.2) < 0.01 &&
-              Math.abs(room.d - 3.6) < 0.01 &&
-              Math.abs(room.h - 2.6) < 0.01
-                ? " active"
-                : ""
-            }`}
-            onClick={() => handlePresetClick(4.2, 3.6, 2.6)}
-          >
-            <div className="pc-icon">🔷</div>
-            <div className="pc-name">ห้องกลาง</div>
-            <div className="pc-dims">4.2×3.6 ม.</div>
-          </div>
-          <div
-            className={`rsp-preset-card${
-              Math.abs(room.w - 5.6) < 0.01 &&
-              Math.abs(room.d - 4.6) < 0.01 &&
-              Math.abs(room.h - 2.8) < 0.01
-                ? " active"
-                : ""
-            }`}
-            onClick={() => handlePresetClick(5.6, 4.6, 2.8)}
-          >
-            <div className="pc-icon">🔶</div>
-            <div className="pc-name">ห้องใหญ่</div>
-            <div className="pc-dims">5.6×4.6 ม.</div>
-          </div>
+          {[
+            { w: 3.4, d: 3.0, h: 2.5, icon: "🔹", name: "ห้องเล็ก", dims: "3.4×3.0 ม." },
+            { w: 4.2, d: 3.6, h: 2.6, icon: "🔷", name: "ห้องกลาง", dims: "4.2×3.6 ม." },
+            { w: 5.6, d: 4.6, h: 2.8, icon: "🔶", name: "ห้องใหญ่", dims: "5.6×4.6 ม." },
+          ].map((p, i) => (
+            <div
+              key={i}
+              className={`rsp-preset-card${
+                Math.abs(room.w - p.w) < 0.01 &&
+                Math.abs(room.d - p.d) < 0.01 &&
+                Math.abs(room.h - p.h) < 0.01
+                  ? " active"
+                  : ""
+              }`}
+              onClick={() => handlePresetClick(p.w, p.d, p.h)}
+            >
+              <div className="pc-icon">{p.icon}</div>
+              <div className="pc-name">{p.name}</div>
+              <div className="pc-dims">{p.dims}</div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -441,7 +420,6 @@ function SizeTab() {
 // ============================================================
 
 function SurfacesTab() {
-  const room = useRoomTwin((s) => s.room);
   const surface = useRoomTwin((s) => s.surface);
   const setSurface = useRoomTwin((s) => s.setSurface);
   const { saveState } = useSaveState();
@@ -454,7 +432,6 @@ function SurfacesTab() {
 
   return (
     <div className="rsp-tab-panel active">
-      {/* ---- Floor ---- */}
       <div className="rsp-subsec">
         <div className="rsp-subsec-title">🟫 วัสดุพื้น</div>
         <div className="floor-grid">
@@ -475,10 +452,8 @@ function SurfacesTab() {
         </div>
       </div>
 
-      {/* ---- Walls ---- */}
       <div className="rsp-subsec">
         <div className="rsp-subsec-title">🧱 สีผนัง</div>
-
         <div className="wall-uniform-toggle">
           <div>
             <span className="wut-label">🎨 ใช้สีเดียวกันทุกผนัง</span>
@@ -563,7 +538,6 @@ function SurfacesTab() {
         )}
       </div>
 
-      {/* ---- Ceiling ---- */}
       <div className="rsp-subsec">
         <div className="rsp-subsec-title">⬜ เพดาน</div>
         <div className="cz-row">
@@ -593,7 +567,6 @@ function OpeningsTab() {
   const room = useRoomTwin((s) => s.room);
   const placedItems = useRoomTwin((s) => s.placedItems);
   const { saveState } = useSaveState();
-
   const [openUid, setOpenUid] = useState<string | null>(null);
 
   const openings = placedItems.filter(
@@ -711,7 +684,6 @@ function OpeningItem({
 
       {isOpen && (
         <div className="opening-body">
-          {/* Wall picker */}
           {roomShape === "rect" && (
             <div className="opening-field">
               <div className="opening-field-label">
@@ -740,7 +712,6 @@ function OpeningItem({
             </div>
           )}
 
-          {/* U slider */}
           <div className="opening-field">
             <div className="opening-field-label">
               <span>ตำแหน่งตามแนวผนัง</span>
@@ -763,7 +734,6 @@ function OpeningItem({
             />
           </div>
 
-          {/* V slider (windows only) */}
           {!product.groundAnchor && (
             <div className="opening-field">
               <div className="opening-field-label">
@@ -802,12 +772,38 @@ function OpeningItem({
 }
 
 // ============================================================
-// Root Panel
+// Root Panel — ⭐ Fix 6: position ใต้ปุ่ม roomSizeBtn
 // ============================================================
 
 export default function RoomStructurePanel() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("size");
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // ⭐ คำนวณ position ของ panel ให้อยู่ใต้ปุ่ม 📐
+  const positionPanel = useCallback(() => {
+    if (!panelRef.current) return;
+    const btn = document.getElementById("roomSizeBtn");
+    if (!btn) return;
+
+    const r = btn.getBoundingClientRect();
+    const w = panelRef.current.offsetWidth || 380;
+    const margin = 8;
+
+    let left = r.right - w;
+    left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
+    const top = r.bottom + 6;
+
+    panelRef.current.style.left = left + "px";
+    panelRef.current.style.top = top + "px";
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    positionPanel();
+    window.addEventListener("resize", positionPanel);
+    return () => window.removeEventListener("resize", positionPanel);
+  }, [open, positionPanel]);
 
   useEffect(() => {
     const onOpen = () => setOpen(true);
@@ -825,8 +821,10 @@ export default function RoomStructurePanel() {
 
   return (
     <div
+      ref={panelRef}
       className={`room-size-panel${open ? " show" : ""}`}
       aria-hidden={!open}
+      style={{ position: "fixed" }}
     >
       <div className="rsp-header">
         <b>🏗️ ปรับแต่งโครงสร้างห้อง</b>

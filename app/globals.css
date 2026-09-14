@@ -1570,8 +1570,7 @@ aside {
 
 .room-size-panel {
   position: fixed;
-  top: 60px;
-  left: 60px;
+  /* ✅ ลบ top/left ออก — JS จะ set ผ่าน ref */
   transform: translateY(-16px);
   width: min(380px, calc(100vw - 16px));
   background: #fff;

@@ -6,15 +6,10 @@ import { useRoomTwin } from "@/lib/state/store";
 import { camera, renderer, objectsByUid } from "@/lib/three/scene";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
 import { rotateItemBy90 } from "@/lib/three/gizmo";
-import {
-  removeZoneFull,
-  swapZoneSlotFull,
-  moveItemOutOfZoneFull,
-} from "@/lib/three/zoneActions";
-import { removeInstantiated, reinstantiateItem } from "@/lib/three/instantiate";
+import { removeZoneFull } from "@/lib/three/zoneActions";
+import { removeInstantiated } from "@/lib/three/instantiate";
 import { resolveRestHeights } from "@/lib/three/placement";
-import { rebuildBaseboards } from "@/lib/three/roomShell";
-import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
@@ -41,36 +36,39 @@ export default function FloatingToolbar() {
 
   const zoneMode = !!selectedZoneUid;
 
-  // ===== คำนวณตำแหน่ง (ทุก frame) =====
+  // ===== Compute position (RAF) =====
   useEffect(() => {
+    if (!renderer) return;
+
     let raf = 0;
     const box = new THREE.Box3();
     const topPoint = new THREE.Vector3();
 
     const tick = () => {
+      // Zone mode
       if (zoneMode && selectedZoneUid) {
         const b = getZoneBounds(selectedZoneUid);
         if (!b) {
           setPos((p) => (p.show ? { ...p, show: false } : p));
-          raf = requestAnimationFrame(tick);
-          return;
-        }
-        topPoint.set(b.cx, 0.5, b.cz).project(camera);
-        if (topPoint.z > 1) {
-          setPos((p) => (p.show ? { ...p, show: false } : p));
         } else {
-          const rect = renderer.domElement.getBoundingClientRect();
-          setPos({
-            x: (topPoint.x * 0.5 + 0.5) * rect.width,
-            y: (-topPoint.y * 0.5 + 0.5) * rect.height,
-            show: true,
-          });
+          topPoint.set(b.cx, 0.5, b.cz).project(camera);
+          if (topPoint.z > 1) {
+            setPos((p) => (p.show ? { ...p, show: false } : p));
+          } else {
+            const rect = renderer.domElement.getBoundingClientRect();
+            setPos({
+              x: (topPoint.x * 0.5 + 0.5) * rect.width,
+              y: (-topPoint.y * 0.5 + 0.5) * rect.height,
+              show: true,
+            });
+          }
         }
         setMode("zone");
         raf = requestAnimationFrame(tick);
         return;
       }
 
+      // No selection
       if (!selectedUid) {
         setPos((p) => (p.show ? { ...p, show: false } : p));
         raf = requestAnimationFrame(tick);
@@ -79,6 +77,10 @@ export default function FloatingToolbar() {
 
       const obj = objectsByUid.get(selectedUid);
       if (!obj || !obj.visible) {
+        // ⭐ log ว่าไม่เจอ object (debug)
+        if (process.env.NODE_ENV === "development") {
+          // console.log("[FloatingToolbar] obj missing for", selectedUid);
+        }
         setPos((p) => (p.show ? { ...p, show: false } : p));
         raf = requestAnimationFrame(tick);
         return;
@@ -88,7 +90,7 @@ export default function FloatingToolbar() {
         .getState()
         .placedItems.find((i) => i.uid === selectedUid);
       box.setFromObject(obj);
-      let topY = it?.ceilingMount ? box.min.y : box.max.y;
+      const topY = it?.ceilingMount ? box.min.y : box.max.y;
 
       topPoint.set(
         (box.min.x + box.max.x) / 2,
@@ -115,11 +117,7 @@ export default function FloatingToolbar() {
     return () => cancelAnimationFrame(raf);
   }, [selectedUid, selectedZoneUid, zoneMode, placedItems]);
 
-  if (!pos.show) {
-    return <div className="floating-toolbar" id="floatingToolbar" />;
-  }
-
-  // ===== Item mode handlers =====
+  // ===== Item handlers =====
   const handleRotLeft = () => {
     if (!selectedUid || (item && item.locked)) return;
     rotateItemBy90(selectedUid, -1);
@@ -157,7 +155,7 @@ export default function FloatingToolbar() {
     selectZone(item.zoneUid);
   };
 
-  // ===== Zone mode handlers =====
+  // ===== Zone handlers =====
   const handleZoneRotate = (dir: -1 | 1) => {
     if (!selectedZoneUid) return;
     rotateZone(selectedZoneUid, dir);
@@ -183,6 +181,10 @@ export default function FloatingToolbar() {
     );
   };
 
+  if (!pos.show) {
+    return <div className="floating-toolbar" id="floatingToolbar" />;
+  }
+
   return (
     <div
       className={`floating-toolbar ${
@@ -191,7 +193,6 @@ export default function FloatingToolbar() {
       id="floatingToolbar"
       style={{ left: pos.x + "px", top: pos.y + "px" }}
     >
-      {/* ===== Item mode ===== */}
       <button
         type="button"
         className="ft-btn item-btn"
@@ -212,7 +213,6 @@ export default function FloatingToolbar() {
       >
         ⟳
       </button>
-
       <button
         type="button"
         className={`ft-btn item-btn${item?.locked ? " locked" : ""}`}
@@ -222,7 +222,6 @@ export default function FloatingToolbar() {
       >
         {item?.locked ? "🔒" : "🔓"}
       </button>
-
       <button
         type="button"
         className="ft-btn item-btn customize"
@@ -232,7 +231,6 @@ export default function FloatingToolbar() {
       >
         🎨
       </button>
-
       <button
         type="button"
         className="ft-btn item-btn swap"
@@ -242,7 +240,6 @@ export default function FloatingToolbar() {
       >
         ⇄
       </button>
-
       <button
         type="button"
         className="ft-btn item-btn"
@@ -252,7 +249,6 @@ export default function FloatingToolbar() {
       >
         ⧉
       </button>
-
       {item?.zoneUid && (
         <button
           type="button"
@@ -264,7 +260,6 @@ export default function FloatingToolbar() {
           📦
         </button>
       )}
-
       <button
         type="button"
         className="ft-btn item-btn danger"
@@ -275,7 +270,7 @@ export default function FloatingToolbar() {
         🗑
       </button>
 
-      {/* ===== Zone mode ===== */}
+      {/* Zone mode */}
       <button
         type="button"
         className="ft-btn zone-only theme"
@@ -287,7 +282,6 @@ export default function FloatingToolbar() {
       >
         ✨
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only"
@@ -297,7 +291,6 @@ export default function FloatingToolbar() {
       >
         ⟲
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only"
@@ -307,7 +300,6 @@ export default function FloatingToolbar() {
       >
         ⟳
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only"
@@ -317,7 +309,6 @@ export default function FloatingToolbar() {
       >
         ✏️
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only danger"
@@ -327,7 +318,6 @@ export default function FloatingToolbar() {
       >
         🗑
       </button>
-
       <button
         type="button"
         className="ft-btn zone-only"
@@ -337,7 +327,6 @@ export default function FloatingToolbar() {
       >
         ✕
       </button>
-
       <div className="ft-arrow" />
     </div>
   );
@@ -357,7 +346,6 @@ function duplicateItem(uid: string) {
   const clonedParams = JSON.parse(JSON.stringify(item.params));
   const newUid = "i" + Math.random().toString(36).slice(2, 10);
 
-  // Wall items
   if (item.wallMount) {
     const newItem: PlacedItem = {
       uid: newUid,
@@ -380,7 +368,6 @@ function duplicateItem(uid: string) {
     return;
   }
 
-  // Ceiling items
   if (item.ceilingMount) {
     const newItem: PlacedItem = {
       uid: newUid,
@@ -401,7 +388,6 @@ function duplicateItem(uid: string) {
     return;
   }
 
-  // Floor items
   const newItem: PlacedItem = {
     uid: newUid,
     productId: item.productId,
@@ -447,11 +433,7 @@ function rotateZone(zuid: string, dir: -1 | 1) {
     const nz = cz + (dx * s + dz * c);
     const nrot = (it.rotY || 0) + ang;
 
-    store.updateItem(it.uid, {
-      x: nx,
-      z: nz,
-      rotY: nrot,
-    });
+    store.updateItem(it.uid, { x: nx, z: nz, rotY: nrot });
 
     const obj = objectsByUid.get(it.uid);
     if (obj) {

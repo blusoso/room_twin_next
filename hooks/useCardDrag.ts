@@ -57,7 +57,6 @@ export function useCardDrag({
       kind: DragKind,
       themeId: string | null = null,
     ) => {
-      // Only primary button (left mouse / touch)
       if ("button" in e && e.button !== undefined && e.button !== 0) return;
 
       const state: DragState = {
@@ -72,7 +71,6 @@ export function useCardDrag({
         ghostEl: null,
       };
 
-      // ===== Handlers =====
       const onMove = (me: PointerEvent) => {
         const dx = me.clientX - state.startX;
         const dy = me.clientY - state.startY;
@@ -97,7 +95,6 @@ export function useCardDrag({
       };
 
       const onUp = (ue: PointerEvent) => {
-        // cleanup listeners
         document.removeEventListener("pointermove", onMove);
         document.removeEventListener("pointerup", onUp);
         document.removeEventListener("pointercancel", onUp);
@@ -111,25 +108,19 @@ export function useCardDrag({
         // ===== Moved → drop in canvas =====
         if (state.moved) {
           if (isOverCanvas(ue.clientX, ue.clientY)) {
-            let uid: string | null = null;
-
             if (state.kind === "zone") {
-              const res = placeZone(state.id, ue.clientX, ue.clientY);
-              uid = res.uid;
+              placeZone(state.id, ue.clientX, ue.clientY);
             } else if (state.kind === "themed") {
-              const res = placeThemedProduct(
+              placeThemedProduct(
                 state.id,
                 state.themeId!,
                 ue.clientX,
                 ue.clientY,
               );
-              uid = res.uid;
             } else {
-              const res = placeProduct(state.id, ue.clientX, ue.clientY);
-              uid = res.uid;
+              placeProduct(state.id, ue.clientX, ue.clientY);
             }
-
-            if (uid) store.selectItem(uid);
+            // ⭐ ไม่ selectItem อัตโนมัติ — ไม่ให้ toolbar ขึ้นทันที
             if (typeof window !== "undefined" && window.innerWidth <= 820) {
               store.collapseDrawer();
             }
@@ -180,7 +171,6 @@ export function useCardDrag({
         }
       };
 
-      // ===== Attach =====
       document.addEventListener("pointermove", onMove);
       document.addEventListener("pointerup", onUp, { once: true });
       document.addEventListener("pointercancel", onUp, { once: true });

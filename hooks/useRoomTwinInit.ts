@@ -2,12 +2,19 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useRoomTwin } from "@/lib/state/store";
-import { loadFromStorage, saveToStorage } from "@/lib/state/storage";
-import { ROOM_DEFAULT, WALL_COLORS, CELL_SIZE } from "@/lib/data/constants";
-import { initRoomShell, rebuildBaseboards } from "@/lib/three/roomShell";
+import { loadFromStorage } from "@/lib/state/storage";
+import {
+  ROOM_DEFAULT,
+  WALL_COLORS,
+  CELL_SIZE,
+} from "@/lib/data/constants";
 import { instantiate } from "@/lib/three/instantiate";
-import { resolveRestHeights } from "@/lib/three/placement";
-import type { SerializedState } from "@/lib/state/types";
+import {
+  wallFootprint,
+  resolveWallPlacement,
+} from "@/lib/three/wallPlacement";
+import { getWallRotY } from "@/lib/three/roomShell";
+import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 
 export function useRoomTwinInit() {
   const ran = useRef(false);
@@ -22,14 +29,12 @@ export function useRoomTwinInit() {
       replaceItems,
       setCurrentWallIdx,
       resetHistory,
-      addItem,
       setZoneMeta,
     } = useRoomTwin.getState();
 
     const state = loadFromStorage();
 
     if (state) {
-      // ===== Room =====
       setRoom({
         w: state.room?.w ?? ROOM_DEFAULT.w,
         d: state.room?.d ?? ROOM_DEFAULT.d,
@@ -39,7 +44,6 @@ export function useRoomTwinInit() {
         blocks: state.room?.blocks ? new Set(state.room.blocks) : null,
       });
 
-      // ===== Surface =====
       setSurface({
         floor: state.surface?.floor ?? "wood",
         wallUniform: state.surface?.wallUniform !== false,
@@ -48,21 +52,16 @@ export function useRoomTwinInit() {
         ceiling: state.surface?.ceiling ?? 0xf7f3ea,
       });
 
-      // ===== Wall index =====
       if (typeof state.wall === "number") setCurrentWallIdx(state.wall);
 
-      // ===== Zone meta =====
       if (Array.isArray(state.zoneMeta)) {
         state.zoneMeta.forEach(([zuid, meta]) => setZoneMeta(zuid, meta));
       }
 
-      // ===== Items =====
       if (Array.isArray(state.items) && state.items.length > 0) {
         replaceItems(state.items);
-        // Instantiate หลัง initShell ด้านล่าง
       }
     } else {
-      // Default room
       setRoom({
         w: ROOM_DEFAULT.w,
         d: ROOM_DEFAULT.d,
@@ -80,83 +79,95 @@ export function useRoomTwinInit() {
       });
     }
 
-    // ===== Init Three.js shell (ต้องเรียกหลัง setRoom/setSurface) =====
-    initRoomShell();
-
-    // ===== Instantiate items =====
+    // ⭐ ถ้าไม่มี items → seed default door/window
     const items = useRoomTwin.getState().placedItems;
     if (items.length === 0) {
-      // Seed default door + window
       seedDefaultRoom();
-    } else {
-      items.forEach((item) => {
-        instantiate(item);
-      });
-      resolveRestHeights();
     }
 
-    rebuildBaseboards();
-
-    // ===== History =====
+    // History snapshot
+    const s = useRoomTwin.getState();
     const snapshot = JSON.stringify({
-      wall: useRoomTwin.getState().currentWallIdx,
-      items: useRoomTwin.getState().placedItems,
-      zoneMeta: [...useRoomTwin.getState().zoneMeta.entries()],
-      surface: useRoomTwin.getState().surface,
+      wall: s.currentWallIdx,
+      items: s.placedItems,
+      zoneMeta: [...s.zoneMeta.entries()],
+      surface: s.surface,
       room: {
-        ...useRoomTwin.getState().room,
-        blocks: useRoomTwin.getState().room.blocks
-          ? [...useRoomTwin.getState().room.blocks!]
-          : null,
+        ...s.room,
+        blocks: s.room.blocks ? [...s.room.blocks] : null,
       },
     });
     resetHistory(snapshot);
   }, []);
 }
 
-// ===== Seed default room (door + window) =====
-function seedDefaultRoom() {
-  const { addItem } = useRoomTwin.getState();
-  const room = useRoomTwin.getState().room;
+// ============================================================
+// Seed default room — ประตูหน้าผนังหลัง, หน้าต่างผนังหลัง
+// ⭐ export เพื่อให้ Header เรียกตอน reset ได้
+// ============================================================
 
+export function seedDefaultRoom() {
+  const store = useRoomTwin.getState();
+  const room = store.room;
   if (room.shape !== "rect") return;
 
-  // Door on front wall
-  const doorUid = "i" + Math.random().toString(36).slice(2, 10);
-  addItem({
-    uid: doorUid,
-    productId: "door",
-    params: {
-      w: 95, d: 6, h: 205, color: 0xc9a776,
-      frameColor: 0xf7f3ea,
-    },
-    wallMount: true,
-    wallId: "front",
-    u: -1.35,
-    v: 0.03,
-    rotY: Math.PI,
-    rotZ: 0,
-  });
-  instantiate(useRoomTwin.getState().placedItems.find((i) => i.uid === doorUid)!);
+  // ===== Door (front wall, ground anchor) =====
+  const doorP = PRODUCT_BY_ID.get("door");
+  if (doorP) {
+    const dp = defaultParamsFor(doorP);
+    const { halfU, halfV } = wallFootprint(dp, 0);
+    const c = resolveWallPlacement(
+      null,
+      "front",
+      -1.35,
+      0,                              // ⭐ v = 0 (ground anchor)
+      halfU,
+      halfV,
+      doorP.groundAnchor || false,
+    );
+    const uid = "i" + Math.random().toString(36).slice(2, 10);
+    const item = {
+      uid,
+      productId: "door",
+      params: dp,
+      wallMount: true,
+      wallId: "front",
+      u: c.u,
+      v: c.v,
+      rotY: getWallRotY("front"),
+      rotZ: 0,
+    };
+    store.addItem(item);
+    instantiate(item);
+  }
 
-  // Window on back wall
-  const winUid = "i" + Math.random().toString(36).slice(2, 10);
-  addItem({
-    uid: winUid,
-    productId: "window",
-    params: {
-      w: 110, d: 6, h: 130, color: 0xcfe0e8,
-      frameColor: 0xf7f3ea,
-      glassColor: 0xcfe0e8,
-      hasCurtains: false,
-      curtainColor: 0xd8b7ae,
-    },
-    wallMount: true,
-    wallId: "back",
-    u: 1.15,
-    v: 1.55,
-    rotY: 0,
-    rotZ: 0,
-  });
-  instantiate(useRoomTwin.getState().placedItems.find((i) => i.uid === winUid)!);
+  // ===== Window (back wall) =====
+  const winP = PRODUCT_BY_ID.get("window");
+  if (winP) {
+    const wp = defaultParamsFor(winP);
+    const { halfU, halfV } = wallFootprint(wp, 0);
+    const c = resolveWallPlacement(
+      null,
+      "back",
+      1.15,
+      1.55,
+      halfU,
+      halfV,
+      false,
+    );
+    const uid = "i" + Math.random().toString(36).slice(2, 10);
+    const item = {
+      uid,
+      productId: "window",
+      params: wp,
+      wallMount: true,
+      wallId: "back",
+      u: c.u,
+      v: c.v,
+      rotY: getWallRotY("back"),
+      rotZ: 0,
+    };
+    store.addItem(item);
+    instantiate(item);
+  }
 }
