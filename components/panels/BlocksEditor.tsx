@@ -2,10 +2,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
-import { rebuildRoomShell, rebuildBaseboards } from "@/lib/three/roomShell";
-import { reclampAllToRoom } from "@/lib/three/reclamp";
-import { instantiate } from "@/lib/three/instantiate";
-import { ensureDefaultOpenings } from "@/hooks/useRoomTwinInit";
 import { useSaveState } from "@/hooks/useSaveState";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
 
@@ -39,7 +35,10 @@ function initBlocksFromRect(w: number, d: number, cellSize: number) {
 
 function computeBBox(blocks: Set<string>, cellSize: number) {
   if (blocks.size === 0) return null;
-  let minI = Infinity, maxI = -Infinity, minJ = Infinity, maxJ = -Infinity;
+  let minI = Infinity,
+    maxI = -Infinity,
+    minJ = Infinity,
+    maxJ = -Infinity;
   blocks.forEach((k) => {
     const [i, j] = k.split(",").map(Number);
     minI = Math.min(minI, i);
@@ -48,7 +47,10 @@ function computeBBox(blocks: Set<string>, cellSize: number) {
     maxJ = Math.max(maxJ, j);
   });
   return {
-    minI, maxI, minJ, maxJ,
+    minI,
+    maxI,
+    minJ,
+    maxJ,
     w: (maxI - minI + 1) * cellSize,
     d: (maxJ - minJ + 1) * cellSize,
   };
@@ -63,10 +65,9 @@ export default function BlocksEditor() {
 
   const room = useRoomTwin((s) => s.room);
   const { saveState } = useSaveState();
-
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // ===== Open from event =====
+  // ===== Open =====
   useEffect(() => {
     const onOpen = () => {
       const r = useRoomTwin.getState().room;
@@ -93,7 +94,6 @@ export default function BlocksEditor() {
   // ===== Painting =====
   useEffect(() => {
     if (!open) return;
-
     const applyCell = (el: HTMLElement) => {
       const i = +el.dataset.i!;
       const j = +el.dataset.j!;
@@ -105,16 +105,13 @@ export default function BlocksEditor() {
         return next;
       });
     };
-
     const onPointerMove = (e: PointerEvent) => {
       if (!paintMode) return;
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const cell = el?.closest?.(".blocks-cell") as HTMLElement | null;
       if (cell) applyCell(cell);
     };
-
     const onPointerUp = () => setPaintMode(null);
-
     document.addEventListener("pointermove", onPointerMove);
     document.addEventListener("pointerup", onPointerUp);
     document.addEventListener("pointercancel", onPointerUp);
@@ -138,38 +135,21 @@ export default function BlocksEditor() {
   };
 
   // ============================================================
-  // ⭐ Apply — Seed ประตู/หน้าต่างบนผนัง blocks
+  // ⭐ handleApply — เรียบง่าย: แค่ setRoom ให้ effects จัดการ
   // ============================================================
-  const handleApply = async () => {
+  // BlocksEditor.tsx — handleApply
+  const handleApply = () => {
     if (draft.size === 0) return;
 
     const store = useRoomTwin.getState();
 
-    // 1. ลบ Three.js objects ของ wall items เก่า
-    store.placedItems.forEach((item) => {
-      if (item.wallMount) {
-        const obj = objectsByUid.get(item.uid);
-        if (obj) {
-          roomGroup.remove(obj);
-          obj.traverse((child: any) => {
-            child.geometry?.dispose?.();
-            if (child.material) {
-              if (Array.isArray(child.material)) {
-                child.material.forEach((m: any) => m?.dispose?.());
-              } else {
-                child.material.dispose?.();
-              }
-            }
-          });
-        }
-        objectsByUid.delete(item.uid);
-      }
-    });
+    // ⭐ แค่ setRoom — Canvas3D effect 2 จะ:
+    //   1. Capture openings (style + relative position)
+    //   2. rebuildRoomShell
+    //   3. restoreOpeningsRelative (ที่ตำแหน่ง relative เดิม)
+    //   4. Effect 3: skip seed (hasDoor/hasWindow = true หลัง restore)
+    //   5. Effect 5: instantiate
 
-    // 2. ลบ state ของ wall items เก่า
-    store.replaceItems(store.placedItems.filter((i) => !i.wallMount));
-
-    // 3. Set room = blocks
     const bb = computeBBox(draft, room.cellSize);
     if (!bb) return;
 
@@ -180,55 +160,27 @@ export default function BlocksEditor() {
       d: bb.d,
     });
 
-    // 4. รอ tick
-    await new Promise((r) => setTimeout(r, 0));
-
-    // 5. Rebuild shell — สร้าง polyWalls
-    rebuildRoomShell();
-
-    // 6. ⭐ Seed ประตู/หน้าต่าง
-    ensureDefaultOpenings();
-
-    // 7. Instantiate items ที่ยังไม่มี
-    const s = useRoomTwin.getState();
-    s.placedItems.forEach((item) => {
-      if (!objectsByUid.has(item.uid)) {
-        instantiate(item);
-      }
-    });
-
-    // 8. Reclamp
-    reclampAllToRoom();
-    rebuildBaseboards();
-
-    // 9. Save
-    saveState();
     setOpen(false);
+    setTimeout(() => saveState(), 200);
   };
 
-  const handleClear = () => {
-    setDraft(new Set());
-  };
-
+  const handleClear = () => setDraft(new Set());
   const handleReset = () => {
     const r = useRoomTwin.getState().room;
     setDraft(initBlocksFromRect(r.w, r.d, r.cellSize));
     setExtent(computeExtent(r.w, r.d, r.cellSize));
     setZoom(1);
   };
-
   const handleRect = () => {
     const r = useRoomTwin.getState().room;
     setDraft(initBlocksFromRect(r.w, r.d, r.cellSize));
   };
-
   const handleZoomIn = () => setZoom((z) => Math.min(MAX_ZOOM, z + 0.15));
   const handleZoomOut = () => setZoom((z) => Math.max(MIN_ZOOM, z - 0.15));
   const handleZoomFit = () => setZoom(1);
 
   const cellPx = useMemo(() => Math.round(CELL_PX_BASE * zoom), [zoom]);
   const N = extent * 2 + 1;
-
   const bbox = useMemo(
     () => computeBBox(draft, room.cellSize),
     [draft, room.cellSize],
@@ -370,8 +322,8 @@ export default function BlocksEditor() {
               ↺ เริ่มใหม่
             </button>
             <span className="blocks-size-info">
-              พื้นที่ใช้สอย:{" "}
-              <b>{bbox ? (bbox.w * bbox.d).toFixed(1) : "0"}</b> ตร.ม.
+              พื้นที่ใช้สอย: <b>{bbox ? (bbox.w * bbox.d).toFixed(1) : "0"}</b>{" "}
+              ตร.ม.
             </span>
           </div>
           <button

@@ -1,13 +1,23 @@
 // lib/three/raycast.ts
 import * as THREE from "three";
 import {
-  raycaster, pointerNDC, renderer, camera,
-  floorGroup, ceilingColliderGroup, surfaceColliders, meshWallId,
+  raycaster,
+  pointerNDC,
+  renderer,
+  camera,
+  floorGroup,
+  ceilingColliderGroup,
+  surfaceColliders,
+  meshWallId,
   objectsByUid,
 } from "./scene";
-import { getWallGeom, WALLS, getPolyWalls } from "./roomShell";
+import { getWallGeom, getWall, WALLS, getPolyWalls } from "./roomShell";
 import { useRoomTwin } from "@/lib/state/store";
 import { collectDescendantUids } from "./placement";
+
+// ============================================================
+// raycastPlacement — วาง item บนพื้น/เฟอร์นิเจอร์
+// ============================================================
 
 export function raycastPlacement(
   cx: number,
@@ -29,11 +39,17 @@ export function raycastPlacement(
   const hits = raycaster.intersectObjects(targets, false);
   if (hits.length === 0) return null;
   const hit = hits[0];
-  const obj = hit.object as THREE.Mesh; // 👈 cast เป็น Mesh
+  const obj = hit.object as THREE.Mesh;
   const isFloor = obj.userData.isFloor === true;
   const hostUid = isFloor ? null : obj.userData.hostUid;
   return { point: hit.point, hostUid };
 }
+
+// ============================================================
+// raycastWallPlacement — วาง item บนผนัง
+// ============================================================
+
+// lib/three/raycast.ts
 
 export function raycastWallPlacement(cx: number, cy: number) {
   if (!renderer) return null;
@@ -57,15 +73,24 @@ export function raycastWallPlacement(cx: number, cy: number) {
 
   const hits = raycaster.intersectObjects(targets, false);
   if (hits.length === 0) return null;
+
   const hit = hits[0];
-  const mesh = hit.object as THREE.Mesh; // 👈 cast เป็น Mesh
-  const id = meshWallId.get(mesh);        // 👈 ตอนนี้ TS รู้แล้วว่า mesh เป็น Mesh
-  if (!id) return null;
-  const g = getWallGeom(id);
+  const mesh = hit.object as THREE.Mesh;
+  const cellId = meshWallId.get(mesh);
+  if (!cellId) return null;
+
+  // ⭐ ใช้ cellId ตรงๆ (เก็บใน item.wallId)
+  //    getWallGeom() จะคืน merged geom ถ้า cellId อยู่ใน merged
+  const g = getWallGeom(cellId);
   if (!g) return null;
+
   const u = (hit.point.x - g.cx) * g.dx + (hit.point.z - g.cz) * g.dz;
-  return { wallId: id, u, v: hit.point.y };
+  return { wallId: cellId, u, v: hit.point.y };
 }
+
+// ============================================================
+// raycastCeilingPlacement
+// ============================================================
 
 export function raycastCeilingPlacement(cx: number, cy: number) {
   if (!renderer) return null;
@@ -81,6 +106,10 @@ export function raycastCeilingPlacement(cx: number, cy: number) {
   return hits[0].point;
 }
 
+// ============================================================
+// raycastFloorPoint — จุดบนพื้น (y=0)
+// ============================================================
+
 export function raycastFloorPoint(cx: number, cy: number) {
   if (!renderer) return null;
   const rect = renderer.domElement.getBoundingClientRect();
@@ -91,6 +120,10 @@ export function raycastFloorPoint(cx: number, cy: number) {
   const t = new THREE.Vector3();
   return raycaster.ray.intersectPlane(plane, t) ? t : null;
 }
+
+// ============================================================
+// ⭐ hitTestPlacedItems — ใช้ getWall() เพื่อรองรับ merged wall
+// ============================================================
 
 export function hitTestPlacedItems(cx: number, cy: number): string | null {
   if (!renderer) return null;
@@ -104,13 +137,29 @@ export function hitTestPlacedItems(cx: number, cy: number): string | null {
 
   objectsByUid.forEach((holder, uid) => {
     if (!holder || holder.visible === false) return;
+
     const item = placedItems.find((i) => i.uid === uid);
-    if (item && item.wallMount) {
-      const wd =
-        WALLS[item.wallId!] ||
-        getPolyWalls().find((w) => w.id === item.wallId);
-      if (!wd || wd.mat.opacity <= 0.3) return;
+
+    // ⭐ Wall items — เช็ค opacity ผ่าน getWall() (รองรับ merged)
+    if (item && item.wallMount && item.wallId) {
+      const wd = getWall(item.wallId);
+      if (!wd) {
+        // wall ถูกลบไปแล้ว → ข้าม item นี้
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            "[hitTest] skip — wall not found:",
+            item.wallId,
+            item.productId,
+          );
+        }
+        return;
+      }
+      const opacity = wd.mat.opacity;
+      if (opacity <= 0.3) {
+        return;
+      }
     }
+
     holder.traverse((o: any) => {
       if (o.isMesh) allMeshes.push(o);
     });
@@ -119,12 +168,15 @@ export function hitTestPlacedItems(cx: number, cy: number): string | null {
   const hits = raycaster.intersectObjects(allMeshes, false);
   if (hits.length === 0) return null;
 
-  // 👇 เดินขึ้นไปหา Object ที่มี userData.uid
   let obj: THREE.Object3D | null = hits[0].object;
   while (obj && !obj.userData.uid) obj = obj.parent;
   if (!obj) return null;
   return obj.userData.uid as string;
 }
+
+// ============================================================
+// isOverCanvas
+// ============================================================
 
 export function isOverCanvas(x: number, y: number): boolean {
   if (!renderer) return false;

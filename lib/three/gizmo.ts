@@ -29,6 +29,7 @@ import {
 } from "./placement";
 import { resolveCeilingPlacement } from "./ceilingPlacement";
 import { interactionState } from "./interactionState";
+import { rebuildBaseboards } from "./roomShell";
 
 // ===== Snap constants =====
 export { GIZMO_SNAP_DEG, GIZMO_SNAP_THRESHOLD_DEG };
@@ -293,7 +294,7 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
   if (!product) return;
 
   if (gizmoDragState.wallMount) {
-    // ===== Wall-mounted rotation =====
+    // Wall-mounted rotation
     const hit = raycastWallPlaneUV(item.wallId!, cx, cy);
     if (!hit) return;
     const du = hit.u - item.u!;
@@ -315,25 +316,23 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
       product.groundAnchor || false,
     );
 
-    // Import instantiate lazily
     import("./instantiate").then(({ reinstantiateItem }) => {
       updateItem(item.uid, {
         u: c.u,
         v: c.v,
         rotZ: rawRot,
       });
-      // For door, rebuild baseboards
+
+      // ⭐ Rebuild baseboards ทันที ถ้าเป็นประตู
       if (product.id === "door") {
-        import("./roomShell").then(({ rebuildBaseboards }) =>
-          rebuildBaseboards(),
-        );
+        rebuildBaseboards();
       }
       reinstantiateItem(item.uid);
     });
 
     showRotateBadge(cx, cy, s.deg, s.snapped);
   } else {
-    // ===== Floor item rotation =====
+    // Floor item rotation
     const hit = raycastFloorY(cx, cy, item.restY || 0);
     if (!hit) return;
     const dx = hit.x - item.x!;
@@ -360,7 +359,6 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
 
     const dRot = rawRot - oRotY;
 
-    // Apply transform to descendants (nightstand-lamp, etc.)
     applyTransformToDescendants(item.uid, ox, oz, c.x, c.z, dRot);
 
     updateItem(item.uid, {
@@ -369,7 +367,6 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
       rotY: rawRot,
     });
 
-    // Update object transform
     import("./scene").then(({ objectsByUid }) => {
       const obj = objectsByUid.get(item.uid);
       if (obj) {
@@ -385,6 +382,10 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
 // ===== End drag =====
 export function endGizmoRotate(e?: PointerEvent) {
   if (!gizmoDragState) return;
+
+  // ⭐ เก็บ uid ของ item ที่หมุน
+  const rotatedUid = gizmoDragState.uid;
+
   if (controls) controls.enabled = true;
   if (renderer) renderer.domElement.style.cursor = "";
   getRotateBadge()?.classList.remove("show");
@@ -396,18 +397,23 @@ export function endGizmoRotate(e?: PointerEvent) {
     /* ignore */
   }
 
-  // Save state (trigger history + persistence)
+  // ⭐ Rebuild baseboards ถ้าหมุนประตู
+  const { placedItems } = useRoomTwin.getState();
+  const item = placedItems.find((i) => i.uid === rotatedUid);
+  if (item?.productId === "door") {
+    rebuildBaseboards();
+  }
+
+  // Save state
   Promise.all([
     import("@/lib/state/store"),
     import("./placement"),
   ]).then(([{ useRoomTwin }, { resolveRestHeights }]) => {
     resolveRestHeights();
-    // In component-level saveState will be triggered
   });
 
   gizmoDragState = null;
 }
-
 // ===== Rotate by 90° (for toolbar buttons) =====
 export function rotateItemBy90(uid: string, dir: 1 | -1) {
   const { placedItems, updateItem, room } = useRoomTwin.getState();

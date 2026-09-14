@@ -27,7 +27,7 @@ import {
   wallItemWorldXZ,
 } from "@/lib/three/wallPlacement";
 import { resolveCeilingPlacement } from "@/lib/three/ceilingPlacement";
-import { getWallRotY } from "@/lib/three/roomShell";
+import { getWallRotY, rebuildBaseboards } from "@/lib/three/roomShell";
 import {
   hitTestGizmoHandle,
   beginGizmoRotate,
@@ -78,8 +78,6 @@ export function usePointerInteraction() {
       return !!(item && item.locked);
     };
 
-    const DEBUG = process.env.NODE_ENV === "development";
-
     // ============================================================
     // POINTER DOWN
     // ============================================================
@@ -89,7 +87,6 @@ export function usePointerInteraction() {
 
       if (store.placingProductId || store.placingZoneId) return;
 
-      // Gizmo handle?
       if (
         store.selectedUid &&
         !isLocked(store.selectedUid) &&
@@ -102,15 +99,6 @@ export function usePointerInteraction() {
       const itemUid = hitTestPlacedItems(e.clientX, e.clientY);
       const zoneAtPoint = hitTestZoneBounds(e.clientX, e.clientY);
 
-      if (DEBUG) {
-        console.log("[pointer down]", {
-          itemUid,
-          zoneAtPoint,
-          objectsCount: objectsByUid.size,
-        });
-      }
-
-      // Zone selected → drag zone
       if (store.selectedZoneUid) {
         const it = itemUid
           ? store.placedItems.find((i) => i.uid === itemUid)
@@ -136,7 +124,6 @@ export function usePointerInteraction() {
         store.deselectZone();
       }
 
-      // Click item → item drag ref
       if (itemUid && !isLocked(itemUid)) {
         itemDragRef.current = {
           uid: itemUid,
@@ -149,7 +136,6 @@ export function usePointerInteraction() {
         return;
       }
 
-      // Click zone (no item)
       if (zoneAtPoint) {
         store.selectZone(zoneAtPoint);
         zoneDragRef.current = {
@@ -288,9 +274,16 @@ export function usePointerInteraction() {
           });
           const obj = objectsByUid.get(item.uid);
           if (obj) {
-            const w = wallItemWorldXZ({ wallId: hit.wallId, u: c.u });
+            const w = wallItemWorldXZ({
+              wallId: hit.wallId,
+              u: c.u,
+            });
             obj.position.set(w.x, c.v, w.z);
             obj.rotation.y = getWallRotY(hit.wallId);
+          }
+          // ⭐ Rebuild baseboards ระหว่างลาก (ถ้าเป็นประตู)
+          if (product.id === "door") {
+            rebuildBaseboards();
           }
           return;
         }
@@ -362,7 +355,7 @@ export function usePointerInteraction() {
     };
 
     // ============================================================
-    // POINTER UP — ⭐ Fix: ถ้า tap (ไม่ drag) → selectItem
+    // POINTER UP
     // ============================================================
     const onUp = (e: PointerEvent) => {
       const store = useRoomTwin.getState();
@@ -397,7 +390,7 @@ export function usePointerInteraction() {
         return;
       }
 
-      // ⭐⭐ ITEM — แก้แล้ว ⭐⭐
+      // Item drag
       if (itemDragRef.current) {
         const id = itemDragRef.current;
         controls.enabled = true;
@@ -407,33 +400,34 @@ export function usePointerInteraction() {
           el.releasePointerCapture(id.pointerId);
         } catch {}
 
+        // ⭐ ตรวจว่าลาก item เป็นประตูหรือไม่
+        const item = store.placedItems.find((i) => i.uid === id.uid);
+        const isDoor = item?.productId === "door";
+
         if (id.moved) {
-          // ===== ลากจริง =====
           const obj = objectsByUid.get(id.uid);
           const { placedItems } = useRoomTwin.getState();
-          const item = placedItems.find((i) => i.uid === id.uid);
-          if (obj && item) {
-            if (item.ceilingMount) obj.position.y = 4;
-            else if (item.wallMount) obj.position.y = item.v!;
-            else obj.position.y = item.restY || 0;
+          const it = placedItems.find((i) => i.uid === id.uid);
+          if (obj && it) {
+            if (it.ceilingMount) obj.position.y = 4;
+            else if (it.wallMount) obj.position.y = it.v!;
+            else obj.position.y = it.restY || 0;
           }
           saveState();
           store.selectItem(id.uid);
-          if (DEBUG) {
-            console.log("[pointer up] drag → selectItem", id.uid);
-          }
         } else {
-          // ⭐ คลิกเฉยๆ → select (นี่คือ fix!)
           store.selectItem(id.uid);
-          if (DEBUG) {
-            console.log("[pointer up] tap → selectItem", id.uid);
-          }
+        }
+
+        // ⭐ Rebuild baseboards หลังลากเสร็จ (ถ้าเป็นประตู)
+        if (isDoor) {
+          rebuildBaseboards();
         }
         itemDragRef.current = null;
         return;
       }
 
-      // Click (moved ตรวจระยะ)
+      // Click (moved check)
       const moved =
         pointerDownPos.current &&
         (Math.abs(e.clientX - pointerDownPos.current.x) > 6 ||
@@ -463,12 +457,6 @@ export function usePointerInteraction() {
 
       // Click empty space
       const uid = hitTestPlacedItems(e.clientX, e.clientY);
-      if (DEBUG) {
-        console.log("[pointer up]", {
-          uid,
-          objectsCount: objectsByUid.size,
-        });
-      }
       if (uid) {
         store.selectItem(uid);
       } else {
@@ -495,6 +483,15 @@ export function usePointerInteraction() {
           controls.enabled = true;
           el.style.cursor = "";
           setItemDragging(false);
+
+          // ⭐ Rebuild baseboards
+          const item = useRoomTwin
+            .getState()
+            .placedItems.find((i) => i.uid === itemDragRef.current!.uid);
+          if (item?.productId === "door") {
+            rebuildBaseboards();
+          }
+
           saveState();
         }
         itemDragRef.current = null;

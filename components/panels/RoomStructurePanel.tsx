@@ -16,26 +16,16 @@ import {
   rebuildRoomShell,
   rebuildBaseboards,
   getWallRotY,
-  wallSpan,
-  getWallGeom,
 } from "@/lib/three/roomShell";
 import { reclampAllToRoom } from "@/lib/three/reclamp";
-import { instantiate } from "@/lib/three/instantiate";
-import {
-  resolveWallPlacement,
-  wallFootprint,
-} from "@/lib/three/wallPlacement";
-import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
-import { ensureDefaultOpenings } from "@/hooks/useRoomTwinInit";
-import { useSaveState } from "@/hooks/useSaveState";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
-import type { PlacedItem } from "@/lib/state/types";
+import { useSaveState } from "@/hooks/useSaveState";
 
-type Tab = "size" | "surfaces" | "openings";
+type Tab = "size" | "surfaces";
 type RectSize = { w: number; d: number; h: number };
 
 // ============================================================
-// ⭐ Last Rect Size — localStorage
+// Last Rect Size — localStorage
 // ============================================================
 
 const LAST_RECT_KEY = "roomtwin_last_rect_size_v1";
@@ -68,124 +58,14 @@ function loadLastRectSize(): RectSize {
 }
 
 // ============================================================
-// Helpers
-// ============================================================
-
-function pickVisibleWall(): string {
-  const { room } = useRoomTwin.getState();
-  if (room.shape !== "rect") return "back";
-  return "front";
-}
-
-function addOpeningOfType(pid: string) {
-  const store = useRoomTwin.getState();
-  const p = PRODUCT_BY_ID.get(pid);
-  if (!p) return;
-
-  const wallId = pickVisibleWall();
-  const params = defaultParamsFor(p);
-  const { halfU, halfV } = wallFootprint(params, 0);
-  const v = p.groundAnchor ? 0 : Math.round(store.room.h * 60) / 100;
-
-  const c = resolveWallPlacement(
-    null,
-    wallId,
-    0,
-    v,
-    halfU,
-    halfV,
-    p.groundAnchor || false,
-  );
-
-  const uid = "i" + Math.random().toString(36).slice(2, 10);
-  const item: PlacedItem = {
-    uid,
-    productId: pid,
-    params,
-    wallMount: true,
-    wallId,
-    u: c.u,
-    v: c.v,
-    rotY: getWallRotY(wallId),
-    rotZ: 0,
-  };
-
-  store.addItem(item);
-  instantiate(item);
-
-  if (pid === "door") {
-    rebuildBaseboards();
-  }
-}
-
-function updateWallItemPosition(
-  uid: string,
-  patch: { u?: number; v?: number; wallId?: string },
-) {
-  const store = useRoomTwin.getState();
-  const item = store.placedItems.find((i) => i.uid === uid);
-  if (!item) return;
-  const product = PRODUCT_BY_ID.get(item.productId);
-  if (!product) return;
-
-  const wallId = patch.wallId ?? item.wallId!;
-  const rotY = getWallRotY(wallId);
-  const { halfU, halfV } = wallFootprint(item.params, item.rotZ || 0);
-
-  const c = resolveWallPlacement(
-    uid,
-    wallId,
-    patch.u ?? item.u!,
-    patch.v ?? item.v!,
-    halfU,
-    halfV,
-    product.groundAnchor || false,
-  );
-
-  store.updateItem(uid, {
-    wallId,
-    u: c.u,
-    v: c.v,
-    rotY,
-  });
-
-  const obj = objectsByUid.get(uid);
-  if (obj) {
-    const g = getWallGeom(wallId);
-    if (g) {
-      const outward = 0.012;
-      obj.position.set(
-        g.cx + g.dx * c.u - g.nx * outward,
-        c.v,
-        g.cz + g.dz * c.u - g.nz * outward,
-      );
-      obj.rotation.y = rotY;
-    }
-  }
-
-  if (product.id === "door") {
-    rebuildBaseboards();
-  }
-}
-
-// ============================================================
-// ⭐ Switch to Rect — ใช้ขนาดล่าสุด
+// Switch to Rect — ใช้ขนาดล่าสุด
 // ============================================================
 
 async function switchToRectShape() {
   const store = useRoomTwin.getState();
 
-  // 1. ลบ wall items เก่า
-  store.placedItems.forEach((item) => {
-    if (item.wallMount) {
-      const obj = objectsByUid.get(item.uid);
-      if (obj) roomGroup.remove(obj);
-      objectsByUid.delete(item.uid);
-    }
-  });
-  store.replaceItems(store.placedItems.filter((i) => !i.wallMount));
+  // ⭐ แค่ setRoom — effects จัดการ capture/restore ให้
 
-  // 2. ใช้ขนาดล่าสุด
   const last = loadLastRectSize();
 
   store.setRoom({
@@ -195,26 +75,6 @@ async function switchToRectShape() {
     d: last.d,
     h: last.h,
   });
-
-  // 3. รอ tick
-  await new Promise((r) => setTimeout(r, 0));
-
-  // 4. Rebuild shell
-  rebuildRoomShell();
-
-  // 5. Seed openings
-  ensureDefaultOpenings();
-
-  // 6. Instantiate items
-  useRoomTwin.getState().placedItems.forEach((item) => {
-    if (!objectsByUid.has(item.uid)) {
-      instantiate(item);
-    }
-  });
-
-  // 7. Reclamp
-  reclampAllToRoom();
-  rebuildBaseboards();
 }
 
 // ============================================================
@@ -228,7 +88,6 @@ function RoomPreviewSvg() {
   const room = useRoomTwin((s) => s.room);
 
   const handleOpenBlocks = useCallback(() => {
-    // ⭐ Save ขนาดปัจจุบันก่อนสลับไป blocks
     if (room.shape === "rect") {
       saveLastRectSize({ w: room.w, d: room.d, h: room.h });
     }
@@ -294,7 +153,9 @@ function RoomPreviewSvg() {
       role="button"
       tabIndex={0}
       title={
-        isBlocksMode ? "คลิกเพื่อแก้ไขผังบล็อก" : "คลิกเพื่อวาดบล็อกผนังห้อง"
+        isBlocksMode
+          ? "คลิกเพื่อแก้ไขผังบล็อก"
+          : "คลิกเพื่อวาดบล็อกผนังห้อง"
       }
     >
       <svg viewBox="0 0 240 158" width="100%" height="132">
@@ -687,218 +548,6 @@ function SurfacesTab() {
 }
 
 // ============================================================
-// Tab 3: Openings
-// ============================================================
-
-function OpeningsTab() {
-  const room = useRoomTwin((s) => s.room);
-  const placedItems = useRoomTwin((s) => s.placedItems);
-  const { saveState } = useSaveState();
-  const [openUid, setOpenUid] = useState<string | null>(null);
-
-  const openings = placedItems.filter(
-    (i) =>
-      i.wallMount &&
-      (i.productId === "door" || i.productId === "window"),
-  );
-
-  return (
-    <div className="rsp-tab-panel active">
-      <div className="opening-actions">
-        <button
-          type="button"
-          className="opening-add-btn"
-          onClick={() => {
-            addOpeningOfType("door");
-            saveState();
-          }}
-        >
-          🚪 + ประตู
-        </button>
-        <button
-          type="button"
-          className="opening-add-btn"
-          onClick={() => {
-            addOpeningOfType("window");
-            saveState();
-          }}
-        >
-          🪟 + หน้าต่าง
-        </button>
-      </div>
-
-      <div className="opening-list">
-        {openings.length === 0 ? (
-          <div className="opening-empty">
-            ยังไม่มีประตู/หน้าต่าง
-            <br />
-            <small>กดปุ่มด้านบนเพื่อเพิ่ม</small>
-          </div>
-        ) : (
-          openings.map((o) => (
-            <OpeningItem
-              key={o.uid}
-              item={o}
-              isOpen={openUid === o.uid}
-              onToggle={() =>
-                setOpenUid((cur) => (cur === o.uid ? null : o.uid))
-              }
-              roomShape={room.shape}
-              onDelete={() => {
-                useRoomTwin.getState().removeItem(o.uid);
-                setOpenUid(null);
-                saveState();
-              }}
-              onUpdate={saveState}
-            />
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-function OpeningItem({
-  item,
-  isOpen,
-  onToggle,
-  roomShape,
-  onDelete,
-  onUpdate,
-}: {
-  item: PlacedItem;
-  isOpen: boolean;
-  onToggle: () => void;
-  roomShape: "rect" | "blocks";
-  onDelete: () => void;
-  onUpdate: () => void;
-}) {
-  const product = PRODUCT_BY_ID.get(item.productId);
-  if (!product) return null;
-
-  const wallLabel = WALL_LABEL_FULL[item.wallId!] || "ผนัง";
-  const offsetCm = Math.round((item.u || 0) * 100);
-  const heightCm = Math.round((item.v || 0) * 100);
-
-  const subLine =
-    item.productId === "door"
-      ? `${wallLabel} • ${offsetCm >= 0 ? "+" : ""}${offsetCm} ซม.`
-      : `${wallLabel} • ${offsetCm >= 0 ? "+" : ""}${offsetCm} ซม. • สูง ${heightCm} ซม.`;
-
-  const half = wallFootprint(item.params, item.rotZ || 0);
-  const span = wallSpan(item.wallId!);
-  const minU = Math.round((-span / 2 + 0.05 + half.halfU) * 100);
-  const maxU = Math.round((span / 2 - 0.05 - half.halfU) * 100);
-  const minV = Math.round((0.55 + half.halfV) * 100);
-  const maxV = Math.round(
-    (useRoomTwin.getState().room.h - 0.15 - half.halfV) * 100,
-  );
-
-  return (
-    <div className={`opening-item${isOpen ? " open" : ""}`}>
-      <div className="opening-head" onClick={onToggle}>
-        <div className="oi-icon">
-          {item.productId === "door" ? "🚪" : "🪟"}
-        </div>
-        <div className="oi-main">
-          <div className="oi-name">
-            {item.displayName || product.name}
-          </div>
-          <div className="oi-sub">{subLine}</div>
-        </div>
-        <div className="oi-chev">▼</div>
-      </div>
-
-      {isOpen && (
-        <div className="opening-body">
-          {roomShape === "rect" && (
-            <div className="opening-field">
-              <div className="opening-field-label">
-                <span>ผนัง</span>
-              </div>
-              <div className="wall-side-row">
-                {(["back", "front", "side", "right"] as const).map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`wall-side-btn${
-                      item.wallId === id ? " active" : ""
-                    }`}
-                    onClick={() => {
-                      updateWallItemPosition(item.uid, {
-                        wallId: id,
-                        u: 0,
-                      });
-                      onUpdate();
-                    }}
-                  >
-                    {WALL_LABEL_FULL[id].replace("ผนัง", "")}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="opening-field">
-            <div className="opening-field-label">
-              <span>ตำแหน่งตามแนวผนัง</span>
-              <span className="val">{Math.round(item.u! * 100)} ซม.</span>
-            </div>
-            <input
-              type="range"
-              className="opening-slider"
-              min={minU}
-              max={maxU}
-              step={1}
-              value={Math.round(item.u! * 100)}
-              onChange={(e) => {
-                updateWallItemPosition(item.uid, {
-                  u: parseFloat(e.target.value) / 100,
-                });
-              }}
-              onMouseUp={onUpdate}
-              onTouchEnd={onUpdate}
-            />
-          </div>
-
-          {!product.groundAnchor && (
-            <div className="opening-field">
-              <div className="opening-field-label">
-                <span>สูงจากพื้น</span>
-                <span className="val">{Math.round(item.v! * 100)} ซม.</span>
-              </div>
-              <input
-                type="range"
-                className="opening-slider"
-                min={minV}
-                max={maxV}
-                step={1}
-                value={Math.round(item.v! * 100)}
-                onChange={(e) => {
-                  updateWallItemPosition(item.uid, {
-                    v: parseFloat(e.target.value) / 100,
-                  });
-                }}
-                onMouseUp={onUpdate}
-                onTouchEnd={onUpdate}
-              />
-            </div>
-          )}
-
-          <button
-            type="button"
-            className="opening-remove"
-            onClick={onDelete}
-          >
-            🗑 ลบช่องเปิดนี้
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================
 // Root Panel
 // ============================================================
 
@@ -963,6 +612,7 @@ export default function RoomStructurePanel() {
 
   return (
     <>
+      {/* ⭐ Backdrop */}
       <div
         className={`panel-backdrop z-29${open ? " show" : ""}`}
         onClick={closePanel}
@@ -1002,19 +652,11 @@ export default function RoomStructurePanel() {
           >
             🎨 พื้นผิว
           </button>
-          <button
-            type="button"
-            className={`rsp-tab${tab === "openings" ? " active" : ""}`}
-            onClick={() => setTab("openings")}
-          >
-            🚪 ช่องเปิด
-          </button>
         </div>
 
         <div className="rsp-body">
           {tab === "size" && <SizeTab />}
           {tab === "surfaces" && <SurfacesTab />}
-          {tab === "openings" && <OpeningsTab />}
         </div>
       </div>
     </>

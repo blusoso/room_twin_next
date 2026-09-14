@@ -7,9 +7,14 @@ import { camera, renderer, objectsByUid } from "@/lib/three/scene";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
 import { rotateItemBy90 } from "@/lib/three/gizmo";
 import { removeZoneFull } from "@/lib/three/zoneActions";
-import { removeInstantiated } from "@/lib/three/instantiate";
+import {
+  removeInstantiated,
+  reinstantiateItem,
+  instantiate,
+} from "@/lib/three/instantiate";
 import { resolveRestHeights } from "@/lib/three/placement";
-import { PRODUCT_BY_ID } from "@/lib/data/products";
+import { rebuildBaseboards } from "@/lib/three/roomShell";
+import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
@@ -36,7 +41,9 @@ export default function FloatingToolbar() {
 
   const zoneMode = !!selectedZoneUid;
 
-  // ===== Compute position (RAF) =====
+  // ============================================================
+  // Compute position (RAF loop)
+  // ============================================================
   useEffect(() => {
     if (!renderer) return;
 
@@ -45,7 +52,7 @@ export default function FloatingToolbar() {
     const topPoint = new THREE.Vector3();
 
     const tick = () => {
-      // Zone mode
+      // ===== Zone mode =====
       if (zoneMode && selectedZoneUid) {
         const b = getZoneBounds(selectedZoneUid);
         if (!b) {
@@ -68,19 +75,16 @@ export default function FloatingToolbar() {
         return;
       }
 
-      // No selection
+      // ===== No selection =====
       if (!selectedUid) {
         setPos((p) => (p.show ? { ...p, show: false } : p));
         raf = requestAnimationFrame(tick);
         return;
       }
 
+      // ===== Item mode =====
       const obj = objectsByUid.get(selectedUid);
       if (!obj || !obj.visible) {
-        // ⭐ log ว่าไม่เจอ object (debug)
-        if (process.env.NODE_ENV === "development") {
-          // console.log("[FloatingToolbar] obj missing for", selectedUid);
-        }
         setPos((p) => (p.show ? { ...p, show: false } : p));
         raf = requestAnimationFrame(tick);
         return;
@@ -117,16 +121,29 @@ export default function FloatingToolbar() {
     return () => cancelAnimationFrame(raf);
   }, [selectedUid, selectedZoneUid, zoneMode, placedItems]);
 
-  // ===== Item handlers =====
+  // ============================================================
+  // Handlers: Item
+  // ============================================================
+
   const handleRotLeft = () => {
     if (!selectedUid || (item && item.locked)) return;
+    const wasDoor = item?.productId === "door";
     rotateItemBy90(selectedUid, -1);
+    // ⭐ Rebuild baseboards ถ้าหมุนประตู
+    if (wasDoor) {
+      rebuildBaseboards();
+    }
     saveState();
   };
 
   const handleRotRight = () => {
     if (!selectedUid || (item && item.locked)) return;
+    const wasDoor = item?.productId === "door";
     rotateItemBy90(selectedUid, 1);
+    // ⭐ Rebuild baseboards ถ้าหมุนประตู
+    if (wasDoor) {
+      rebuildBaseboards();
+    }
     saveState();
   };
 
@@ -144,9 +161,18 @@ export default function FloatingToolbar() {
 
   const handleDelete = () => {
     if (!item) return;
+
+    // ⭐ ถ้าเป็นประตู → rebuild baseboards หลังลบ
+    const wasDoor = item.productId === "door";
+
     removeInstantiated(item.uid);
     removeItem(item.uid);
     closeItemPanel();
+
+    if (wasDoor) {
+      rebuildBaseboards();
+    }
+
     saveState();
   };
 
@@ -155,7 +181,10 @@ export default function FloatingToolbar() {
     selectZone(item.zoneUid);
   };
 
-  // ===== Zone handlers =====
+  // ============================================================
+  // Handlers: Zone
+  // ============================================================
+
   const handleZoneRotate = (dir: -1 | 1) => {
     if (!selectedZoneUid) return;
     rotateZone(selectedZoneUid, dir);
@@ -173,13 +202,25 @@ export default function FloatingToolbar() {
     openConfirm(
       `ลบทั้งโซน "${meta.name || "โซน"}" (${zoneItems.length} ชิ้น)?`,
       () => {
+        // ⭐ ถ้าโซนมีประตู → rebuild baseboards
+        const hasDoor = zoneItems.some((i) => i.productId === "door");
+
         removeZoneFull(selectedZoneUid);
         closeItemPanel();
         deselectZone();
+
+        if (hasDoor) {
+          rebuildBaseboards();
+        }
+
         saveState();
       },
     );
   };
+
+  // ============================================================
+  // Render
+  // ============================================================
 
   if (!pos.show) {
     return <div className="floating-toolbar" id="floatingToolbar" />;
@@ -193,6 +234,7 @@ export default function FloatingToolbar() {
       id="floatingToolbar"
       style={{ left: pos.x + "px", top: pos.y + "px" }}
     >
+      {/* ===== Item mode ===== */}
       <button
         type="button"
         className="ft-btn item-btn"
@@ -203,6 +245,7 @@ export default function FloatingToolbar() {
       >
         ⟲
       </button>
+
       <button
         type="button"
         className="ft-btn item-btn"
@@ -213,6 +256,7 @@ export default function FloatingToolbar() {
       >
         ⟳
       </button>
+
       <button
         type="button"
         className={`ft-btn item-btn${item?.locked ? " locked" : ""}`}
@@ -222,6 +266,7 @@ export default function FloatingToolbar() {
       >
         {item?.locked ? "🔒" : "🔓"}
       </button>
+
       <button
         type="button"
         className="ft-btn item-btn customize"
@@ -231,6 +276,7 @@ export default function FloatingToolbar() {
       >
         🎨
       </button>
+
       <button
         type="button"
         className="ft-btn item-btn swap"
@@ -240,6 +286,7 @@ export default function FloatingToolbar() {
       >
         ⇄
       </button>
+
       <button
         type="button"
         className="ft-btn item-btn"
@@ -249,6 +296,7 @@ export default function FloatingToolbar() {
       >
         ⧉
       </button>
+
       {item?.zoneUid && (
         <button
           type="button"
@@ -260,6 +308,7 @@ export default function FloatingToolbar() {
           📦
         </button>
       )}
+
       <button
         type="button"
         className="ft-btn item-btn danger"
@@ -270,7 +319,7 @@ export default function FloatingToolbar() {
         🗑
       </button>
 
-      {/* Zone mode */}
+      {/* ===== Zone mode ===== */}
       <button
         type="button"
         className="ft-btn zone-only theme"
@@ -282,6 +331,7 @@ export default function FloatingToolbar() {
       >
         ✨
       </button>
+
       <button
         type="button"
         className="ft-btn zone-only"
@@ -291,6 +341,7 @@ export default function FloatingToolbar() {
       >
         ⟲
       </button>
+
       <button
         type="button"
         className="ft-btn zone-only"
@@ -300,15 +351,19 @@ export default function FloatingToolbar() {
       >
         ⟳
       </button>
+
       <button
         type="button"
         className="ft-btn zone-only"
         id="ftZoneEdit"
         title="แก้ไขโซน"
-        onClick={() => selectedZoneUid && openZoneEditDialog(selectedZoneUid)}
+        onClick={() =>
+          selectedZoneUid && openZoneEditDialog(selectedZoneUid)
+        }
       >
         ✏️
       </button>
+
       <button
         type="button"
         className="ft-btn zone-only danger"
@@ -318,6 +373,7 @@ export default function FloatingToolbar() {
       >
         🗑
       </button>
+
       <button
         type="button"
         className="ft-btn zone-only"
@@ -327,6 +383,7 @@ export default function FloatingToolbar() {
       >
         ✕
       </button>
+
       <div className="ft-arrow" />
     </div>
   );
@@ -346,6 +403,7 @@ function duplicateItem(uid: string) {
   const clonedParams = JSON.parse(JSON.stringify(item.params));
   const newUid = "i" + Math.random().toString(36).slice(2, 10);
 
+  // ===== Wall items =====
   if (item.wallMount) {
     const newItem: PlacedItem = {
       uid: newUid,
@@ -361,13 +419,18 @@ function duplicateItem(uid: string) {
       displayName: item.displayName,
     };
     store.addItem(newItem);
-    import("@/lib/three/instantiate").then(({ instantiate }) => {
-      instantiate(newItem);
-    });
+    instantiate(newItem);
+
+    // ⭐ ถ้าเป็นประตู → rebuild baseboards
+    if (item.productId === "door") {
+      rebuildBaseboards();
+    }
+
     store.selectItem(newUid);
     return;
   }
 
+  // ===== Ceiling items =====
   if (item.ceilingMount) {
     const newItem: PlacedItem = {
       uid: newUid,
@@ -381,13 +444,12 @@ function duplicateItem(uid: string) {
       displayName: item.displayName,
     };
     store.addItem(newItem);
-    import("@/lib/three/instantiate").then(({ instantiate }) => {
-      instantiate(newItem);
-    });
+    instantiate(newItem);
     store.selectItem(newUid);
     return;
   }
 
+  // ===== Floor items =====
   const newItem: PlacedItem = {
     uid: newUid,
     productId: item.productId,
@@ -401,9 +463,7 @@ function duplicateItem(uid: string) {
     displayName: item.displayName,
   };
   store.addItem(newItem);
-  import("@/lib/three/instantiate").then(({ instantiate }) => {
-    instantiate(newItem);
-  });
+  instantiate(newItem);
   resolveRestHeights();
   store.selectItem(newUid);
 }
@@ -433,7 +493,11 @@ function rotateZone(zuid: string, dir: -1 | 1) {
     const nz = cz + (dx * s + dz * c);
     const nrot = (it.rotY || 0) + ang;
 
-    store.updateItem(it.uid, { x: nx, z: nz, rotY: nrot });
+    store.updateItem(it.uid, {
+      x: nx,
+      z: nz,
+      rotY: nrot,
+    });
 
     const obj = objectsByUid.get(it.uid);
     if (obj) {
@@ -442,4 +506,10 @@ function rotateZone(zuid: string, dir: -1 | 1) {
       obj.rotation.y = nrot;
     }
   });
+
+  // ⭐ ถ้าโซนมีประตู → rebuild baseboards
+  const hasDoor = items.some((i) => i.productId === "door");
+  if (hasDoor) {
+    rebuildBaseboards();
+  }
 }
