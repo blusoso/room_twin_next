@@ -23,12 +23,13 @@ import {
 } from "@/lib/three/roomShell";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+import { isOpeningRemoved } from "@/lib/state/openingFlags";  // ⭐ import ครั้งเดียว
 import type { PlacedItem } from "@/lib/state/types";
 
 let _seedingInProgress = false;
 
 // ============================================================
-// Opening Snapshot — เก็บ style + ตำแหน่ง relative
+// Opening Snapshot
 // ============================================================
 
 export interface OpeningSnapshot {
@@ -153,11 +154,6 @@ function findBestWallForSide(side: "N" | "S" | "E" | "W"): {
   };
 }
 
-/**
- * ⭐ Restore — วางช่องเปิดกลับตาม side + relative position
- * อัปเดตเฉพาะ position ไม่แตะ params/theme
- * เรียก rebuildBaseboards() ที่ท้ายเพื่อให้บัวมีช่องตรงประตู
- */
 export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
   if (snapshots.length === 0) return;
 
@@ -200,7 +196,6 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
       product.groundAnchor || false,
     );
 
-    // ⭐ updateItem — คง style เดิม (params/themeOverride/displayName ไม่แตะ)
     store.updateItem(item.uid, {
       wallId: wall.id,
       u: c.u,
@@ -208,7 +203,6 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
       rotY: wall.rotY,
     });
 
-    // อัปเดต scene object
     const obj = objectsByUid.get(item.uid);
     if (obj) {
       const p = wallPointXZ(wall.id, c.u, WALL_OUTWARD);
@@ -228,8 +222,7 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
     );
   });
 
-  // ⭐⭐⭐ Rebuild baseboards หลัง restore เสร็จ
-  //       → บัววาดใหม่ โดยมีช่องตรงตำแหน่งประตูที่ restore แล้ว
+  // ⭐ Rebuild baseboards หลัง restore
   rebuildBaseboards();
 
   console.log(
@@ -322,7 +315,7 @@ export function useRoomTwinInit() {
 }
 
 // ============================================================
-// ensureDefaultOpenings — seed เฉพาะเมื่อไม่มี
+// ⭐ ensureDefaultOpenings — เช็ค flags ก่อน seed
 // ============================================================
 
 export function ensureDefaultOpenings() {
@@ -337,14 +330,33 @@ export function ensureDefaultOpenings() {
     const hasDoor = items.some((i) => i.productId === "door");
     const hasWindow = items.some((i) => i.productId === "window");
 
-    if (hasDoor && hasWindow) return;
+    // ⭐ ตรวจ flags
+    const doorRemoved = isOpeningRemoved("door");
+    const windowRemoved = isOpeningRemoved("window");
+
+    console.log("[ensureDefaultOpenings]", {
+      hasDoor,
+      hasWindow,
+      doorRemoved,
+      windowRemoved,
+      shape: room.shape,
+    });
+
+    // ⭐ seed เฉพาะเมื่อไม่มี + ไม่ได้ถูกลบ
+    const shouldSeedDoor = !hasDoor && !doorRemoved;
+    const shouldSeedWindow = !hasWindow && !windowRemoved;
+
+    if (!shouldSeedDoor && !shouldSeedWindow) {
+      console.log("[ensureDefaultOpenings] skip — nothing to seed");
+      return;
+    }
 
     if (room.shape === "rect") {
-      if (!hasDoor) seedDoorRect();
-      if (!hasWindow) seedWindowRect();
+      if (shouldSeedDoor) seedDoorRect();
+      if (shouldSeedWindow) seedWindowRect();
     } else {
-      if (!hasDoor) seedDoorBlocks();
-      if (!hasWindow) seedWindowBlocks();
+      if (shouldSeedDoor) seedDoorBlocks();
+      if (shouldSeedWindow) seedWindowBlocks();
     }
   } finally {
     _seedingInProgress = false;

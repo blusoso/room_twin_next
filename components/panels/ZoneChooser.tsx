@@ -51,7 +51,6 @@ export default function ZoneChooser() {
 
   const open = !!pendingUid;
 
-  // ⭐ ยกเลิก (ไม่ผูกโซน)
   const handleCancel = () => {
     setPending(null);
   };
@@ -90,16 +89,25 @@ export default function ZoneChooser() {
 
   return (
     <>
-      {/* ⭐ Backdrop — z-34 (ต่ำกว่า panel z-35) */}
-      <div
-        className={`panel-backdrop z-34${open ? " show" : ""}`}
-        onClick={handleCancel}
-        aria-hidden="true"
-      />
+      {/* ⭐ Backdrop — render เฉพาะตอน open */}
+      {open && (
+        <div
+          className="panel-backdrop z-34 show"
+          onClick={handleCancel}
+          aria-hidden="true"
+        />
+      )}
 
       <div
         className="zone-chooser show"
         aria-hidden="false"
+        // ⭐ Inline styles
+        style={{
+          visibility: open ? "visible" : "hidden",
+          pointerEvents: open ? "auto" : "none",
+        }}
+        // ⭐ inert — block ทุก interaction เมื่อปิด
+        {...(!open ? { inert: "" as any } : {})}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="zone-chooser-label">วางไว้ที่โซนไหน?</div>

@@ -97,35 +97,26 @@ export default function ZoneThemePanel() {
   const { saveState } = useSaveState();
 
   const [open, setOpen] = useState(false);
-
-  // ⭐ useRef แทน state — ไม่ trigger re-render
   const openedForRef = useRef<string | null>(null);
 
-  // ⭐ ปิด panel (ผู้ใช้กด ✕)
   const close = useCallback(() => {
     setOpen(false);
-    // ⚠️ ไม่ reset openedForRef → ป้องกัน effect loop
-    // ⚠️ ไม่ deselect zone → ผู้ใช้ยังเลือกโซนอยู่ได้
   }, []);
 
-  // ⭐⭐⭐ Auto-open เมื่อ selectedZoneUid เปลี่ยน
-  //        + Auto-close เมื่อ selectedZoneUid = null
+  // Auto-open/close ตาม selectedZoneUid
   useEffect(() => {
     if (!selectedZoneUid) {
-      // Zone ถูก deselect → ปิด panel
       setOpen(false);
       openedForRef.current = null;
       return;
     }
-
-    // Zone ใหม่ (ไม่ใช่โซนเดิมที่เคยเปิด) → เปิด
     if (openedForRef.current !== selectedZoneUid) {
       openedForRef.current = selectedZoneUid;
       setOpen(true);
     }
   }, [selectedZoneUid]);
 
-  // Escape key → close
+  // Escape
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -159,11 +150,18 @@ export default function ZoneThemePanel() {
 
   return (
     <>
-      {/* ⭐⭐⭐ ไม่มี backdrop แล้ว — ไม่มีอะไรมาปิด panel เวลาคลิกนอก */}
+      {/* ⭐ ZoneThemePanel ไม่มี backdrop — user ต้องการให้ปิดเมื่อ deselect zone เท่านั้น */}
 
       <aside
         className={`zone-theme-panel${open ? " show" : ""}`}
         aria-hidden={!open}
+        // ⭐ Inline styles — บังคับแม้ CSS ไม่โหลด
+        style={{
+          visibility: open ? "visible" : "hidden",
+          pointerEvents: open ? "auto" : "none",
+        }}
+        // ⭐ inert — block ทุก interaction เมื่อปิด
+        {...(!open ? { inert: "" as any } : {})}
       >
         <div className="ztp-head">
           <div className="ztp-title">

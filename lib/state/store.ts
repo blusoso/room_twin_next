@@ -6,12 +6,15 @@ import {
   WALL_COLORS,
   CELL_SIZE,
 } from "@/lib/data/constants";
+import {
+  markOpeningRemoved,
+  clearOpeningRemoved,
+} from "./openingFlags";
 import type {
   PlacedItem,
   RoomShape,
   SurfaceState,
   ZoneMeta,
-  Params,
 } from "./types";
 
 const MAX_HISTORY = 60;
@@ -76,7 +79,7 @@ export interface RoomTwinState {
   currentWallIdx: number;
   setCurrentWallIdx: (i: number) => void;
 
-  // ===== History (undo/redo) =====
+  // ===== History =====
   history: string[];
   historyIndex: number;
   pushHistory: (snapshot: string) => void;
@@ -92,7 +95,7 @@ export interface RoomTwinState {
   setCartExcluded: (s: Set<string>) => void;
   clearCartExcluded: () => void;
 
-  // ===== Zone Chooser (pending) =====
+  // ===== Zone Chooser =====
   pendingZoneChooserUid: string | null;
   setPendingZoneChooser: (uid: string | null) => void;
 
@@ -106,7 +109,7 @@ export interface RoomTwinState {
   showLockBadges: boolean;
   toggleLockBadges: () => void;
 
-  // ===== Whole-state reset =====
+  // ===== Reset =====
   resetAll: () => void;
 }
 
@@ -124,8 +127,7 @@ export const useRoomTwin = create<RoomTwinState>()(
       cellSize: CELL_SIZE,
     },
 
-    setRoom: (patch) =>
-      set((s) => ({ room: { ...s.room, ...patch } })),
+    setRoom: (patch) => set((s) => ({ room: { ...s.room, ...patch } })),
 
     applyRoomSize: (w, d, h) =>
       set((s) => ({ room: { ...s.room, w, d, h } })),
@@ -154,15 +156,30 @@ export const useRoomTwin = create<RoomTwinState>()(
     // ============================================================
     placedItems: [],
 
+    // ⭐ addItem — clear flag ถ้าเพิ่ม door/window ใหม่
     addItem: (item) =>
-      set((s) => ({ placedItems: [...s.placedItems, item] })),
+      set((s) => {
+        // ⭐ ถ้าเพิ่ม door/window → clear removed flag
+        if (item.productId === "door" || item.productId === "window") {
+          clearOpeningRemoved(item.productId);
+        }
+        return { placedItems: [...s.placedItems, item] };
+      }),
 
+    // ⭐ removeItem — mark flag ถ้าลบ door/window
     removeItem: (uid) =>
       set((s) => {
         const removed = s.placedItems.find((i) => i.uid === uid);
-        const next = s.placedItems.filter((i) => i.uid !== uid);
 
-        // Orphan children (ที่ parentUid = uid)
+        // ⭐ ถ้าลบ door/window → mark removed
+        if (
+          removed &&
+          (removed.productId === "door" || removed.productId === "window")
+        ) {
+          markOpeningRemoved(removed.productId);
+        }
+
+        const next = s.placedItems.filter((i) => i.uid !== uid);
         const hasOrphans = next.some((i) => i.parentUid === uid);
         const finalItems = hasOrphans
           ? next.map((i) =>
@@ -172,8 +189,7 @@ export const useRoomTwin = create<RoomTwinState>()(
 
         return {
           placedItems: finalItems,
-          selectedUid:
-            s.selectedUid === uid ? null : s.selectedUid,
+          selectedUid: s.selectedUid === uid ? null : s.selectedUid,
           customizeTargetUid:
             s.customizeTargetUid === uid
               ? null
@@ -204,16 +220,23 @@ export const useRoomTwin = create<RoomTwinState>()(
     // ============================================================
     // Zones
     // ============================================================
+    // ⭐ removeZone — mark flag ถ้าในโซนมี door/window
     removeZone: (zuid) =>
       set((s) => {
-        // UIDs ที่อยู่ในโซนนี้
         const uidsInZone = new Set(
           s.placedItems
             .filter((i) => i.zoneUid === zuid)
             .map((i) => i.uid),
         );
 
-        // ลบ items ในโซน + orphan children ที่ parent อยู่ในโซนนี้
+        // ⭐ เช็คว่ามี door/window ในโซนไหม
+        s.placedItems.forEach((it) => {
+          if (!uidsInZone.has(it.uid)) return;
+          if (it.productId === "door" || it.productId === "window") {
+            markOpeningRemoved(it.productId);
+          }
+        });
+
         const newItems = s.placedItems
           .filter((i) => !uidsInZone.has(i.uid))
           .map((i) =>
@@ -222,15 +245,12 @@ export const useRoomTwin = create<RoomTwinState>()(
               : i,
           );
 
-        // ลบ zoneMeta
         const newMeta = new Map(s.zoneMeta);
         newMeta.delete(zuid);
 
         return {
           placedItems: newItems,
           zoneMeta: newMeta,
-
-          // Clear selections ที่อ้างถึงโซน/items ที่ถูกลบ
           selectedZoneUid:
             s.selectedZoneUid === zuid ? null : s.selectedZoneUid,
           selectedUid:
@@ -265,7 +285,6 @@ export const useRoomTwin = create<RoomTwinState>()(
       set({ selectedZoneUid: zuid, selectedUid: null }),
 
     deselectZone: () => set({ selectedZoneUid: null }),
-
     closeItemPanel: () => set({ selectedUid: null }),
 
     // ============================================================
@@ -316,11 +335,10 @@ export const useRoomTwin = create<RoomTwinState>()(
       }),
 
     // ============================================================
-    // Swap / Customize targets
+    // Swap / Customize
     // ============================================================
     swapTargetUid: null,
     customizeTargetUid: null,
-
     setSwapTarget: (uid) => set({ swapTargetUid: uid }),
     setCustomizeTarget: (uid) => set({ customizeTargetUid: uid }),
 
@@ -347,7 +365,6 @@ export const useRoomTwin = create<RoomTwinState>()(
 
     pushHistory: (snapshot) =>
       set((s) => {
-        // ถ้า snapshot เหมือนตัวปัจจุบัน → ไม่ push
         if (
           s.historyIndex >= 0 &&
           s.history[s.historyIndex] === snapshot
@@ -400,7 +417,6 @@ export const useRoomTwin = create<RoomTwinState>()(
       }),
 
     setCartExcluded: (sc) => set({ cartExcluded: new Set(sc) }),
-
     clearCartExcluded: () => set({ cartExcluded: new Set() }),
 
     // ============================================================
@@ -427,7 +443,7 @@ export const useRoomTwin = create<RoomTwinState>()(
       set((s) => ({ showLockBadges: !s.showLockBadges })),
 
     // ============================================================
-    // Reset
+    // Reset — ⚠️ ไม่ clear opening flags (user ต้องการให้ persist)
     // ============================================================
     resetAll: () =>
       set({
@@ -462,7 +478,7 @@ export const useRoomTwin = create<RoomTwinState>()(
 );
 
 // ============================================================
-// Selectors (convenience)
+// Selectors
 // ============================================================
 
 export const selectSelectedItem = (s: RoomTwinState) => {

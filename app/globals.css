@@ -1570,7 +1570,6 @@ aside {
 
 .room-size-panel {
   position: fixed;
-  /* ✅ ลบ top/left ออก — JS จะ set ผ่าน ref */
   transform: translateY(-16px);
   width: min(380px, calc(100vw - 16px));
   background: #fff;
@@ -1583,14 +1582,23 @@ aside {
   flex-direction: column;
   max-height: calc(100vh - 72px);
   opacity: 0;
+  visibility: hidden;          /* ⭐ เพิ่ม */
   pointer-events: none;
-  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0.26s;       /* ⭐ transition delay */
 }
 
 .room-size-panel.show {
   transform: translateY(0);
   opacity: 1;
+  visibility: visible;         /* ⭐ เพิ่ม */
   pointer-events: auto;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0s;
 }
 
 /* ============================================================
@@ -2685,14 +2693,23 @@ aside {
   flex-direction: column;
   overflow: hidden;
   opacity: 0;
+  visibility: hidden;          /* ⭐ */
   pointer-events: none;
-  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0.26s;       /* ⭐ */
 }
 
 .customize-panel.show {
   transform: translate(-50%, 0);
   opacity: 1;
+  visibility: visible;         /* ⭐ */
   pointer-events: auto;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0s;
 }
 
 .cz-head {
@@ -3009,14 +3026,23 @@ aside {
   flex-direction: column;
   overflow: hidden;
   opacity: 0;
+  visibility: hidden;          /* ⭐ */
   pointer-events: none;
-  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0.26s;       /* ⭐ */
 }
 
 .zone-theme-panel.show {
   transform: translate(-50%, 0);
   opacity: 1;
+  visibility: visible;         /* ⭐ */
   pointer-events: auto;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0s;
 }
 
 .ztp-head {
@@ -3218,15 +3244,23 @@ aside {
   gap: 8px;
   padding: 8px 12px;
   opacity: 0;
+  visibility: hidden;          /* ⭐ */
   pointer-events: none;
-  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s;
-  max-width: calc(100% - 32px);
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0.22s;       /* ⭐ */
 }
 
 .zone-chooser.show {
   transform: translate(-50%, 0);
   opacity: 1;
+  visibility: visible;         /* ⭐ */
   pointer-events: auto;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0s;
 }
 
 .zone-chooser-label {
@@ -4055,12 +4089,17 @@ aside {
   z-index: 29;
   display: none;
   opacity: 0;
-  transition: opacity 0.18s;
+  visibility: hidden;          /* ⭐ */
+  pointer-events: none;        /* ⭐ */
+  transition: opacity 0.18s, visibility 0s 0.18s;
 }
 
 .panel-backdrop.show {
   display: block;
   opacity: 1;
+  visibility: visible;         /* ⭐ */
+  pointer-events: auto;        /* ⭐ */
+  transition: opacity 0.18s, visibility 0s 0s;
 }
 
 /* Mobile — โชว์ backdrop สีเทาจางๆ */

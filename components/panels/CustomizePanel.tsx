@@ -28,7 +28,7 @@ export default function CustomizePanel() {
     saveState();
   }, [setTarget, saveState]);
 
-  // ⭐ Escape key → close
+  // Escape
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -43,17 +43,25 @@ export default function CustomizePanel() {
 
   return (
     <>
-      {/* ⭐ Backdrop */}
-      <div
-        className={`panel-backdrop z-29${open ? " show" : ""}`}
-        onClick={close}
-        aria-hidden="true"
-      />
+      {/* ⭐ Backdrop — render เฉพาะตอน open */}
+      {open && (
+        <div
+          className="panel-backdrop z-29 show"
+          onClick={close}
+          aria-hidden="true"
+        />
+      )}
 
       <aside
         className={`customize-panel${open ? " show" : ""}`}
         aria-hidden={!open}
-        onClick={(e) => e.stopPropagation()}
+        // ⭐ Inline styles — บังคับแม้ CSS ไม่โหลด
+        style={{
+          visibility: open ? "visible" : "hidden",
+          pointerEvents: open ? "auto" : "none",
+        }}
+        // ⭐ inert — block ทุก interaction เมื่อปิด
+        {...(!open ? { inert: "" as any } : {})}
       >
         <div className="cz-head">
           <div className="cz-head-main">
