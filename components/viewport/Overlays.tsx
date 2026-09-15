@@ -1,6 +1,6 @@
 // components/viewport/Overlays.tsx
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useRoomTwin } from "@/lib/state/store";
 import { getWallStatusText } from "@/lib/three/roomShell";
@@ -20,7 +20,6 @@ export default function Overlays() {
     show: false,
   });
 
-  // ===== Wall status text =====
   useEffect(() => {
     const id = setInterval(() => {
       setWallStatus(getWallStatusText());
@@ -28,30 +27,25 @@ export default function Overlays() {
     return () => clearInterval(id);
   }, []);
 
-  // ===== Toast event listener =====
   useEffect(() => {
     const onToast = (e: Event) => {
       const msg = (e as CustomEvent).detail?.msg || "";
       setToast({ msg, show: true });
-      setTimeout(() => {
-        setToast((t) => ({ ...t, show: false }));
-      }, 3200);
+      setTimeout(() => setToast((t) => ({ ...t, show: false })), 3200);
     };
     window.addEventListener("roomtwin:toast", onToast);
-    return () => {
-      window.removeEventListener("roomtwin:toast", onToast);
-    };
+    return () => window.removeEventListener("roomtwin:toast", onToast);
   }, []);
 
   const showHint = !!placingProductId || !!placingZoneId;
 
   let hintText = "";
-  if (placingZoneId) {
-    hintText = "แตะจุดบนพื้นเพื่อวางโซนนี้";
-  } else if (placingProductId) {
+  if (placingZoneId) hintText = "แตะจุดบนพื้นเพื่อวางโซนนี้";
+  else if (placingProductId) {
     const p = PRODUCT_BY_ID.get(placingProductId);
     if (p?.wallMount) hintText = "แตะบนผนังเพื่อแขวนไอเทมนี้";
-    else if (p?.ceilingMount) hintText = "แตะจุดบนเพดานเพื่อแขวนไอเทมนี้";
+    else if (p?.ceilingMount)
+      hintText = "แตะจุดบนเพดานเพื่อแขวนไอเทมนี้";
     else hintText = "แตะจุดในห้องเพื่อวางไอเทมนี้";
   }
 
@@ -74,10 +68,6 @@ export default function Overlays() {
         </button>
       )}
 
-      <div className="placement-toast" id="placementToast" role="alert">
-        {/* ใช้ render message ตรงๆ แทนการควบคุมด้วย class */}
-      </div>
-
       <button
         type="button"
         className={`lock-toggle-btn${showLockBadges ? "" : " off"}`}
@@ -94,7 +84,6 @@ export default function Overlays() {
 
       {showLockBadges && <LockBadges />}
 
-      {/* Toast */}
       {toast.show && (
         <div
           className="placement-toast show"
@@ -119,52 +108,82 @@ export default function Overlays() {
           ⚠️ {toast.msg}
         </div>
       )}
+
+      <div className="scale-badge" id="scaleBadge" />
     </>
   );
 }
 
 // ============================================================
-// Lock Badges
+// LockBadges — centered on object
 // ============================================================
 
 function LockBadges() {
-  const placedItems = useRoomTwin((s) => s.placedItems);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
-    const box = new THREE.Box3();
-    const point = new THREE.Vector3();
     const els = new Map<string, HTMLElement>();
+
+    const box = new THREE.Box3();
+    const center = new THREE.Vector3();
+    const ndc = new THREE.Vector3();
 
     let raf = 0;
     const tick = () => {
       const rect = renderer.domElement.getBoundingClientRect();
+      const { placedItems } = useRoomTwin.getState();
       const seen = new Set<string>();
 
       placedItems.forEach((item) => {
         if (!item.locked) return;
+
         const obj = objectsByUid.get(item.uid);
-        if (!obj || !obj.visible) return;
+        if (!obj || obj.visible === false) return;
+
+        // Skip if hidden by parent (e.g., faded wall)
+        let p: THREE.Object3D | null = obj.parent;
+        let hidden = false;
+        while (p) {
+          if (!p.visible) {
+            hidden = true;
+            break;
+          }
+          p = p.parent;
+        }
+        if (hidden) return;
+
+        // Compute visible bounds (skip transparent colliders)
+        obj.updateMatrixWorld(true);
+        box.makeEmpty();
+        obj.traverse((child: any) => {
+          if (!child.isMesh) return;
+          if (child.visible === false) return;
+          const mat = child.material as any;
+          if (mat?.transparent && (mat.opacity ?? 1) < 0.05) return;
+
+          const b = new THREE.Box3().setFromObject(child);
+          if (isFinite(b.min.x)) box.union(b);
+        });
+        if (box.isEmpty()) return;
 
         seen.add(item.uid);
-        box.setFromObject(obj);
-        const anchorY = item.ceilingMount ? box.min.y : box.max.y;
 
-        point.set(
-          (box.min.x + box.max.x) / 2,
-          anchorY,
-          (box.min.z + box.max.z) / 2,
-        );
-        point.project(camera);
+        // ⭐ Center of bounding box
+        box.getCenter(center);
+        ndc.copy(center).project(camera);
 
-        let el = els.get(item.uid);
-        if (point.z > 1) {
+        if (ndc.z > 1) {
+          const el = els.get(item.uid);
           if (el) el.style.display = "none";
           return;
         }
 
+        const sx = (ndc.x * 0.5 + 0.5) * rect.width;
+        const sy = (-ndc.y * 0.5 + 0.5) * rect.height;
+
+        let el = els.get(item.uid);
         if (!el) {
           el = document.createElement("div");
           el.className = "lock-badge";
@@ -173,9 +192,9 @@ function LockBadges() {
           els.set(item.uid, el);
         }
 
-        el.style.display = "block";
-        el.style.left = (point.x * 0.5 + 0.5) * rect.width + "px";
-        el.style.top = (point.y * 0.5 + 0.5) * rect.height - 6 + "px";
+        el.style.display = "flex";
+        el.style.left = sx + "px";
+        el.style.top = sy + "px";
       });
 
       els.forEach((el, uid) => {
@@ -195,7 +214,7 @@ function LockBadges() {
       els.forEach((el) => el.remove());
       els.clear();
     };
-  }, [placedItems]);
+  }, []);
 
   return <div className="lock-badges" id="lockBadges" ref={containerRef} />;
 }
