@@ -4,7 +4,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 // ===== Shared instances =====
 export const scene = new THREE.Scene();
-export const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+export const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
 
 export const roomGroup = new THREE.Group();
 export const floorGroup = new THREE.Group();
@@ -13,13 +13,13 @@ export const ceilingColliderGroup = new THREE.Group();
 export const baseboardGroup = new THREE.Group();
 export const zoneBoundaryGroup = new THREE.Group();
 
-// ===== Registries (mutable maps) =====
+// ===== Registries =====
 export const objectsByUid = new Map<string, THREE.Group>();
 export const wallItemMaterials = new Map<string, THREE.Material[]>();
 export const surfaceColliders = new Map<string, THREE.Mesh>();
 export const meshWallId = new Map<THREE.Mesh, string>();
 
-// ===== Deferred instances (set by initScene) =====
+// ===== Deferred instances =====
 export let renderer: THREE.WebGLRenderer;
 export let controls: OrbitControls;
 export let sun: THREE.DirectionalLight;
@@ -35,9 +35,13 @@ export function initScene(holder: HTMLElement) {
   if (_initialized) return;
 
   scene.background = new THREE.Color(0xede4d2);
-  scene.fog = new THREE.Fog(0xede4d2, 9, 16);
+  // ⭐ Fog เริ่มที่ 20 จบ 50 — ไกลพอ ไม่บังตอน zoom out
+  scene.fog = new THREE.Fog(0xede4d2, 20, 50);
 
   camera.position.set(2.6, 2.5, 5.6);
+  // ⭐ far = 200 → มองไกลได้มาก
+  camera.far = 200;
+  camera.updateProjectionMatrix();
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -51,8 +55,9 @@ export function initScene(holder: HTMLElement) {
   controls.target.set(0, 1.1, 0);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.minDistance = 2.0;
-  controls.maxDistance = 14;
+  controls.minDistance = 1.5;
+  // ⭐ maxDistance = 40 → zoom out ได้ไกลมาก
+  controls.maxDistance = 40;
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.minPolarAngle = 0.02;
   controls.rotateSpeed = 0.8;
