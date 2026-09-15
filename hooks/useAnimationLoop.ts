@@ -1,7 +1,13 @@
 // hooks/useAnimationLoop.ts
 "use client";
 import { useEffect } from "react";
-import { renderer, scene, camera, controls, isInitialized } from "@/lib/three/scene";
+import {
+  renderer,
+  scene,
+  camera,
+  controls,
+  isInitialized,
+} from "@/lib/three/scene";
 import { updateWallVisibility } from "@/lib/three/roomShell";
 import { updateRotateGizmo } from "@/lib/three/gizmo";
 import { buildZoneBoundary } from "@/lib/three/zoneBounds";

@@ -19,6 +19,7 @@ import {
   snap,
   computeRestY,
   applyTransformToDescendants,
+  clampToRoom,
 } from "@/lib/three/placement";
 import {
   resolveWallPlacement,
@@ -46,7 +47,7 @@ import type { PlacedItem } from "@/lib/state/types";
 const DRAG_THRESHOLD = 8;
 
 // ============================================================
-// ⭐ Helper — collect descendants recursively
+// Helpers
 // ============================================================
 
 function collectDescendants(
@@ -65,10 +66,6 @@ function collectDescendants(
   return set;
 }
 
-// ============================================================
-// ⭐ Helper — compute zone bbox (from startItems snapshot)
-// ============================================================
-
 function computeZoneBBox(
   placedItems: PlacedItem[],
   startItems: Array<{ uid: string; x: number; z: number }>,
@@ -77,7 +74,6 @@ function computeZoneBBox(
   let maxX = -Infinity;
   let minZ = Infinity;
   let maxZ = -Infinity;
-
   startItems.forEach((si) => {
     const it = placedItems.find((i) => i.uid === si.uid);
     if (!it) return;
@@ -87,7 +83,6 @@ function computeZoneBBox(
     minZ = Math.min(minZ, si.z - fp.d / 2);
     maxZ = Math.max(maxZ, si.z + fp.d / 2);
   });
-
   if (!isFinite(minX)) return null;
   return { minX, maxX, minZ, maxZ };
 }
@@ -139,6 +134,7 @@ export function usePointerInteraction() {
 
       if (store.placingProductId || store.placingZoneId) return;
 
+      // Rotate handle?
       if (
         store.selectedUid &&
         !isLocked(store.selectedUid) &&
@@ -218,22 +214,16 @@ export function usePointerInteraction() {
     // POINTER MOVE
     // ============================================================
     const onMove = (e: PointerEvent) => {
-      // ============================================================
-      // ⭐ ZONE DRAG — fix both bugs
-      // ============================================================
+      // 1. Zone drag
       if (zoneDragRef.current) {
         const zd = zoneDragRef.current;
         const dx = e.clientX - zd.startX;
         const dy = e.clientY - zd.startY;
 
-        // ----- Start drag -----
         if (!zd.started && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
           const sp = raycastFloorPoint(zd.startX, zd.startY);
           if (!sp) return;
-
           const { placedItems } = useRoomTwin.getState();
-
-          // ⭐ Fix Bug 1: เก็บ zone items + descendants ทั้งหมด
           const zoneItems = placedItems.filter(
             (i) => i.zoneUid === zd.zoneUid,
           );
@@ -246,9 +236,7 @@ export function usePointerInteraction() {
           zd.startItems = Array.from(allUids)
             .map((uid) => {
               const it = placedItems.find((i) => i.uid === uid);
-              return it
-                ? { uid, x: it.x || 0, z: it.z || 0 }
-                : null;
+              return it ? { uid, x: it.x || 0, z: it.z || 0 } : null;
             })
             .filter(
               (s): s is { uid: string; x: number; z: number } => !!s,
@@ -265,37 +253,28 @@ export function usePointerInteraction() {
           el.style.cursor = "move";
         }
 
-        // ----- Update drag -----
         if (zd.started) {
           const p = raycastFloorPoint(e.clientX, e.clientY);
           if (!p) return;
-
           const dxR = p.x - zd.startFloor.x;
           const dzR = p.z - zd.startFloor.z;
           const rawDx = Math.round(dxR / GRID) * GRID;
           const rawDz = Math.round(dzR / GRID) * GRID;
-
           const { placedItems, updateItem, room } = useRoomTwin.getState();
-
-          // ⭐ Fix Bug 2: clamp offset as whole zone
           const bbox = computeZoneBBox(placedItems, zd.startItems);
           let cdx = rawDx;
           let cdz = rawDz;
-
           if (bbox) {
             const margin = 0.03;
             const rMinX = -room.w / 2 + margin;
             const rMaxX = room.w / 2 - margin;
             const rMinZ = -room.d / 2 + margin;
             const rMaxZ = room.d / 2 - margin;
-
             if (bbox.minX + cdx < rMinX) cdx = rMinX - bbox.minX;
             if (bbox.maxX + cdx > rMaxX) cdx = rMaxX - bbox.maxX;
             if (bbox.minZ + cdz < rMinZ) cdz = rMinZ - bbox.minZ;
             if (bbox.maxZ + cdz > rMaxZ) cdz = rMaxZ - bbox.maxZ;
           }
-
-          // Apply same offset to all items
           zd.startItems.forEach((si) => {
             const newX = si.x + cdx;
             const newZ = si.z + cdz;
@@ -310,18 +289,14 @@ export function usePointerInteraction() {
         return;
       }
 
-      // ============================================================
-      // Gizmo drag
-      // ============================================================
+      // 2. Rotate gizmo
       if (isGizmoDragging()) {
         setHoveredZone(null);
         updateGizmoRotateDrag(e.clientX, e.clientY);
         return;
       }
 
-      // ============================================================
-      // ITEM DRAG
-      // ============================================================
+      // 3. Item drag
       if (itemDragRef.current) {
         const id = itemDragRef.current;
         const dx = e.clientX - id.startX;
@@ -336,7 +311,6 @@ export function usePointerInteraction() {
           try {
             el.setPointerCapture(id.pointerId);
           } catch {}
-
           const obj = objectsByUid.get(id.uid);
           const { placedItems } = useRoomTwin.getState();
           const item = placedItems.find((i) => i.uid === id.uid);
@@ -353,7 +327,7 @@ export function usePointerInteraction() {
         const item = placedItems.find((i) => i.uid === id.uid);
         if (!item) return;
 
-        // ----- Wall item -----
+        // Wall item
         if (item.wallMount) {
           const hit = raycastWallPlacement(e.clientX, e.clientY);
           if (!hit) return;
@@ -377,20 +351,15 @@ export function usePointerInteraction() {
           });
           const obj = objectsByUid.get(item.uid);
           if (obj) {
-            const w = wallItemWorldXZ({
-              wallId: hit.wallId,
-              u: c.u,
-            });
+            const w = wallItemWorldXZ({ wallId: hit.wallId, u: c.u });
             obj.position.set(w.x, c.v, w.z);
             obj.rotation.y = getWallRotY(hit.wallId);
           }
-          if (product.id === "door") {
-            rebuildBaseboards();
-          }
+          if (product.id === "door") rebuildBaseboards();
           return;
         }
 
-        // ----- Ceiling item -----
+        // Ceiling item
         if (item.ceilingMount) {
           const hit = raycastCeilingPlacement(e.clientX, e.clientY);
           if (!hit) return;
@@ -408,7 +377,7 @@ export function usePointerInteraction() {
           return;
         }
 
-        // ----- Floor item -----
+        // Floor item
         const hit = raycastPlacement(e.clientX, e.clientY, item.uid);
         if (!hit) return;
         const product = PRODUCT_BY_ID.get(item.productId);
@@ -423,12 +392,9 @@ export function usePointerInteraction() {
           hostUid,
           product.rug,
         );
-
-        // ⭐ Fix Bug 1: children follow parent via applyTransformToDescendants
         const ox = item.x!;
         const oz = item.z!;
         applyTransformToDescendants(item.uid, ox, oz, c.x, c.z, 0);
-
         const restY = computeRestY(hostUid);
         updateItem(item.uid, {
           x: c.x,
@@ -442,7 +408,7 @@ export function usePointerInteraction() {
       }
 
       // ============================================================
-      // CURSOR + HOVER
+      // Cursor feedback
       // ============================================================
       const store = useRoomTwin.getState();
 
@@ -493,7 +459,6 @@ export function usePointerInteraction() {
           try {
             if (zd.captured) el.releasePointerCapture(zd.pointerId);
           } catch {}
-          // ⭐ Re-resolve heights after drag
           import("@/lib/three/placement").then(({ resolveRestHeights }) => {
             resolveRestHeights();
           });
@@ -544,9 +509,7 @@ export function usePointerInteraction() {
           store.selectItem(id.uid);
         }
 
-        if (isDoor) {
-          rebuildBaseboards();
-        }
+        if (isDoor) rebuildBaseboards();
         itemDragRef.current = null;
         return;
       }
@@ -607,9 +570,7 @@ export function usePointerInteraction() {
           const item = useRoomTwin
             .getState()
             .placedItems.find((i) => i.uid === itemDragRef.current!.uid);
-          if (item?.productId === "door") {
-            rebuildBaseboards();
-          }
+          if (item?.productId === "door") rebuildBaseboards();
           saveState();
         }
         itemDragRef.current = null;

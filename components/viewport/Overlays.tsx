@@ -108,8 +108,7 @@ export default function Overlays() {
           ⚠️ {toast.msg}
         </div>
       )}
-
-      <div className="scale-badge" id="scaleBadge" />
+      {/* ⭐ ลบ scaleBadge ออก */}
     </>
   );
 }
@@ -154,7 +153,6 @@ function LockBadges() {
         }
         if (hidden) return;
 
-        // Compute visible bounds (skip transparent colliders)
         obj.updateMatrixWorld(true);
         box.makeEmpty();
         obj.traverse((child: any) => {
@@ -162,7 +160,6 @@ function LockBadges() {
           if (child.visible === false) return;
           const mat = child.material as any;
           if (mat?.transparent && (mat.opacity ?? 1) < 0.05) return;
-
           const b = new THREE.Box3().setFromObject(child);
           if (isFinite(b.min.x)) box.union(b);
         });
