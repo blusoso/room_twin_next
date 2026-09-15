@@ -117,3 +117,17 @@ export const WALL_CHIP_COLORS = [
 
 export const GIZMO_SNAP_DEG = 15;
 export const GIZMO_SNAP_THRESHOLD_DEG = 4;
+
+// ⭐ ระดับความสูงของพื้น
+export const LEVEL_PRESETS = [
+  { id: "l0", label: "0", value: 0.0, color: "#e8dcc4" },
+  { id: "l1", label: "+15", value: 0.15, color: "#dccfaf" },
+  { id: "l2", label: "+30", value: 0.3, color: "#d0c09a" },
+  { id: "l3", label: "+50", value: 0.5, color: "#c4b185" },
+  { id: "l4", label: "+75", value: 0.75, color: "#b8a270" },
+  { id: "l5", label: "+100", value: 1.0, color: "#ac935b" },
+] as const;
+
+export const LEVEL_MIN = 0.0;
+export const LEVEL_MAX = 1.5;
+export const LEVEL_STEP = 0.05;

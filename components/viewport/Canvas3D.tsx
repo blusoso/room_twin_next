@@ -113,6 +113,9 @@ export default function Canvas3D() {
     room.d,
     room.h,
     room.blocks?.size,
+    // ⭐ Detect cellLevels change by size + JSON-stringified check
+    Object.keys(room.cellLevels || {}).length,
+    JSON.stringify(room.cellLevels),
   ]);
 
   // ===== 3. Seed (กรณีไม่มีเลย) =====
@@ -135,6 +138,9 @@ export default function Canvas3D() {
     room.d,
     room.h,
     room.blocks?.size,
+    // ⭐ Detect cellLevels change by size + JSON-stringified check
+    Object.keys(room.cellLevels || {}).length,
+    JSON.stringify(room.cellLevels),
   ]);
 
   // ===== 5. Instantiate =====

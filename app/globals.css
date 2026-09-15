@@ -4421,3 +4421,81 @@ aside {
   }
 }
 
+/* ============================================================
+   Blocks Editor — Level Picker
+   ============================================================ */
+
+.blocks-level-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #fffdf6, #fbf8f2);
+  border-bottom: 1px solid var(--panel-line);
+  flex-shrink: 0;
+}
+
+.blp-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  letter-spacing: 0.3px;
+}
+
+.blp-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.blp-chip {
+  min-width: 44px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5a4a30;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+  box-shadow: inset 0 0 0 1px rgba(42, 35, 48, 0.08);
+  touch-action: manipulation;
+}
+
+.blp-chip:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(42, 35, 48, 0.08),
+    0 3px 8px rgba(42, 35, 48, 0.15);
+}
+
+.blp-chip.active {
+  border-color: var(--ink);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(42, 35, 48, 0.08),
+    0 0 0 3px rgba(184, 117, 46, 0.2);
+}
+
+.blp-custom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.blp-custom input[type="range"] {
+  flex: 1;
+  accent-color: var(--ochre);
+  height: 4px;
+}
+
+.blp-value {
+  font-family: "Courier New", monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ochre-deep);
+  min-width: 56px;
+  text-align: right;
+}

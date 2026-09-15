@@ -13,7 +13,11 @@ import { useRoomTwin } from "@/lib/state/store";
 import { reinstantiateItem, removeInstantiated } from "@/lib/three/instantiate";
 import { instantiate } from "@/lib/three/instantiate";
 import { resolveRestHeights } from "@/lib/three/placement";
-import { rebuildBaseboards, applySurface, rebuildRoomShell } from "@/lib/three/roomShell";
+import {
+  rebuildBaseboards,
+  applySurface,
+  rebuildRoomShell,
+} from "@/lib/three/roomShell";
 import { relayoutCeilingItemsForObstacles } from "@/lib/three/ceilingPlacement";
 import { WALL_COLORS, CELL_SIZE } from "@/lib/data/constants";
 
@@ -85,9 +89,9 @@ function restoreSnapshot(snapshotJson: string) {
       h: state.room?.h ?? 2.6,
       shape: state.room?.shape || "rect",
       cellSize: state.room?.cellSize || CELL_SIZE,
-      blocks: state.room?.blocks
-        ? new Set(state.room.blocks)
-        : null,
+      blocks: state.room?.blocks ? new Set(state.room.blocks) : null,
+      // ⭐ New: cellLevels
+      cellLevels: state.room?.cellLevels || {},
     });
 
     // Surface
@@ -141,15 +145,9 @@ function ClosePanelsListener() {
       store.setCustomizeTarget(null);
       store.setSwapTarget(null);
       // Dispatch custom events for panels ที่เก็บ state เอง
-      window.dispatchEvent(
-        new CustomEvent("roomtwin:closeRoomStructure"),
-      );
-      window.dispatchEvent(
-        new CustomEvent("roomtwin:closeZoneTheme"),
-      );
-      window.dispatchEvent(
-        new CustomEvent("roomtwin:closeBlocksEditor"),
-      );
+      window.dispatchEvent(new CustomEvent("roomtwin:closeRoomStructure"));
+      window.dispatchEvent(new CustomEvent("roomtwin:closeZoneTheme"));
+      window.dispatchEvent(new CustomEvent("roomtwin:closeBlocksEditor"));
     };
     window.addEventListener("roomtwin:closePanels", onClose);
     return () => {
@@ -169,10 +167,12 @@ function SwapSlotListener() {
 
   useEffect(() => {
     const onSwap = (e: Event) => {
-      const { uid, productId } = (e as CustomEvent<{
-        uid: string;
-        productId: string;
-      }>).detail;
+      const { uid, productId } = (
+        e as CustomEvent<{
+          uid: string;
+          productId: string;
+        }>
+      ).detail;
 
       if (!uid || !productId) return;
 
@@ -181,12 +181,10 @@ function SwapSlotListener() {
       if (!item) return;
 
       // ใช้ helper swap ครบชุด
-      import("@/lib/three/zoneActions").then(
-        ({ swapZoneSlotFull }) => {
-          swapZoneSlotFull(uid, productId);
-          saveState();
-        },
-      );
+      import("@/lib/three/zoneActions").then(({ swapZoneSlotFull }) => {
+        swapZoneSlotFull(uid, productId);
+        saveState();
+      });
     };
     window.addEventListener("roomtwin:swapSlot", onSwap);
     return () => {

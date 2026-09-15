@@ -7,7 +7,7 @@ export function saveToStorage(state: SerializedState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
-    /* quota / private mode — ignore */
+    /* ignore */
   }
 }
 
@@ -18,6 +18,19 @@ export function loadFromStorage(): SerializedState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as SerializedState;
     if (!parsed || typeof parsed !== "object") return null;
+
+    // ⭐ Migration
+    if (parsed.room) {
+      if (!Array.isArray(parsed.room.blocks) && parsed.room.blocks) {
+        // fine
+      }
+      if (!parsed.room.cellLevels) {
+        (parsed.room as any).cellLevels = {};
+      }
+      // Remove old floors field
+      delete (parsed.room as any).floors;
+    }
+
     return parsed;
   } catch (e) {
     return null;

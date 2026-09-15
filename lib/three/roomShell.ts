@@ -13,7 +13,11 @@ import {
   objectsByUid,
 } from "./scene";
 import { makeFloorTexture } from "./surfaceTextures";
-import { WALL_COLORS, WALL_LABEL_FULL, CELL_SIZE } from "@/lib/data/constants";
+import {
+  WALL_COLORS,
+  WALL_LABEL_FULL,
+  CELL_SIZE,
+} from "@/lib/data/constants";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { useRoomTwin } from "@/lib/state/store";
 
@@ -41,7 +45,7 @@ export const ceilingColliderMat = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide,
 });
 
-// ===== Meshes =====
+// ===== Meshes (rect) =====
 export let floorMesh: THREE.Mesh;
 export let ceilingMesh: THREE.Mesh;
 export let ceilingCollider: THREE.Mesh;
@@ -74,7 +78,7 @@ export interface PolyWall {
 export let polyWalls: PolyWall[] = [];
 
 // ============================================================
-// ⭐ Merged Walls
+// Merged Walls
 // ============================================================
 
 export interface MergedWall {
@@ -297,15 +301,13 @@ export function initRoomShell() {
 }
 
 // ============================================================
-// Get wall / geometry
+// getWall / getWallGeom / helpers
 // ============================================================
 
 export function getWall(id: string): WallEntry | null {
   if (WALLS[id]) return WALLS[id];
-
   const polyW = polyWalls.find((w) => w.id === id);
   if (polyW) return polyW as any;
-
   const merged = mergedWallRegistry.get(id);
   if (merged && merged.memberIds.length > 0) {
     return (
@@ -318,7 +320,6 @@ export function getWall(id: string): WallEntry | null {
 export function getWallGeom(id: string) {
   const { room } = useRoomTwin.getState();
 
-  // 1. Merged wall ตรงๆ
   const merged = mergedWallRegistry.get(id);
   if (merged) {
     return {
@@ -333,7 +334,6 @@ export function getWallGeom(id: string) {
     };
   }
 
-  // 2. Rect walls
   if (id === "back")
     return {
       cx: 0, cz: -room.d / 2, dx: 1, dz: 0, nx: 0, nz: -1,
@@ -355,7 +355,6 @@ export function getWallGeom(id: string) {
       len: room.d, rotY: -Math.PI / 2,
     };
 
-  // 3. Cell wall → fallback merged
   const polyW = polyWalls.find((w) => w.id === id);
   if (polyW) {
     if (room.shape === "blocks") {
@@ -421,13 +420,11 @@ export function applySurface() {
   const { room, surface } = useRoomTwin.getState();
   if (!floorMat) return;
 
-  // Floor
   if (floorMat.map && floorMat.map.dispose) floorMat.map.dispose();
   floorMat.map = makeFloorTexture(surface.floor, room.w, room.d, 1);
   floorMat.map.repeat.set(room.w / 1.4, room.d / 1.4);
   floorMat.needsUpdate = true;
 
-  // Walls
   const cw = (id: string) =>
     surface.walls[id] !== undefined ? surface.walls[id] : surface.wallAll;
   if (surface.wallUniform || room.shape !== "rect") {
@@ -443,37 +440,25 @@ export function applySurface() {
     frontWallMat.color.setHex(cw("front"));
   }
 
-  // Ceiling
   ceilingMat.color.setHex(surface.ceiling);
 
-  // ⭐ Partition sync
-  syncPartitionColors(surface.wallAll);
-}
-
-// ============================================================
-// ⭐ Sync partitions to match wall color
-// ============================================================
-
-function syncPartitionColors(wallColor: number) {
-  const store = useRoomTwin.getState();
-  const partitions = store.placedItems.filter(
+  // Partitions sync
+  const partitions = useRoomTwin.getState().placedItems.filter(
     (i) => i.productId === "partition",
   );
-
   partitions.forEach((p) => {
-    if (p.params.color !== wallColor) {
-      store.updateItem(p.uid, {
-        params: { ...p.params, color: wallColor },
+    if (p.params.color !== surface.wallAll) {
+      useRoomTwin.getState().updateItem(p.uid, {
+        params: { ...p.params, color: surface.wallAll },
       });
     }
-
     const obj = objectsByUid.get(p.uid);
     if (!obj) return;
     obj.traverse((child: any) => {
       if (child.isMesh && child.material) {
         const m = child.material as THREE.MeshStandardMaterial;
         if (m.color && m.map === undefined) {
-          m.color.setHex(wallColor);
+          m.color.setHex(surface.wallAll);
         }
       }
     });
@@ -553,11 +538,39 @@ export function getWallStatusText() {
 }
 
 // ============================================================
+// findFloorYAt — raycast down onto floor + blocks
+// ============================================================
+
+const _floorRayOrigin = new THREE.Vector3();
+const _floorRayDir = new THREE.Vector3(0, -1, 0);
+const _floorRay = new THREE.Raycaster();
+
+export function findFloorYAt(x: number, z: number): number {
+  const targets: THREE.Object3D[] = [...floorGroup.children];
+
+  _floorRayOrigin.set(x, 50, z);
+  _floorRay.set(_floorRayOrigin, _floorRayDir);
+  _floorRay.far = 100;
+
+  const hits = _floorRay.intersectObjects(targets, false);
+  if (hits.length === 0) return 0;
+
+  let bestY = 0;
+  let found = false;
+  hits.forEach((h) => {
+    if (!found || h.point.y > bestY) {
+      bestY = h.point.y;
+      found = true;
+    }
+  });
+  return found ? bestY : 0;
+}
+
+// ============================================================
 // Baseboards
 // ============================================================
 
 export function rebuildBaseboards() {
-  // Clear
   while (baseboardGroup.children.length) {
     const child = baseboardGroup.children[0];
     baseboardGroup.remove(child);
@@ -571,7 +584,6 @@ export function rebuildBaseboards() {
     roughness: 0.6,
   });
 
-  // Wall set
   const wallGeoms: Array<{
     id: string;
     cx: number;
@@ -608,16 +620,13 @@ export function rebuildBaseboards() {
   }
 
   wallGeoms.forEach((g) => {
-    // ⭐ หา openings (ground anchor) ทั้งหมด — รวม door + slidingdoor
     const doors: Array<{ door: any; u: number }> = [];
 
     placedItems.forEach((it) => {
       if (!it.wallMount || !it.wallId) return;
-
       const product = PRODUCT_BY_ID.get(it.productId);
       if (!product?.groundAnchor) return;
 
-      // Wall id ตรง หรืออยู่ใน memberIds
       if (it.wallId === g.id) {
         doors.push({ door: it, u: it.u || 0 });
       } else if (g.memberIds && g.memberIds.includes(it.wallId)) {
@@ -627,7 +636,6 @@ export function rebuildBaseboards() {
 
     doors.sort((a, b) => a.u - b.u);
 
-    // Segments
     const segs: [number, number][] = [];
     let cur = -g.len / 2;
 
@@ -641,7 +649,6 @@ export function rebuildBaseboards() {
     });
     if (g.len / 2 - cur > 0.005) segs.push([cur, g.len / 2]);
 
-    // Draw each segment
     segs.forEach(([u0, u1]) => {
       const len = u1 - u0;
       if (len < 0.005) return;
@@ -682,7 +689,6 @@ export function rebuildRoomShell() {
     return;
   }
 
-  // Clear poly walls
   polyWalls.forEach((w) => {
     roomGroup.remove(w.mesh);
     if (w.mesh.geometry) w.mesh.geometry.dispose();
@@ -759,13 +765,22 @@ export function clearGroup(g: THREE.Group) {
 }
 
 // ============================================================
-// Blocks shell
+// ⭐ buildBlocksShell — ใหม่ (voxel with levels)
 // ============================================================
+
+const LEVEL_COLOR_LOW = new THREE.Color(0xe0d4bc);
+const LEVEL_COLOR_HIGH = new THREE.Color(0xa8895a);
+
+function levelColor(y: number): THREE.Color {
+  const t = Math.max(0, Math.min(1, y / 1.5));
+  return LEVEL_COLOR_LOW.clone().lerp(LEVEL_COLOR_HIGH, t);
+}
 
 export function buildBlocksShell() {
   const { room } = useRoomTwin.getState();
   if (!room.blocks) return;
 
+  // Clear
   polyWalls.forEach((w) => {
     roomGroup.remove(w.mesh);
     if (w.mesh.geometry) w.mesh.geometry.dispose();
@@ -789,30 +804,58 @@ export function buildBlocksShell() {
   const cs = room.cellSize;
   const cellGeo = new THREE.PlaneGeometry(cs, cs);
 
+  // ⭐ Get level for each cell
+  const getLevel = (i: number, j: number): number => {
+    return room.cellLevels[`${i},${j}`] ?? 0;
+  };
+
+  // ===== 1. Render floor + solid block per cell =====
   room.blocks.forEach((k) => {
     const [i, j] = k.split(",").map(Number);
-    const c = { x: i * cs, z: j * cs };
+    const cx = i * cs;
+    const cz = j * cs;
+    const levelY = getLevel(i, j);
 
-    const fm = new THREE.Mesh(cellGeo, floorMat);
-    fm.rotation.x = -Math.PI / 2;
-    fm.position.set(c.x, 0, c.z);
-    fm.receiveShadow = true;
-    fm.userData.isFloor = true;
-    fm.name = "FLOOR";
-    floorGroup.add(fm);
+    const color = levelColor(levelY);
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.85,
+    });
 
+    // ⭐ Solid block from 0 to levelY (or thin slab at 0)
+    const topY = levelY;
+    const bottomY = Math.min(0, levelY);
+    const height = Math.max(0.02, topY - bottomY);
+    const centerY = bottomY + height / 2;
+
+    const blockMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(cs, height, cs),
+      mat,
+    );
+    blockMesh.position.set(cx, centerY, cz);
+    blockMesh.receiveShadow = true;
+    blockMesh.castShadow = true;
+    blockMesh.userData.isFloor = true;
+    blockMesh.userData.cellI = i;
+    blockMesh.userData.cellJ = j;
+    blockMesh.userData.floorY = levelY;
+    blockMesh.name = "FLOOR";
+    floorGroup.add(blockMesh);
+
+    // Ceiling
     const cm = new THREE.Mesh(cellGeo, ceilingMat);
     cm.rotation.x = Math.PI / 2;
-    cm.position.set(c.x, room.h, c.z);
+    cm.position.set(cx, room.h, cz);
     cm.userData.isCeiling = true;
     ceilingGroup.add(cm);
 
     const cc = new THREE.Mesh(cellGeo, ceilingColliderMat);
     cc.rotation.x = Math.PI / 2;
-    cc.position.set(c.x, room.h - 0.002, c.z);
+    cc.position.set(cx, room.h - 0.002, cz);
     ceilingColliderGroup.add(cc);
   });
 
+  // ===== 2. Walls =====
   const neighbors = [
     { side: "N", di: 0, dj: -1 },
     { side: "S", di: 0, dj: 1 },
@@ -822,26 +865,56 @@ export function buildBlocksShell() {
 
   room.blocks.forEach((k) => {
     const [i, j] = k.split(",").map(Number);
+    const myLevel = getLevel(i, j);
+
     neighbors.forEach(({ side, di, dj }) => {
       const nk = `${i + di},${j + dj}`;
-      if (room.blocks!.has(nk)) return;
-      addBlockWall(i, j, side);
+      const hasNeighbor = room.blocks!.has(nk);
+
+      if (!hasNeighbor) {
+        // ⭐ Outer wall — from myLevel to room.h
+        addBlockWall(i, j, side, myLevel, room.h, false);
+      } else {
+        const nLevel = getLevel(i + di, j + dj);
+        const diff = nLevel - myLevel;
+        if (Math.abs(diff) > 0.001) {
+          // ⭐ Riser — draw from min to max at boundary
+          const bottom = Math.min(myLevel, nLevel);
+          const top = Math.max(myLevel, nLevel);
+          addBlockWall(i, j, side, bottom, top, true);
+        }
+      }
     });
   });
 
   computeMergedWalls();
 }
 
-export function addBlockWall(i: number, j: number, side: string) {
+/**
+ * ⭐ addBlockWall — supports both outer walls and risers
+ * `isRiser = true` → short wall between different levels (no merged wall tracking)
+ */
+export function addBlockWall(
+  i: number,
+  j: number,
+  side: string,
+  bottomY: number,
+  topY: number,
+  isRiser: boolean,
+) {
   const { room, surface } = useRoomTwin.getState();
   const cs = room.cellSize;
+  const height = topY - bottomY;
+  if (height <= 0.001) return;
+
   const mat = new THREE.MeshStandardMaterial({
     color: surface.wallAll,
     roughness: 0.95,
     side: THREE.FrontSide,
     transparent: true,
   });
-  const geo = new THREE.PlaneGeometry(cs, room.h);
+
+  const geo = new THREE.PlaneGeometry(cs, height);
   const m = new THREE.Mesh(geo, mat);
 
   let cx: number, cz: number, rotY: number;
@@ -862,10 +935,13 @@ export function addBlockWall(i: number, j: number, side: string) {
     nx = -1; nz = 0; dx = 0; dz = 1;
   }
 
-  m.position.set(cx, room.h / 2, cz);
+  m.position.set(cx, bottomY + height / 2, cz);
   m.rotation.y = rotY;
   m.receiveShadow = true;
   roomGroup.add(m);
+
+  // ⭐ Risers ไม่นับเป็น merged wall (แค่ผนังสั้น)
+  if (isRiser) return;
 
   const wid = `bw_${i}_${j}_${side}`;
   meshWallId.set(m, wid);

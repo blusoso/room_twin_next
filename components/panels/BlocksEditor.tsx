@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { useSaveState } from "@/hooks/useSaveState";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
+import { rebuildRoomShell } from "@/lib/three/roomShell";
+import { LEVEL_PRESETS, LEVEL_STEP } from "@/lib/data/constants";
 
 const CELL_PX_BASE = 22;
 const MIN_ZOOM = 0.5;
@@ -35,10 +37,7 @@ function initBlocksFromRect(w: number, d: number, cellSize: number) {
 
 function computeBBox(blocks: Set<string>, cellSize: number) {
   if (blocks.size === 0) return null;
-  let minI = Infinity,
-    maxI = -Infinity,
-    minJ = Infinity,
-    maxJ = -Infinity;
+  let minI = Infinity, maxI = -Infinity, minJ = Infinity, maxJ = -Infinity;
   blocks.forEach((k) => {
     const [i, j] = k.split(",").map(Number);
     minI = Math.min(minI, i);
@@ -47,10 +46,7 @@ function computeBBox(blocks: Set<string>, cellSize: number) {
     maxJ = Math.max(maxJ, j);
   });
   return {
-    minI,
-    maxI,
-    minJ,
-    maxJ,
+    minI, maxI, minJ, maxJ,
     w: (maxI - minI + 1) * cellSize,
     d: (maxJ - minJ + 1) * cellSize,
   };
@@ -59,9 +55,11 @@ function computeBBox(blocks: Set<string>, cellSize: number) {
 export default function BlocksEditor() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Set<string>>(new Set());
+  const [draftLevels, setDraftLevels] = useState<Record<string, number>>({});
   const [extent, setExtent] = useState(12);
   const [zoom, setZoom] = useState(1);
   const [paintMode, setPaintMode] = useState<"add" | "remove" | null>(null);
+  const [paintLevel, setPaintLevel] = useState(0);
 
   const room = useRoomTwin((s) => s.room);
   const { saveState } = useSaveState();
@@ -73,6 +71,7 @@ export default function BlocksEditor() {
       const r = useRoomTwin.getState().room;
       if (r.shape === "blocks" && r.blocks && r.blocks.size > 0) {
         setDraft(new Set(r.blocks));
+        setDraftLevels({ ...r.cellLevels });
         let m = 0;
         r.blocks.forEach((k) => {
           const [i, j] = k.split(",").map(Number);
@@ -81,9 +80,11 @@ export default function BlocksEditor() {
         setExtent(Math.max(10, m + 4));
       } else {
         setDraft(initBlocksFromRect(r.w, r.d, r.cellSize));
+        setDraftLevels({});
         setExtent(computeExtent(r.w, r.d, r.cellSize));
       }
       setZoom(1);
+      setPaintLevel(0);
       setOpen(true);
     };
     window.addEventListener("roomtwin:openBlocksEditor", onOpen);
@@ -94,24 +95,55 @@ export default function BlocksEditor() {
   // ===== Painting =====
   useEffect(() => {
     if (!open) return;
+
     const applyCell = (el: HTMLElement) => {
       const i = +el.dataset.i!;
       const j = +el.dataset.j!;
       const key = cellKey(i, j);
-      setDraft((prev) => {
-        const next = new Set(prev);
-        if (paintMode === "add") next.add(key);
-        else if (paintMode === "remove") next.delete(key);
-        return next;
-      });
+
+      if (paintMode === "add") {
+        // ⭐ If exists at different level → update level
+        setDraft((prev) => {
+          if (prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
+        setDraftLevels((prev) => {
+          if (paintLevel === 0) {
+            if (prev[key] === 0 || prev[key] === undefined) return prev;
+            const n = { ...prev };
+            delete n[key];
+            return n;
+          }
+          if (prev[key] === paintLevel) return prev;
+          return { ...prev, [key]: paintLevel };
+        });
+      } else if (paintMode === "remove") {
+        setDraft((prev) => {
+          if (!prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+        setDraftLevels((prev) => {
+          if (prev[key] === undefined) return prev;
+          const n = { ...prev };
+          delete n[key];
+          return n;
+        });
+      }
     };
+
     const onPointerMove = (e: PointerEvent) => {
       if (!paintMode) return;
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const cell = el?.closest?.(".blocks-cell") as HTMLElement | null;
       if (cell) applyCell(cell);
     };
+
     const onPointerUp = () => setPaintMode(null);
+
     document.addEventListener("pointermove", onPointerMove);
     document.addEventListener("pointerup", onPointerUp);
     document.addEventListener("pointercancel", onPointerUp);
@@ -120,36 +152,75 @@ export default function BlocksEditor() {
       document.removeEventListener("pointerup", onPointerUp);
       document.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [open, paintMode]);
+  }, [open, paintMode, paintLevel]);
 
   const handleCellDown = (i: number, j: number) => {
     const key = cellKey(i, j);
     const has = draft.has(key);
-    setPaintMode(has ? "remove" : "add");
-    setDraft((prev) => {
-      const next = new Set(prev);
-      if (has) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    const curLevel = draftLevels[key] ?? 0;
+
+    // ⭐ If cell exists AND level matches paintLevel → toggle remove
+    //    If cell exists at DIFFERENT level → repaint with new level
+    //    If cell doesn't exist → add at paintLevel
+    if (has && curLevel === paintLevel) {
+      setPaintMode("remove");
+      setDraft((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+      setDraftLevels((prev) => {
+        const n = { ...prev };
+        delete n[key];
+        return n;
+      });
+    } else {
+      setPaintMode("add");
+      setDraft((prev) => {
+        if (prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+      setDraftLevels((prev) => {
+        if (paintLevel === 0) {
+          if (prev[key] === undefined) return prev;
+          const n = { ...prev };
+          delete n[key];
+          return n;
+        }
+        if (prev[key] === paintLevel) return prev;
+        return { ...prev, [key]: paintLevel };
+      });
+    }
   };
 
-  // ============================================================
-  // ⭐ handleApply — เรียบง่าย: แค่ setRoom ให้ effects จัดการ
-  // ============================================================
-  // BlocksEditor.tsx — handleApply
-  // components/panels/BlocksEditor.tsx — handleApply
+  // ===== Apply =====
   const handleApply = () => {
     if (draft.size === 0) return;
-
     const store = useRoomTwin.getState();
 
-    // ⭐ แค่ setRoom — Canvas3D effect 2 จะ:
-    //   1. Capture openings (style + relative position)
-    //   2. rebuildRoomShell
-    //   3. restoreOpeningsRelative (ตำแหน่ง relative เดิม)
-    //   4. Effect 3: skip seed (hasDoor/hasWindow = true หลัง restore)
-    //   5. Effect 5: instantiate
+    // ลบ wall items
+    store.placedItems.forEach((item) => {
+      if (item.wallMount) {
+        const obj = objectsByUid.get(item.uid);
+        if (obj) {
+          roomGroup.remove(obj);
+          obj.traverse((child: any) => {
+            child.geometry?.dispose?.();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((m: any) => m?.dispose?.());
+              } else {
+                child.material.dispose?.();
+              }
+            }
+          });
+        }
+        objectsByUid.delete(item.uid);
+      }
+    });
+    store.replaceItems(store.placedItems.filter((i) => !i.wallMount));
 
     const bb = computeBBox(draft, room.cellSize);
     if (!bb) return;
@@ -157,25 +228,37 @@ export default function BlocksEditor() {
     store.setRoom({
       shape: "blocks",
       blocks: new Set(draft),
+      cellLevels: { ...draftLevels },
       w: bb.w,
       d: bb.d,
     });
 
-    setOpen(false);
-    setTimeout(() => saveState(), 200);
+    // Force immediate rebuild
+    setTimeout(() => {
+      rebuildRoomShell();
+      setOpen(false);
+      saveState();
+    }, 0);
   };
 
-  const handleClear = () => setDraft(new Set());
+  const handleClear = () => {
+    setDraft(new Set());
+    setDraftLevels({});
+  };
+
   const handleReset = () => {
     const r = useRoomTwin.getState().room;
     setDraft(initBlocksFromRect(r.w, r.d, r.cellSize));
+    setDraftLevels({});
     setExtent(computeExtent(r.w, r.d, r.cellSize));
     setZoom(1);
   };
+
   const handleRect = () => {
     const r = useRoomTwin.getState().room;
     setDraft(initBlocksFromRect(r.w, r.d, r.cellSize));
   };
+
   const handleZoomIn = () => setZoom((z) => Math.min(MAX_ZOOM, z + 0.15));
   const handleZoomOut = () => setZoom((z) => Math.max(MIN_ZOOM, z - 0.15));
   const handleZoomFit = () => setZoom(1);
@@ -186,6 +269,18 @@ export default function BlocksEditor() {
     () => computeBBox(draft, room.cellSize),
     [draft, room.cellSize],
   );
+
+  // ⭐ Cell color from level
+  const getCellColor = (i: number, j: number) => {
+    const key = cellKey(i, j);
+    const on = draft.has(key);
+    if (!on) return "#fff";
+    const y = draftLevels[key] ?? 0;
+    const t = Math.min(1, y / 1.5);
+    // HSL: lightest (cream) → darkest (brown)
+    const lightness = 82 - t * 32;
+    return `hsl(35, 45%, ${lightness}%)`;
+  };
 
   return (
     <div
@@ -198,9 +293,9 @@ export default function BlocksEditor() {
       <div className="blocks-box">
         <div className="blocks-head">
           <div className="blocks-title">
-            <span>▦ วาดผนังห้อง</span>
+            <span>▦ วาดผนังห้อง + พื้นต่างระดับ</span>
             <span className="bt-sub">
-              คลิก/ลากช่องเพื่อเพิ่ม-ลบ • 1 ช่อง = {room.cellSize} ม.
+              เลือกระดับ → วาดช่อง • 1 ช่อง = {room.cellSize} ม.
             </span>
           </div>
           <div className="blocks-head-actions">
@@ -236,6 +331,42 @@ export default function BlocksEditor() {
         </div>
 
         <div className="blocks-body">
+          {/* ⭐ Level picker */}
+          <div className="blocks-level-picker">
+            <span className="blp-label">ระดับพื้น:</span>
+            <div className="blp-chips">
+              {LEVEL_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`blp-chip${
+                    paintLevel === p.value ? " active" : ""
+                  }`}
+                  style={{ background: p.color }}
+                  onClick={() => setPaintLevel(p.value)}
+                  title={`${(p.value * 100).toFixed(0)} ซม.`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="blp-custom">
+              <input
+                type="range"
+                min="0"
+                max="1.5"
+                step={LEVEL_STEP}
+                value={paintLevel}
+                onChange={(e) =>
+                  setPaintLevel(parseFloat(e.target.value))
+                }
+              />
+              <span className="blp-value">
+                {(paintLevel * 100).toFixed(0)} ซม.
+              </span>
+            </div>
+          </div>
+
           <div className="blocks-toolbar">
             <div className="blocks-tool">
               ขนาด:{" "}
@@ -277,6 +408,8 @@ export default function BlocksEditor() {
                   const i = (idx % N) - extent;
                   const key = cellKey(i, j);
                   const on = draft.has(key);
+                  const y = draftLevels[key] ?? 0;
+                  const bgColor = getCellColor(i, j);
                   return (
                     <div
                       key={idx}
@@ -286,7 +419,7 @@ export default function BlocksEditor() {
                         i === 0 && j === 0 ? " origin" : ""
                       }`}
                       style={{
-                        background: on ? "var(--ochre)" : "#fff",
+                        background: bgColor,
                         cursor: "pointer",
                         position: "relative",
                         userSelect: "none",
@@ -295,7 +428,24 @@ export default function BlocksEditor() {
                         e.preventDefault();
                         handleCellDown(i, j);
                       }}
-                    />
+                    >
+                      {on && y > 0 && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            bottom: 1,
+                            right: 2,
+                            fontSize: 8,
+                            color: "#5a4a30",
+                            fontFamily: "monospace",
+                            fontWeight: 700,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          {(y * 100).toFixed(0)}
+                        </span>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -323,8 +473,8 @@ export default function BlocksEditor() {
               ↺ เริ่มใหม่
             </button>
             <span className="blocks-size-info">
-              พื้นที่ใช้สอย: <b>{bbox ? (bbox.w * bbox.d).toFixed(1) : "0"}</b>{" "}
-              ตร.ม.
+              พื้นที่ใช้สอย:{" "}
+              <b>{bbox ? (bbox.w * bbox.d).toFixed(1) : "0"}</b> ตร.ม.
             </span>
           </div>
           <button

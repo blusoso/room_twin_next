@@ -20,17 +20,21 @@ import type {
 const MAX_HISTORY = 60;
 
 export interface RoomTwinState {
-  // ===== Room =====
   room: RoomShape;
   setRoom: (patch: Partial<RoomShape>) => void;
   applyRoomSize: (w: number, d: number, h: number) => void;
 
-  // ===== Surface =====
+  // ⭐ Cell levels
+  getCellLevel: (i: number, j: number) => number;
+  setCellLevel: (i: number, j: number, y: number) => void;
+  setManyCellLevels: (
+    entries: Array<{ key: string; y: number }>,
+  ) => void;
+
   surface: SurfaceState;
   setSurface: (patch: Partial<SurfaceState>) => void;
   setWallAll: (color: number) => void;
 
-  // ===== Items =====
   placedItems: PlacedItem[];
   addItem: (item: PlacedItem) => void;
   removeItem: (uid: string) => void;
@@ -38,11 +42,9 @@ export interface RoomTwinState {
   replaceItems: (items: PlacedItem[]) => void;
   clearItems: () => void;
 
-  // ===== Zones =====
   removeZone: (zuid: string) => void;
   getZoneItems: (zuid: string) => PlacedItem[];
 
-  // ===== Selection =====
   selectedUid: string | null;
   selectedZoneUid: string | null;
   selectItem: (uid: string | null) => void;
@@ -50,7 +52,6 @@ export interface RoomTwinState {
   deselectZone: () => void;
   closeItemPanel: () => void;
 
-  // ===== Placing =====
   placingProductId: string | null;
   placingThemeId: string | null;
   placingZoneId: string | null;
@@ -58,28 +59,23 @@ export interface RoomTwinState {
   startPlacingZone: (zid: string) => void;
   cancelPlacing: () => void;
 
-  // ===== Zone Meta =====
   zoneMeta: Map<string, ZoneMeta>;
   setZoneMeta: (zuid: string, meta: Partial<ZoneMeta>) => void;
   deleteZoneMeta: (zuid: string) => void;
 
-  // ===== Swap / Customize targets =====
   swapTargetUid: string | null;
   customizeTargetUid: string | null;
   setSwapTarget: (uid: string | null) => void;
   setCustomizeTarget: (uid: string | null) => void;
 
-  // ===== UI Panel =====
   activePanel: "build" | "room";
   setActivePanel: (p: "build" | "room") => void;
   activeCat: string;
   setActiveCat: (c: string) => void;
 
-  // ===== Wall index =====
   currentWallIdx: number;
   setCurrentWallIdx: (i: number) => void;
 
-  // ===== History =====
   history: string[];
   historyIndex: number;
   pushHistory: (snapshot: string) => void;
@@ -89,27 +85,22 @@ export interface RoomTwinState {
   canUndo: () => boolean;
   canRedo: () => boolean;
 
-  // ===== Cart =====
   cartExcluded: Set<string>;
   toggleCartLine: (pid: string) => void;
   setCartExcluded: (s: Set<string>) => void;
   clearCartExcluded: () => void;
 
-  // ===== Zone Chooser =====
   pendingZoneChooserUid: string | null;
   setPendingZoneChooser: (uid: string | null) => void;
 
-  // ===== Sidebar =====
   drawerExpanded: boolean;
   toggleDrawer: () => void;
   expandDrawer: () => void;
   collapseDrawer: () => void;
 
-  // ===== Lock badges =====
   showLockBadges: boolean;
   toggleLockBadges: () => void;
 
-  // ===== Reset =====
   resetAll: () => void;
 }
 
@@ -125,12 +116,42 @@ export const useRoomTwin = create<RoomTwinState>()(
       shape: ROOM_DEFAULT.shape,
       blocks: null,
       cellSize: CELL_SIZE,
+      cellLevels: {},
     },
 
     setRoom: (patch) => set((s) => ({ room: { ...s.room, ...patch } })),
 
     applyRoomSize: (w, d, h) =>
       set((s) => ({ room: { ...s.room, w, d, h } })),
+
+    // ============================================================
+    // Cell Levels
+    // ============================================================
+    getCellLevel: (i, j) => {
+      const key = `${i},${j}`;
+      return get().room.cellLevels[key] ?? 0;
+    },
+
+    setCellLevel: (i, j, y) => {
+      const key = `${i},${j}`;
+      set((s) => {
+        const next = { ...s.room.cellLevels };
+        if (y === 0) delete next[key];
+        else next[key] = y;
+        return { room: { ...s.room, cellLevels: next } };
+      });
+    },
+
+    setManyCellLevels: (entries) => {
+      set((s) => {
+        const next = { ...s.room.cellLevels };
+        entries.forEach(({ key, y }) => {
+          if (y === 0) delete next[key];
+          else next[key] = y;
+        });
+        return { room: { ...s.room, cellLevels: next } };
+      });
+    },
 
     // ============================================================
     // Surface
@@ -156,25 +177,22 @@ export const useRoomTwin = create<RoomTwinState>()(
     // ============================================================
     placedItems: [],
 
-    // ⭐ addItem — clear flag ถ้าเพิ่ม door/window ใหม่
     addItem: (item) =>
       set((s) => {
-        // ⭐ ถ้าเพิ่ม door/window → clear removed flag
         if (item.productId === "door" || item.productId === "window") {
           clearOpeningRemoved(item.productId);
         }
         return { placedItems: [...s.placedItems, item] };
       }),
 
-    // ⭐ removeItem — mark flag ถ้าลบ door/window
     removeItem: (uid) =>
       set((s) => {
         const removed = s.placedItems.find((i) => i.uid === uid);
 
-        // ⭐ ถ้าลบ door/window → mark removed
         if (
           removed &&
-          (removed.productId === "door" || removed.productId === "window")
+          (removed.productId === "door" ||
+            removed.productId === "window")
         ) {
           markOpeningRemoved(removed.productId);
         }
@@ -220,7 +238,6 @@ export const useRoomTwin = create<RoomTwinState>()(
     // ============================================================
     // Zones
     // ============================================================
-    // ⭐ removeZone — mark flag ถ้าในโซนมี door/window
     removeZone: (zuid) =>
       set((s) => {
         const uidsInZone = new Set(
@@ -229,7 +246,6 @@ export const useRoomTwin = create<RoomTwinState>()(
             .map((i) => i.uid),
         );
 
-        // ⭐ เช็คว่ามี door/window ในโซนไหม
         s.placedItems.forEach((it) => {
           if (!uidsInZone.has(it.uid)) return;
           if (it.productId === "door" || it.productId === "window") {
@@ -273,7 +289,7 @@ export const useRoomTwin = create<RoomTwinState>()(
       get().placedItems.filter((i) => i.zoneUid === zuid),
 
     // ============================================================
-    // Selection
+    // Selection / Placing / Zone meta / Swap / UI (เหมือนเดิม)
     // ============================================================
     selectedUid: null,
     selectedZoneUid: null,
@@ -287,9 +303,6 @@ export const useRoomTwin = create<RoomTwinState>()(
     deselectZone: () => set({ selectedZoneUid: null }),
     closeItemPanel: () => set({ selectedUid: null }),
 
-    // ============================================================
-    // Placing
-    // ============================================================
     placingProductId: null,
     placingThemeId: null,
     placingZoneId: null,
@@ -315,9 +328,6 @@ export const useRoomTwin = create<RoomTwinState>()(
         placingZoneId: null,
       }),
 
-    // ============================================================
-    // Zone Meta
-    // ============================================================
     zoneMeta: new Map(),
 
     setZoneMeta: (zuid, meta) =>
@@ -334,26 +344,17 @@ export const useRoomTwin = create<RoomTwinState>()(
         return { zoneMeta: m };
       }),
 
-    // ============================================================
-    // Swap / Customize
-    // ============================================================
     swapTargetUid: null,
     customizeTargetUid: null,
     setSwapTarget: (uid) => set({ swapTargetUid: uid }),
     setCustomizeTarget: (uid) => set({ customizeTargetUid: uid }),
 
-    // ============================================================
-    // UI Panel
-    // ============================================================
     activePanel: "build",
     setActivePanel: (p) => set({ activePanel: p }),
 
     activeCat: "zone",
     setActiveCat: (c) => set({ activeCat: c }),
 
-    // ============================================================
-    // Wall index
-    // ============================================================
     currentWallIdx: 0,
     setCurrentWallIdx: (i) => set({ currentWallIdx: i }),
 
@@ -419,31 +420,22 @@ export const useRoomTwin = create<RoomTwinState>()(
     setCartExcluded: (sc) => set({ cartExcluded: new Set(sc) }),
     clearCartExcluded: () => set({ cartExcluded: new Set() }),
 
-    // ============================================================
-    // Zone Chooser
-    // ============================================================
     pendingZoneChooserUid: null,
     setPendingZoneChooser: (uid) =>
       set({ pendingZoneChooserUid: uid }),
 
-    // ============================================================
-    // Sidebar
-    // ============================================================
     drawerExpanded: false,
     toggleDrawer: () =>
       set((s) => ({ drawerExpanded: !s.drawerExpanded })),
     expandDrawer: () => set({ drawerExpanded: true }),
     collapseDrawer: () => set({ drawerExpanded: false }),
 
-    // ============================================================
-    // Lock badges
-    // ============================================================
     showLockBadges: true,
     toggleLockBadges: () =>
       set((s) => ({ showLockBadges: !s.showLockBadges })),
 
     // ============================================================
-    // Reset — ⚠️ ไม่ clear opening flags (user ต้องการให้ persist)
+    // Reset
     // ============================================================
     resetAll: () =>
       set({
@@ -470,6 +462,7 @@ export const useRoomTwin = create<RoomTwinState>()(
           shape: "rect",
           blocks: null,
           cellSize: CELL_SIZE,
+          cellLevels: {},
         },
         history: [],
         historyIndex: -1,
@@ -478,7 +471,7 @@ export const useRoomTwin = create<RoomTwinState>()(
 );
 
 // ============================================================
-// Selectors
+// Selectors (ไม่เปลี่ยน)
 // ============================================================
 
 export const selectSelectedItem = (s: RoomTwinState) => {
