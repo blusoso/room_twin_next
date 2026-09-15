@@ -1215,3 +1215,167 @@ export function buildStairs(dims: any, color: number, opts: any = {}) {
   addContactShadow(g, w, d);
   return g;
 }
+
+// ============================================================
+// ⭐ Sliding Door (ประตูระเบียง) — 2 บาน + กระจก
+// ============================================================
+
+export function buildSlidingDoor(dims: any, color: number, opts: any = {}) {
+  const g = new THREE.Group();
+  const w = dims.w / 100;
+  const h = dims.h / 100;
+  const d = dims.d / 100;
+
+  const frameColor = P(opts, "frameColor", 0xf7f3ea);
+  const glassColor = P(opts, "glassColor", 0xcfe0e8);
+
+  const tr = 0.05; // frame thickness
+
+  // ===== Outer frame =====
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: frameColor,
+    roughness: 0.7,
+  });
+
+  // Top
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(w + tr * 2, tr, d),
+    frameMat,
+  );
+  top.position.set(0, h / 2 - tr / 2, 0);
+  g.add(top);
+
+  // Bottom (threshold)
+  const bottom = new THREE.Mesh(
+    new THREE.BoxGeometry(w + tr * 2, tr * 0.6, d * 1.2),
+    frameMat,
+  );
+  bottom.position.set(0, -h / 2 + tr * 0.3, 0);
+  g.add(bottom);
+
+  // Left / Right
+  const left = new THREE.Mesh(new THREE.BoxGeometry(tr, h, d), frameMat);
+  left.position.set(-w / 2 - tr / 2, 0, 0);
+  g.add(left);
+
+  const right = new THREE.Mesh(new THREE.BoxGeometry(tr, h, d), frameMat);
+  right.position.set(w / 2 + tr / 2, 0, 0);
+  g.add(right);
+
+  // ===== 2 panels: 1 fixed + 1 sliding =====
+  const panelW = w / 2;
+  const panelH = h - tr * 0.6 - tr;
+
+  // Glass material
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: glassColor,
+    roughness: 0.1,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.55,
+    emissive: glassColor,
+    emissiveIntensity: 0.08,
+    side: THREE.DoubleSide,
+  });
+
+  // Panel frame material
+  const panelFrameMat = new THREE.MeshStandardMaterial({
+    color: color,
+    roughness: 0.6,
+  });
+
+  // Build a single panel (frame + glass + handle)
+  const buildPanel = (offsetX: number, offsetZ: number, hasHandle: boolean) => {
+    const panel = new THREE.Group();
+    const pf = tr * 0.6; // panel frame thickness
+
+    // Panel frame (4 sides)
+    const pTop = new THREE.Mesh(
+      new THREE.BoxGeometry(panelW, pf, d * 0.6),
+      panelFrameMat,
+    );
+    pTop.position.set(0, panelH / 2 - pf / 2, 0);
+    panel.add(pTop);
+
+    const pBot = new THREE.Mesh(
+      new THREE.BoxGeometry(panelW, pf, d * 0.6),
+      panelFrameMat,
+    );
+    pBot.position.set(0, -panelH / 2 + pf / 2, 0);
+    panel.add(pBot);
+
+    const pLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(pf, panelH, d * 0.6),
+      panelFrameMat,
+    );
+    pLeft.position.set(-panelW / 2 + pf / 2, 0, 0);
+    panel.add(pLeft);
+
+    const pRight = new THREE.Mesh(
+      new THREE.BoxGeometry(pf, panelH, d * 0.6),
+      panelFrameMat,
+    );
+    pRight.position.set(panelW / 2 - pf / 2, 0, 0);
+    panel.add(pRight);
+
+    // Glass
+    const glass = new THREE.Mesh(
+      new THREE.PlaneGeometry(
+        panelW - pf * 2,
+        panelH - pf * 2,
+      ),
+      glassMat,
+    );
+    glass.position.z = 0.001;
+    panel.add(glass);
+
+    // Handle (vertical bar)
+    if (hasHandle) {
+      const handleMat = new THREE.MeshStandardMaterial({
+        color: 0x8a8a8a,
+        roughness: 0.3,
+        metalness: 0.7,
+      });
+      const handle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.025, 0.25, 0.03),
+        handleMat,
+      );
+      handle.position.set(panelW / 2 - pf - 0.04, 0, d * 0.35);
+      panel.add(handle);
+    }
+
+    panel.position.set(offsetX, -tr * 0.3, offsetZ);
+    return panel;
+  };
+
+  // Fixed panel (back track)
+  const fixedPanel = buildPanel(-panelW / 2, -d * 0.15, false);
+  g.add(fixedPanel);
+
+  // Sliding panel (front track, slightly overlapping center)
+  const slidingPanel = buildPanel(panelW / 2, d * 0.15, true);
+  g.add(slidingPanel);
+
+  // Center divider (between the 2 tracks)
+  const centerDiv = new THREE.Mesh(
+    new THREE.BoxGeometry(tr * 0.5, h * 0.98, d * 0.8),
+    frameMat,
+  );
+  centerDiv.position.set(0, 0, 0);
+  g.add(centerDiv);
+
+  // ===== Track (top rail) =====
+  const trackMat = new THREE.MeshStandardMaterial({
+    color: 0x8a8a8a,
+    roughness: 0.4,
+    metalness: 0.5,
+  });
+  const track = new THREE.Mesh(
+    new THREE.BoxGeometry(w * 0.98, 0.03, d * 0.9),
+    trackMat,
+  );
+  track.position.set(0, h / 2 - tr * 0.5, 0);
+  g.add(track);
+
+  return g;
+}

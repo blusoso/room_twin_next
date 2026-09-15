@@ -335,6 +335,22 @@ export const PRODUCTS: ProductDef[] = [
       treadColor: 0xd9c7a8,
     },
   },
+    // ⭐ เพิ่ม sliding door ต่อจาก stairs
+  {
+    id: "slidingdoor",
+    name: "ประตูระเบียงบานเลื่อน",
+    cat: "structure",
+    dims: { w: 180, d: 8, h: 210 },
+    price: 15900,
+    color: 0xb9a88f,
+    build: B.buildSlidingDoor,
+    wallMount: true,
+    groundAnchor: true,
+    extraDefaults: {
+      frameColor: 0xf7f3ea,
+      glassColor: 0xcfe0e8,
+    },
+  },
 ];
 
 export const PRODUCT_BY_ID = new Map(PRODUCTS.map((p) => [p.id, p]));

@@ -2,6 +2,7 @@
 
 export const PRODUCT_ICONS: Record<string, string> = {
   door: "🚪",
+  slidingdoor: "🚪",
   window: "🪟",
   column: "🏛️",     // ⭐
   partition: "🚧",   // ⭐

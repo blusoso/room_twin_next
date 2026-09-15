@@ -14,6 +14,7 @@ import {
 } from "./scene";
 import { makeFloorTexture } from "./surfaceTextures";
 import { WALL_COLORS, WALL_LABEL_FULL, CELL_SIZE } from "@/lib/data/constants";
+import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { useRoomTwin } from "@/lib/state/store";
 
 // ===== Materials =====
@@ -40,7 +41,7 @@ export const ceilingColliderMat = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide,
 });
 
-// ===== Meshes (rect mode) =====
+// ===== Meshes =====
 export let floorMesh: THREE.Mesh;
 export let ceilingMesh: THREE.Mesh;
 export let ceilingCollider: THREE.Mesh;
@@ -73,7 +74,7 @@ export interface PolyWall {
 export let polyWalls: PolyWall[] = [];
 
 // ============================================================
-// ⭐ Merged Wall — รวมผนังบล็อกที่ต่อเนื่องกัน
+// ⭐ Merged Walls
 // ============================================================
 
 export interface MergedWall {
@@ -91,7 +92,11 @@ export interface MergedWall {
 
 export const mergedWallRegistry = new Map<string, MergedWall>();
 
-function parseBlockWallId(id: string): { i: number; j: number; side: string } | null {
+function parseBlockWallId(id: string): {
+  i: number;
+  j: number;
+  side: string;
+} | null {
   const m = id.match(/^bw_(-?\d+)_(-?\d+)_([NSEW])$/);
   if (!m) return null;
   return { i: parseInt(m[1]), j: parseInt(m[2]), side: m[3] };
@@ -99,7 +104,6 @@ function parseBlockWallId(id: string): { i: number; j: number; side: string } | 
 
 export function computeMergedWalls() {
   mergedWallRegistry.clear();
-
   if (polyWalls.length === 0) return;
 
   const groups = new Map<
@@ -111,7 +115,8 @@ export function computeMergedWalls() {
     const parsed = parseBlockWallId(w.id);
     if (!parsed) return;
     const { i, j, side } = parsed;
-    const key = side === "N" || side === "S" ? `${side}|${j}` : `${side}|${i}`;
+    const key =
+      side === "N" || side === "S" ? `${side}|${j}` : `${side}|${i}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push({ i, j, side, wall: w });
   });
@@ -140,14 +145,6 @@ export function computeMergedWalls() {
     }
     if (run.length > 0) registerMergedWall(run);
   });
-
-  console.log(
-    "[mergedWalls] registered",
-    mergedWallRegistry.size,
-    "merged walls from",
-    polyWalls.length,
-    "cells",
-  );
 }
 
 function registerMergedWall(
@@ -203,7 +200,7 @@ export function getMergedWalls(): MergedWall[] {
 }
 
 // ============================================================
-// Init / Get wall
+// Init
 // ============================================================
 
 export function initRoomShell() {
@@ -214,7 +211,10 @@ export function initRoomShell() {
     roughness: 0.85,
   });
 
-  floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.d), floorMat);
+  floorMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(room.w, room.d),
+    floorMat,
+  );
   floorMesh.rotation.x = -Math.PI / 2;
   floorMesh.receiveShadow = true;
   floorMesh.name = "FLOOR";
@@ -243,28 +243,53 @@ export function initRoomShell() {
   backWall.receiveShadow = true;
   roomGroup.add(backWall);
 
-  sideWall = new THREE.Mesh(new THREE.PlaneGeometry(room.d, room.h), sideWallMat);
+  sideWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(room.d, room.h),
+    sideWallMat,
+  );
   sideWall.rotation.y = Math.PI / 2;
   sideWall.position.set(-room.w / 2, room.h / 2, 0);
   sideWall.receiveShadow = true;
   roomGroup.add(sideWall);
 
-  rightWall = new THREE.Mesh(new THREE.PlaneGeometry(room.d, room.h), rightWallMat);
+  rightWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(room.d, room.h),
+    rightWallMat,
+  );
   rightWall.rotation.y = -Math.PI / 2;
   rightWall.position.set(room.w / 2, room.h / 2, 0);
   rightWall.receiveShadow = true;
   roomGroup.add(rightWall);
 
-  frontWall = new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.h), frontWallMat);
+  frontWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(room.w, room.h),
+    frontWallMat,
+  );
   frontWall.rotation.y = Math.PI;
   frontWall.position.set(0, room.h / 2, room.d / 2);
   frontWall.receiveShadow = true;
   roomGroup.add(frontWall);
 
-  WALLS.back = { mesh: backWall, mat: wallMat, outward: new THREE.Vector3(0, 0, -1) };
-  WALLS.side = { mesh: sideWall, mat: sideWallMat, outward: new THREE.Vector3(-1, 0, 0) };
-  WALLS.right = { mesh: rightWall, mat: rightWallMat, outward: new THREE.Vector3(1, 0, 0) };
-  WALLS.front = { mesh: frontWall, mat: frontWallMat, outward: new THREE.Vector3(0, 0, 1) };
+  WALLS.back = {
+    mesh: backWall,
+    mat: wallMat,
+    outward: new THREE.Vector3(0, 0, -1),
+  };
+  WALLS.side = {
+    mesh: sideWall,
+    mat: sideWallMat,
+    outward: new THREE.Vector3(-1, 0, 0),
+  };
+  WALLS.right = {
+    mesh: rightWall,
+    mat: rightWallMat,
+    outward: new THREE.Vector3(1, 0, 0),
+  };
+  WALLS.front = {
+    mesh: frontWall,
+    mat: frontWallMat,
+    outward: new THREE.Vector3(0, 0, 1),
+  };
 
   Object.entries(WALLS).forEach(([id, w]) => meshWallId.set(w.mesh, id));
 
@@ -272,7 +297,7 @@ export function initRoomShell() {
 }
 
 // ============================================================
-// ⭐ getWall — handle merged wall ids
+// Get wall / geometry
 // ============================================================
 
 export function getWall(id: string): WallEntry | null {
@@ -281,7 +306,6 @@ export function getWall(id: string): WallEntry | null {
   const polyW = polyWalls.find((w) => w.id === id);
   if (polyW) return polyW as any;
 
-  // ⭐ fallback ไป member แรกของ merged wall
   const merged = mergedWallRegistry.get(id);
   if (merged && merged.memberIds.length > 0) {
     return (
@@ -290,10 +314,6 @@ export function getWall(id: string): WallEntry | null {
   }
   return null;
 }
-
-// ============================================================
-// ⭐ getWallGeom — handle merged wall ids
-// ============================================================
 
 export function getWallGeom(id: string) {
   const { room } = useRoomTwin.getState();
@@ -315,18 +335,29 @@ export function getWallGeom(id: string) {
 
   // 2. Rect walls
   if (id === "back")
-    return { cx: 0, cz: -room.d / 2, dx: 1, dz: 0, nx: 0, nz: -1, len: room.w, rotY: 0 };
+    return {
+      cx: 0, cz: -room.d / 2, dx: 1, dz: 0, nx: 0, nz: -1,
+      len: room.w, rotY: 0,
+    };
   if (id === "front")
-    return { cx: 0, cz: room.d / 2, dx: 1, dz: 0, nx: 0, nz: 1, len: room.w, rotY: Math.PI };
+    return {
+      cx: 0, cz: room.d / 2, dx: 1, dz: 0, nx: 0, nz: 1,
+      len: room.w, rotY: Math.PI,
+    };
   if (id === "side")
-    return { cx: -room.w / 2, cz: 0, dx: 0, dz: 1, nx: -1, nz: 0, len: room.d, rotY: Math.PI / 2 };
+    return {
+      cx: -room.w / 2, cz: 0, dx: 0, dz: 1, nx: -1, nz: 0,
+      len: room.d, rotY: Math.PI / 2,
+    };
   if (id === "right")
-    return { cx: room.w / 2, cz: 0, dx: 0, dz: 1, nx: 1, nz: 0, len: room.d, rotY: -Math.PI / 2 };
+    return {
+      cx: room.w / 2, cz: 0, dx: 0, dz: 1, nx: 1, nz: 0,
+      len: room.d, rotY: -Math.PI / 2,
+    };
 
-  // 3. ⭐ Cell wall → หา merged ที่บรรจุ → คืน merged geom (ให้ u ต่อเนื่อง)
+  // 3. Cell wall → fallback merged
   const polyW = polyWalls.find((w) => w.id === id);
   if (polyW) {
-    // ถ้าเป็น blocks mode → try merged
     if (room.shape === "blocks") {
       for (const mw of mergedWallRegistry.values()) {
         if (mw.memberIds.includes(id)) {
@@ -343,7 +374,6 @@ export function getWallGeom(id: string) {
         }
       }
     }
-    // fallback: cell wall เอง
     return {
       cx: polyW.cx,
       cz: polyW.cz,
@@ -391,13 +421,13 @@ export function applySurface() {
   const { room, surface } = useRoomTwin.getState();
   if (!floorMat) return;
 
-  // ===== Floor =====
+  // Floor
   if (floorMat.map && floorMat.map.dispose) floorMat.map.dispose();
   floorMat.map = makeFloorTexture(surface.floor, room.w, room.d, 1);
   floorMat.map.repeat.set(room.w / 1.4, room.d / 1.4);
   floorMat.needsUpdate = true;
 
-  // ===== Walls =====
+  // Walls
   const cw = (id: string) =>
     surface.walls[id] !== undefined ? surface.walls[id] : surface.wallAll;
   if (surface.wallUniform || room.shape !== "rect") {
@@ -413,10 +443,10 @@ export function applySurface() {
     frontWallMat.color.setHex(cw("front"));
   }
 
-  // ===== Ceiling =====
+  // Ceiling
   ceilingMat.color.setHex(surface.ceiling);
 
-  // ⭐⭐ Sync partition colors with wall color
+  // ⭐ Partition sync
   syncPartitionColors(surface.wallAll);
 }
 
@@ -431,21 +461,18 @@ function syncPartitionColors(wallColor: number) {
   );
 
   partitions.forEach((p) => {
-    // Update state (so save/load ใช้สีที่ถูกต้อง)
     if (p.params.color !== wallColor) {
       store.updateItem(p.uid, {
         params: { ...p.params, color: wallColor },
       });
     }
 
-    // Update scene material ทันที
     const obj = objectsByUid.get(p.uid);
     if (!obj) return;
     obj.traverse((child: any) => {
       if (child.isMesh && child.material) {
         const m = child.material as THREE.MeshStandardMaterial;
         if (m.color && m.map === undefined) {
-          // Skip contact shadow materials (มี map)
           m.color.setHex(wallColor);
         }
       }
@@ -529,8 +556,6 @@ export function getWallStatusText() {
 // Baseboards
 // ============================================================
 
-// lib/three/roomShell.ts
-// ⭐ ต้องมี getMergedWalls ในไฟล์เดียวกัน (มีอยู่แล้ว)
 export function rebuildBaseboards() {
   // Clear
   while (baseboardGroup.children.length) {
@@ -583,24 +608,20 @@ export function rebuildBaseboards() {
   }
 
   wallGeoms.forEach((g) => {
-    // ⭐⭐⭐ หาประตู: 2-way matching + แปลง u ให้อยู่ใน merged frame
+    // ⭐ หา openings (ground anchor) ทั้งหมด — รวม door + slidingdoor
     const doors: Array<{ door: any; u: number }> = [];
 
     placedItems.forEach((it) => {
-      if (!it.wallMount || it.productId !== "door" || !it.wallId) return;
+      if (!it.wallMount || !it.wallId) return;
 
-      // Case 1: merged id ตรง
+      const product = PRODUCT_BY_ID.get(it.productId);
+      if (!product?.groundAnchor) return;
+
+      // Wall id ตรง หรืออยู่ใน memberIds
       if (it.wallId === g.id) {
         doors.push({ door: it, u: it.u || 0 });
-        return;
-      }
-
-      // Case 2: cell id อยู่ใน merged memberIds
-      if (g.memberIds && g.memberIds.includes(it.wallId)) {
-        const cg = getWallGeom(it.wallId); // ← จะคืน merged geom (เพราะแก้แล้ว)
-        // ⚠️ cg ที่ได้เป็น merged geom เดียวกัน → delta = 0 → ใช้ u ตรงๆ
+      } else if (g.memberIds && g.memberIds.includes(it.wallId)) {
         doors.push({ door: it, u: it.u || 0 });
-        return;
       }
     });
 
@@ -618,9 +639,9 @@ export function rebuildBaseboards() {
       if (l - cur > 0.005) segs.push([cur, l]);
       cur = r;
     });
-
     if (g.len / 2 - cur > 0.005) segs.push([cur, g.len / 2]);
 
+    // Draw each segment
     segs.forEach(([u0, u1]) => {
       const len = u1 - u0;
       if (len < 0.005) return;
@@ -640,9 +661,8 @@ export function rebuildBaseboards() {
   });
 }
 
-
 // ============================================================
-// ⭐ rebuildRoomShell
+// rebuildRoomShell
 // ============================================================
 
 export function rebuildRoomShell() {
@@ -739,7 +759,7 @@ export function clearGroup(g: THREE.Group) {
 }
 
 // ============================================================
-// ⭐ buildBlocksShell — เพิ่ม computeMergedWalls()
+// Blocks shell
 // ============================================================
 
 export function buildBlocksShell() {
@@ -809,7 +829,6 @@ export function buildBlocksShell() {
     });
   });
 
-  // ⭐ คำนวณ merged walls หลังสร้างเสร็จ
   computeMergedWalls();
 }
 
@@ -825,7 +844,8 @@ export function addBlockWall(i: number, j: number, side: string) {
   const geo = new THREE.PlaneGeometry(cs, room.h);
   const m = new THREE.Mesh(geo, mat);
 
-  let cx: number, cz: number, rotY: number, nx: number, nz: number, dx: number, dz: number;
+  let cx: number, cz: number, rotY: number;
+  let nx: number, nz: number, dx: number, dz: number;
   const c = { x: i * cs, z: j * cs };
 
   if (side === "N") {

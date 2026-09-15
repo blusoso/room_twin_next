@@ -23,7 +23,7 @@ import {
 } from "@/lib/three/roomShell";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
-import { isOpeningRemoved } from "@/lib/state/openingFlags";  // ⭐ import ครั้งเดียว
+import { isOpeningRemoved } from "@/lib/state/openingFlags";
 import type { PlacedItem } from "@/lib/state/types";
 
 let _seedingInProgress = false;
@@ -85,14 +85,17 @@ export function captureOpeningsRelative(): OpeningSnapshot[] {
 
   store.placedItems.forEach((item) => {
     if (!item.wallMount) return;
-    if (item.productId !== "door" && item.productId !== "window") return;
+
+    // ⭐ ครอบคลุม door, slidingdoor, window (groundAnchor หรือ window)
+    const product = PRODUCT_BY_ID.get(item.productId);
+    if (!product) return;
+    const isOpening =
+      product.groundAnchor || item.productId === "window";
+    if (!isOpening) return;
     if (!item.wallId) return;
 
     const side = getSideFromWallId(item.wallId);
-    if (!side) {
-      console.warn("[capture] unknown side for wallId:", item.wallId);
-      return;
-    }
+    if (!side) return;
 
     snapshots.push({
       uid: item.uid,
@@ -165,12 +168,6 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
 
     const wall = findBestWallForSide(snap.side);
     if (!wall) {
-      console.warn(
-        "[restore] no wall for side",
-        snap.side,
-        "→ removing",
-        snap.uid,
-      );
       store.removeItem(snap.uid);
       const obj = objectsByUid.get(snap.uid);
       if (obj) {
@@ -209,27 +206,9 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
       obj.position.set(p.x, c.v, p.z);
       obj.rotation.y = wall.rotY;
     }
-
-    console.log(
-      "[restore]",
-      snap.uid,
-      "→ wall",
-      wall.id,
-      "u=",
-      c.u.toFixed(2),
-      "rel=",
-      snap.relativeU.toFixed(2),
-    );
   });
 
-  // ⭐ Rebuild baseboards หลัง restore
   rebuildBaseboards();
-
-  console.log(
-    "[restore] rebuilt baseboards for",
-    snapshots.length,
-    "openings",
-  );
 }
 
 // ============================================================
@@ -315,7 +294,7 @@ export function useRoomTwinInit() {
 }
 
 // ============================================================
-// ⭐ ensureDefaultOpenings — เช็ค flags ก่อน seed
+// ensureDefaultOpenings
 // ============================================================
 
 export function ensureDefaultOpenings() {
@@ -327,29 +306,20 @@ export function ensureDefaultOpenings() {
     if (room.shape !== "rect" && room.shape !== "blocks") return;
 
     const items = store.placedItems;
-    const hasDoor = items.some((i) => i.productId === "door");
+    // ⭐ ครอบคลุม door + slidingdoor
+    const hasDoor = items.some(
+      (i) =>
+        i.productId === "door" || i.productId === "slidingdoor",
+    );
     const hasWindow = items.some((i) => i.productId === "window");
 
-    // ⭐ ตรวจ flags
     const doorRemoved = isOpeningRemoved("door");
     const windowRemoved = isOpeningRemoved("window");
 
-    console.log("[ensureDefaultOpenings]", {
-      hasDoor,
-      hasWindow,
-      doorRemoved,
-      windowRemoved,
-      shape: room.shape,
-    });
-
-    // ⭐ seed เฉพาะเมื่อไม่มี + ไม่ได้ถูกลบ
     const shouldSeedDoor = !hasDoor && !doorRemoved;
     const shouldSeedWindow = !hasWindow && !windowRemoved;
 
-    if (!shouldSeedDoor && !shouldSeedWindow) {
-      console.log("[ensureDefaultOpenings] skip — nothing to seed");
-      return;
-    }
+    if (!shouldSeedDoor && !shouldSeedWindow) return;
 
     if (room.shape === "rect") {
       if (shouldSeedDoor) seedDoorRect();

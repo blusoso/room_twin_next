@@ -311,4 +311,15 @@ export const PARAM_SCHEMA: Record<string, ParamSchema> = {
       { key: "treadColor", label: "สีพื้นเหยียบ" },
     ],
   },
+  slidingdoor: {
+    dims: [
+      { key: "w", label: "กว้าง", min: 120, max: 300, step: 10 },
+      { key: "h", label: "สูง", min: 180, max: 260, step: 5 },
+    ],
+    colors: [
+      { key: "color", label: "สีบานเลื่อน" },
+      { key: "frameColor", label: "สีวงกบ" },
+      { key: "glassColor", label: "สีกระจก" },
+    ],
+  },
 };
