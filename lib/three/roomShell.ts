@@ -10,6 +10,7 @@ import {
   controls,
   sun,
   meshWallId,
+  objectsByUid,
 } from "./scene";
 import { makeFloorTexture } from "./surfaceTextures";
 import { WALL_COLORS, WALL_LABEL_FULL, CELL_SIZE } from "@/lib/data/constants";
@@ -390,11 +391,13 @@ export function applySurface() {
   const { room, surface } = useRoomTwin.getState();
   if (!floorMat) return;
 
+  // ===== Floor =====
   if (floorMat.map && floorMat.map.dispose) floorMat.map.dispose();
   floorMat.map = makeFloorTexture(surface.floor, room.w, room.d, 1);
   floorMat.map.repeat.set(room.w / 1.4, room.d / 1.4);
   floorMat.needsUpdate = true;
 
+  // ===== Walls =====
   const cw = (id: string) =>
     surface.walls[id] !== undefined ? surface.walls[id] : surface.wallAll;
   if (surface.wallUniform || room.shape !== "rect") {
@@ -409,7 +412,45 @@ export function applySurface() {
     rightWallMat.color.setHex(cw("right"));
     frontWallMat.color.setHex(cw("front"));
   }
+
+  // ===== Ceiling =====
   ceilingMat.color.setHex(surface.ceiling);
+
+  // ⭐⭐ Sync partition colors with wall color
+  syncPartitionColors(surface.wallAll);
+}
+
+// ============================================================
+// ⭐ Sync partitions to match wall color
+// ============================================================
+
+function syncPartitionColors(wallColor: number) {
+  const store = useRoomTwin.getState();
+  const partitions = store.placedItems.filter(
+    (i) => i.productId === "partition",
+  );
+
+  partitions.forEach((p) => {
+    // Update state (so save/load ใช้สีที่ถูกต้อง)
+    if (p.params.color !== wallColor) {
+      store.updateItem(p.uid, {
+        params: { ...p.params, color: wallColor },
+      });
+    }
+
+    // Update scene material ทันที
+    const obj = objectsByUid.get(p.uid);
+    if (!obj) return;
+    obj.traverse((child: any) => {
+      if (child.isMesh && child.material) {
+        const m = child.material as THREE.MeshStandardMaterial;
+        if (m.color && m.map === undefined) {
+          // Skip contact shadow materials (มี map)
+          m.color.setHex(wallColor);
+        }
+      }
+    });
+  });
 }
 
 // ============================================================

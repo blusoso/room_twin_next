@@ -3,6 +3,9 @@
 export const PRODUCT_ICONS: Record<string, string> = {
   door: "🚪",
   window: "🪟",
+  column: "🏛️",     // ⭐
+  partition: "🚧",   // ⭐
+  stairs: "🪜",      // ⭐ ใหม่
   bed: "🛏️",
   armchair: "🪑",
   bench: "🛋️",

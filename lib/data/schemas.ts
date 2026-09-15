@@ -282,4 +282,33 @@ export const PARAM_SCHEMA: Record<string, ParamSchema> = {
       { key: "cordColor", label: "สาย" },
     ],
   },
+  column: {
+    dims: [
+      { key: "w", label: "กว้าง", min: 15, max: 60, step: 5 },
+      { key: "d", label: "ลึก", min: 15, max: 60, step: 5 },
+      { key: "h", label: "สูง", min: 200, max: 320, step: 5 },
+    ],
+    colors: [
+      { key: "color", label: "สีเสา" },
+      { key: "baseColor", label: "สีฐาน/หัวเสา" },
+    ],
+  },
+  partition: {
+    dims: [
+      { key: "w", label: "ยาว", min: 60, max: 300, step: 10 },
+      { key: "d", label: "หนา", min: 3, max: 20, step: 1 },
+      { key: "h", label: "สูง", min: 100, max: 260, step: 10 },
+    ],
+  },
+  stairs: {
+    dims: [
+      { key: "w", label: "กว้าง", min: 60, max: 200, step: 5 },
+      { key: "d", label: "ยาว (ระยะเหยียบ)", min: 80, max: 400, step: 10 },
+      { key: "h", label: "สูง (พื้นถึงพื้น)", min: 20, max: 320, step: 5 },
+    ],
+    colors: [
+      { key: "color", label: "สีขั้นบันได" },
+      { key: "treadColor", label: "สีพื้นเหยียบ" },
+    ],
+  },
 };

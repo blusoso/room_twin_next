@@ -169,8 +169,14 @@ function addFloorItem(
   const p = PRODUCT_BY_ID.get(pid);
   if (!p) return null;
 
-  const { addItem } = useRoomTwin.getState();
+  const { addItem, surface } = useRoomTwin.getState();
   const params: Params = defaultParamsFor(p);
+
+  // ⭐ Partition ใช้สีเดียวกับผนังอัตโนมัติ
+  if (pid === "partition") {
+    params.color = surface.wallAll;
+  }
+
   const host = p.rug ? null : hostUid;
 
   const uid = "i" + Math.random().toString(36).slice(2, 10);

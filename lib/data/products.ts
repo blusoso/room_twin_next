@@ -297,6 +297,44 @@ export const PRODUCTS: ProductDef[] = [
     ceilingMount: true,
     extraDefaults: { cordColor: 0x3a3138 },
   },
+  // ===== room structure =====
+  {
+    id: "column",
+    name: "เสาโครงสร้าง",
+    cat: "structure",
+    dims: { w: 30, d: 30, h: 260 },
+    price: 4500,
+    color: 0xe8dcc4,
+    build: B.buildColumn,
+    extraDefaults: {
+      baseColor: 0xf7f3ea,
+      accentColor: 0xb9a88f,
+    },
+  },
+  {
+    id: "partition",
+    name: "ฉากกั้นห้อง",
+    cat: "structure",
+    dims: { w: 120, d: 8, h: 200 },
+    price: 5990,
+    color: 0xf0ece4,
+    build: B.buildPartition,
+    extraDefaults: {
+      frameColor: 0xb9a88f,
+    },
+  },
+  {
+    id: "stairs",
+    name: "บันไดตรงพื้นฐาน",
+    cat: "structure",
+    dims: { w: 90, d: 180, h: 100 },
+    price: 8900,
+    color: 0xc9a776,
+    build: B.buildStairs,
+    extraDefaults: {
+      treadColor: 0xd9c7a8,
+    },
+  },
 ];
 
 export const PRODUCT_BY_ID = new Map(PRODUCTS.map((p) => [p.id, p]));

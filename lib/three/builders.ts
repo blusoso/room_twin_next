@@ -1141,3 +1141,77 @@ export function buildHangingPlant(dims: any, color: number, opts: any = {}) {
   }
   return g;
 }
+
+// ============================================================
+// ⭐ Column (เสาโครงสร้าง) — เรียบๆ
+// ============================================================
+
+export function buildColumn(dims: any, color: number, opts: any = {}) {
+  const g = new THREE.Group();
+  const w = dims.w / 100;
+  const d = dims.d / 100;
+  const h = dims.h / 100;
+
+  // Simple box only
+  const pillar = box(w, h, d, color);
+  pillar.position.y = h / 2;
+  g.add(pillar);
+
+  addContactShadow(g, w, d);
+  return g;
+}
+
+// ============================================================
+// ⭐ Partition (ฉากกั้นห้อง) — เรียบๆ ใช้สีเดียวกับผนัง
+// ============================================================
+
+export function buildPartition(dims: any, color: number, opts: any = {}) {
+  const g = new THREE.Group();
+  const w = dims.w / 100;
+  const d = dims.d / 100;
+  const h = dims.h / 100;
+
+  // Simple panel only
+  const panel = box(w, h, d, color);
+  panel.position.y = h / 2;
+  g.add(panel);
+
+  addContactShadow(g, w, d);
+  return g;
+}
+
+// ============================================================
+// ⭐ Stairs (บันไดตรงพื้นฐาน)
+// ============================================================
+
+export function buildStairs(dims: any, color: number, opts: any = {}) {
+  const g = new THREE.Group();
+  const w = dims.w / 100;
+  const d = dims.d / 100;
+  const h = dims.h / 100;
+
+  const treadColor = P(opts, "treadColor", 0xd9c7a8);
+
+  // จำนวนขั้น — สูงประมาณ 18 ซม./ขั้น
+  const stepCount = Math.max(3, Math.round(h / 0.18));
+  const stepH = h / stepCount;
+  const stepD = d / stepCount;
+
+  for (let i = 0; i < stepCount; i++) {
+    const topY = (i + 1) * stepH;
+    const z = -d / 2 + (i + 0.5) * stepD;
+
+    // Solid step block
+    const step = box(w, topY, stepD, color);
+    step.position.set(0, topY / 2, z);
+    g.add(step);
+
+    // Tread (พื้นเหยียบด้านบน) — accent color
+    const tread = box(w + 0.02, 0.03, stepD, treadColor);
+    tread.position.set(0, topY + 0.015, z);
+    g.add(tread);
+  }
+
+  addContactShadow(g, w, d);
+  return g;
+}

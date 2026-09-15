@@ -7,6 +7,7 @@ import { hexOf, priceStr } from "@/lib/utils/format";
 import { applySurface } from "@/lib/three/roomShell";
 import { useSaveState } from "@/hooks/useSaveState";
 import { openConfirm } from "@/components/modals";
+import { objectsByUid, roomGroup } from "@/lib/three/scene";
 
 export default function Header() {
   const surface = useRoomTwin((s) => s.surface);
@@ -34,7 +35,7 @@ export default function Header() {
   const handleWallColor = (idx: number, color: number) => {
     setCurrentWallIdx(idx);
     setSurface({ wallAll: color, wallUniform: true });
-    applySurface();
+    applySurface();  // ⭐ calls syncPartitionColors internally
     saveState();
   };
 
@@ -68,20 +69,13 @@ export default function Header() {
     );
   };
 
-  // ============================================================
-  // ⭐ Reset — เก็บโครงสร้าง (ขนาด, สี, ประตู, หน้าต่าง)
-  //          ลบแค่เฟอร์นิเจอร์ + โซน
-  // ============================================================
   const handleReset = () => {
     openConfirm(
       "ลบเฟอร์นิเจอร์และของแต่งทั้งหมดออก? " +
         "(ขนาดห้อง สี และประตู/หน้าต่างจะคงอยู่)",
       async () => {
         const store = useRoomTwin.getState();
-        const { objectsByUid, roomGroup, surfaceColliders, wallItemMaterials } =
-          await import("@/lib/three/scene");
 
-        // ⭐ 1. แยก items เป็น 2 กลุ่ม
         const openings: typeof store.placedItems = [];
         const toRemove: typeof store.placedItems = [];
 
@@ -96,7 +90,6 @@ export default function Header() {
           }
         });
 
-        // ⭐ 2. ลบ Three.js objects ของ items ที่จะลบ
         toRemove.forEach((item) => {
           const obj = objectsByUid.get(item.uid);
           if (obj) {
@@ -113,33 +106,29 @@ export default function Header() {
             });
           }
           objectsByUid.delete(item.uid);
-          surfaceColliders.delete(item.uid);
-          wallItemMaterials.delete(item.uid);
         });
 
-        // ⭐ 3. Reset store — เก็บ openings ไว้
         const keptRoom = store.room;
         const keptSurface = store.surface;
 
         store.resetAll();
 
-        // ⭐ 4. คืนค่า room + surface + openings
         useRoomTwin.setState({
           room: keptRoom,
           surface: keptSurface,
           placedItems: openings,
         });
 
-        // ⭐ 5. รอ tick ให้ store propagate
         await new Promise((r) => setTimeout(r, 0));
 
-        // ⭐ 6. Rebuild shell + baseboards
-        const { rebuildRoomShell, applySurface: apply, rebuildBaseboards } =
-          await import("@/lib/three/roomShell");
+        const {
+          rebuildRoomShell,
+          applySurface: apply,
+          rebuildBaseboards,
+        } = await import("@/lib/three/roomShell");
         rebuildRoomShell();
         apply();
 
-        // ⭐ 7. Instantiate openings (ถ้ายังไม่มีใน scene)
         const { instantiate } = await import("@/lib/three/instantiate");
         const { objectsByUid: objMap } = await import("@/lib/three/scene");
 
@@ -150,8 +139,6 @@ export default function Header() {
         });
 
         rebuildBaseboards();
-
-        // ⭐ 8. Save
         saveState();
       },
     );
@@ -227,6 +214,7 @@ export default function Header() {
         type="button"
         className="reset-btn"
         id="roomSizeBtn"
+        title="ปรับขนาดห้อง"
         onClick={handleToggleRoomSize}
       >
         📐 <span className="rsp-btn-label">ขนาดห้อง</span>

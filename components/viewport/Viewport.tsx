@@ -25,6 +25,7 @@ export default function Viewport() {
       <FloatingToolbar />
       <CornerViews />
       <RoomStructurePanel />
+      {/* ⭐ ลบ <RoomSetupPanel /> ออก */}
       <CustomizePanel />
       <ZoneThemePanel />
       <ZoneChooser />
