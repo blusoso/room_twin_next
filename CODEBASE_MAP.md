@@ -546,6 +546,8 @@ Examples:
 ```text
 Floor item
 → x / z / restY
+⭐ ตำแหน่งพื้ น snap ตาม GRID (10 ซม.) ยกเว้นพรม (ProductDef.rug)
+   ที่วาง/ลากอิสระ — ดู snapFloorPosition() ใน lib/three/placement.ts
 
 Wall item (ผิว = ผนังห้อง หรือไอเทมที่เป็น hostSurface)
 → wallId  (พื้ นผิว = ผนัง)

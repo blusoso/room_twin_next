@@ -19,6 +19,7 @@ import {
   footprintOf,
   resolvePlacement,
   snap,
+  snapFloorPosition,
   computeRestY,
   applyTransformToDescendants,
   clampToRoom,
@@ -399,10 +400,12 @@ export function usePointerInteraction() {
         if (!product) return;
         const hostUid = product.rug ? null : hit.hostUid;
         const fp = footprintOf(item.params, item.rotY || 0);
+        // ⭐ พรมลากอิสระ (ไม่ snap 10 ซม.) — ของอื่นยัง snap ตาม GRID
+        const pos = snapFloorPosition(product, hit.point.x, hit.point.z);
         const c = resolvePlacement(
           item.uid,
-          snap(hit.point.x),
-          snap(hit.point.z),
+          pos.x,
+          pos.z,
           fp,
           hostUid,
           product.rug,

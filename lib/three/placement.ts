@@ -257,6 +257,19 @@ export function snap(v: number) {
   return Math.round(v / GRID) * GRID;
 }
 
+/**
+ * ⭐ ตำแหน่งพื้ นของ item — พรมวางอิสระ (ไม่ snap 10 ซม.)
+ *    ของอื่น snap ตาม GRID เดิม; ถ้าอนาคตมีของพื้ นชนิดอื่นที่ต้องอิสระ
+ *    ให้เพิ่ม flag ใน ProductDef แล้วขยายเงื่อนไขที่นี่จุดเดียว
+ */
+export function snapFloorPosition(
+  product: { rug?: boolean } | null | undefined,
+  x: number,
+  z: number,
+) {
+  return product?.rug ? { x, z } : { x: snap(x), z: snap(z) };
+}
+
 const _surfBox = new THREE.Box3();
 
 export function surfaceBoundsFor(hostUid: string) {

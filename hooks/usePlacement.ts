@@ -15,6 +15,7 @@ import {
   footprintOf,
   resolvePlacement,
   snap,
+  snapFloorPosition,
   computeRestY,
   resolveRestHeights,
 } from "@/lib/three/placement";
@@ -197,7 +198,9 @@ function addFloorItem(
 
   const uid = "i" + Math.random().toString(36).slice(2, 10);
   const fp = footprintOf(params, 0);
-  const c = resolvePlacement(null, snap(x), snap(z), fp, host, p.rug);
+  // ⭐ พรมวางอิสระ (ไม่ snap 10 ซม.) — ของอื่นยัง snap ตาม GRID
+  const pos = snapFloorPosition(p, x, z);
+  const c = resolvePlacement(null, pos.x, pos.z, fp, host, p.rug);
   const restY = host
     ? computeRestY(host)
     : p.rug
@@ -345,7 +348,16 @@ function addZone(zid: string, cx: number, cz: number): string | null {
 
     const uid = "i" + Math.random().toString(36).slice(2, 10);
     const fp = footprintOf(params, 0);
-    const c = resolvePlacement(null, snap(tx), snap(tz), fp, hostUid, p.rug);
+    // ⭐ ใช้กติกาเดียวกัน: พรม (ถ้ามีใน slot) ไม่ snap
+    const slotPos = snapFloorPosition(p, tx, tz);
+    const c = resolvePlacement(
+      null,
+      slotPos.x,
+      slotPos.z,
+      fp,
+      hostUid,
+      p.rug,
+    );
     const restY = hostUid
       ? computeRestY(hostUid)
       : p.rug
