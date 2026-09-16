@@ -209,13 +209,7 @@ After completing any implementation/build task, ALWAYS finish with these section
 
 Briefly summarize the actual changes that were implemented.
 
-### 2. Verification Performed
-
-List the checks/tests that were actually run by the agent.
-
-Do NOT claim a test was performed if it was not actually run.
-
-### 3. Manual Test Cases
+### 2. Manual Test Cases
 
 Always provide a concrete list of manual test cases the user should perform.
 
@@ -258,30 +252,8 @@ Example:
 2. Change an unrelated floor.
 3. Expected: the unrelated object does not move.
 
-### 4. Problems Found
 
-Report any problems discovered while investigating, implementing, testing, or reviewing the code.
-
-For each problem, state:
-
-Problem: What is wrong
-Impact: What behavior/functionality is affected
-Status: Fixed / Not Fixed / Out of Scope / Needs Follow-up
-Risk: Low / Medium / High
-Recommended Next Step: What should be done next, if applicable
-
-Important:
-
-Do NOT hide unrelated problems discovered during implementation.
-Do NOT silently fix unrelated issues unless they are necessary for the requested implementation or the user explicitly asks for them.
-Clearly separate the requested fix from unrelated problems.
-If no additional problems were found, explicitly say:
-
-No additional problems found.
-
-The final build report must therefore contain:
-
-### 5. Suggested Git Commit
+### 3. Suggested Git Commit
 
 Provide a suggested Git commit message.
 

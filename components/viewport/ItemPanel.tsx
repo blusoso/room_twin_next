@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
+import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { priceStr, hexOf, affiliateUrl } from "@/lib/utils/format";
 import { trackAffiliateClick } from "@/lib/state/storage";
 
@@ -49,11 +50,11 @@ export default function ItemPanel() {
   const p = item.params;
   const locked = !!item.locked;
 
-  // zone info
-  const zone = item.zoneUid ? zoneMeta.get(item.zoneUid) : null;
-  const zoneInfo = zone
-    ? ` • ${zone.icon || "📦"} ${zone.name || "โซน"}`
-    : "";
+  // zone info — ⭐ ใช้ resolver กลาง (definition + override)
+  const zone = item.zoneUid
+    ? resolveZoneDisplay(item.zoneUid, { placedItems, zoneMeta })
+    : null;
+  const zoneInfo = zone ? ` • ${zone.icon} ${zone.name}` : "";
 
   const handleOpenStore = () => {
     trackAffiliateClick();

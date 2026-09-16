@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { ZONE_BY_ID } from "@/lib/data/zones";
+import { pickUniqueZoneName } from "@/lib/data/zoneResolve";
 import { applyThemeToItem } from "@/lib/three/themeApply";
 import {
   footprintOf,
@@ -291,13 +292,9 @@ function addZone(zid: string, cx: number, cz: number): string | null {
   const { addItem, setZoneMeta, selectZone } = useRoomTwin.getState();
   const zuid = "z" + Math.random().toString(36).slice(2, 10);
 
-  // Unique name
-  let name = zdef.name;
-  let n = 2;
-  while (isZoneNameTaken(name, zuid)) {
-    name = zdef.name + " " + n;
-    n++;
-  }
+  // ⭐ ชื่อไม่ซ้ำ — เทียบกับชื่อที่ resolve แล้ว (definition/override) ของโซนที่มีอยู่
+  //    ส่วน icon/color ไม่ copy ลง zoneMeta: ปล่อยให้ derive จาก ZoneDef ผ่าน resolver
+  const name = pickUniqueZoneName(zdef.name, zuid);
   if (name !== zdef.name) setZoneMeta(zuid, { name });
 
   // Sort so parents come first
@@ -349,21 +346,6 @@ function addZone(zid: string, cx: number, cz: number): string | null {
 
   selectZone(zuid);
   return zuid;
-}
-
-function isZoneNameTaken(name: string, exclude: string): boolean {
-  const { placedItems, zoneMeta } = useRoomTwin.getState();
-  const norm = name.trim().toLowerCase();
-  const uids = new Set<string>();
-  placedItems.forEach((i) => {
-    if (i.zoneUid) uids.add(i.zoneUid);
-  });
-  for (const z of uids) {
-    if (z === exclude) continue;
-    const m = zoneMeta.get(z);
-    if (m && (m.name || "").trim().toLowerCase() === norm) return true;
-  }
-  return false;
 }
 
 function handleZoneDrop(uid: string, x: number, z: number) {

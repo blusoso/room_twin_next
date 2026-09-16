@@ -6,6 +6,7 @@ import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { getProductIcon } from "@/lib/data/icons";
 import { getProductThumbnail } from "@/lib/three/thumbnails";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
+import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { flyCameraTo } from "@/lib/three/cameraFlight";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
@@ -49,7 +50,6 @@ export default function RoomTree() {
 
 function RoomTreeContent() {
   const placedItems = useRoomTwin((s) => s.placedItems);
-  const zoneMeta = useRoomTwin((s) => s.zoneMeta);
 
   // group items
   const groups = new Map<string, PlacedItem[]>();
@@ -67,15 +67,7 @@ function RoomTreeContent() {
   return (
     <>
       {Array.from(groups.entries()).map(([zuid, items]) => {
-        const meta = zoneMeta.get(zuid) || {};
-        return (
-          <ZoneGroup
-            key={zuid}
-            zuid={zuid}
-            items={items}
-            meta={meta}
-          />
-        );
+        return <ZoneGroup key={zuid} zuid={zuid} items={items} />;
       })}
 
       {standalone.length > 0 && <StandaloneGroup items={standalone} />}
@@ -90,20 +82,22 @@ function RoomTreeContent() {
 function ZoneGroup({
   zuid,
   items,
-  meta,
 }: {
   zuid: string;
   items: PlacedItem[];
-  meta: any;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const selectZone = useRoomTwin((s) => s.selectZone);
+  // ⭐ subscribe zoneMeta เพื่อ re-render เมื่อ user แก้ชื่อ/ไอคอน/สี
+  const zoneMeta = useRoomTwin((s) => s.zoneMeta);
   const { saveState } = useSaveState();
 
-  const zoneName = meta.name || "โซน";
-  const zoneIcon = meta.icon || "📦";
-  const zoneColor = meta.color !== undefined ? meta.color : 0xb8752e;
-  const hasTheme = !!meta.themeId;
+  // ⭐ name/icon/color มาจาก definition + override ผ่าน resolver กลางเท่านั้น
+  const display = resolveZoneDisplay(zuid, { placedItems: items, zoneMeta });
+  const zoneName = display.name;
+  const zoneIcon = display.icon;
+  const zoneColor = display.color;
+  const hasTheme = !!zoneMeta.get(zuid)?.themeId;
 
   const handleFocus = (e: React.MouseEvent) => {
     e.stopPropagation();

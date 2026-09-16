@@ -4,6 +4,10 @@ import { useRoomTwin } from "@/lib/state/store";
 import { ZONE_ATTACH_MAX_DIST } from "@/lib/data/constants";
 import { hexOf } from "@/lib/utils/format";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
+import {
+  resolveZoneDisplay,
+  type ZoneStateSlice,
+} from "@/lib/data/zoneResolve";
 
 interface ZoneOption {
   zoneUid: string;
@@ -16,8 +20,9 @@ function findNearbyZonesAt(
   x: number,
   z: number,
   maxDist: number,
+  slice: ZoneStateSlice,
 ): ZoneOption[] {
-  const { placedItems } = useRoomTwin.getState();
+  const { placedItems } = slice;
   const seen = new Set<string>();
   const results: Array<ZoneOption & { dist: number }> = [];
 
@@ -31,12 +36,12 @@ function findNearbyZonesAt(
     const dist = Math.hypot(dx, dz);
     if (dist > maxDist) return;
 
-    const meta = useRoomTwin.getState().zoneMeta.get(i.zoneUid) || {};
+    const d = resolveZoneDisplay(i.zoneUid, slice);
     results.push({
       zoneUid: i.zoneUid,
-      name: meta.name || "โซน",
-      icon: meta.icon || "📦",
-      color: meta.color !== undefined ? meta.color : 0xb8752e,
+      name: d.name,
+      icon: d.icon,
+      color: d.color,
       dist,
     });
   });
@@ -49,6 +54,8 @@ export default function ZoneChooser() {
   const pendingUid = useRoomTwin((s) => s.pendingZoneChooserUid);
   const setPending = useRoomTwin((s) => s.setPendingZoneChooser);
   const placedItems = useRoomTwin((s) => s.placedItems);
+  // ⭐ subscribe zoneMeta เพื่อให้ชื่อ/ไอคอน/สีของโซนอัปเดตทันทีเมื่อ user แก้
+  const zoneMeta = useRoomTwin((s) => s.zoneMeta);
 
   const open = !!pendingUid;
 
@@ -65,7 +72,10 @@ export default function ZoneChooser() {
     return null;
   }
 
-  const zones = findNearbyZonesAt(item.x, item.z, ZONE_ATTACH_MAX_DIST);
+  const zones = findNearbyZonesAt(item.x, item.z, ZONE_ATTACH_MAX_DIST, {
+    placedItems,
+    zoneMeta,
+  });
 
   const assign = (zuid: string | null) => {
     const store = useRoomTwin.getState();

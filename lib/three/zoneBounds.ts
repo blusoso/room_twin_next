@@ -5,16 +5,15 @@ import { useRoomTwin } from "@/lib/state/store";
 import { footprintOf } from "./placement";
 import { findFloorYAt } from "./roomShell";
 import { interactionState, isAnyDragging } from "./interactionState";
+import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 
+/**
+ * ⭐ metadata ของโซนสำหรับ 3D — derive จาก definition/override ผ่าน resolver กลางเท่านั้น
+ *    (ห้าม hardcode name/icon/color ที่นี่)
+ */
 export function getZoneMetaLocal(zuid: string) {
-  const { zoneMeta, placedItems } = useRoomTwin.getState();
-  const ov = zoneMeta.get(zuid) || {};
-  const any = placedItems.find((i) => i.zoneUid === zuid);
-  return {
-    name: ov.name || "โซน",
-    icon: ov.icon || "📦",
-    color: ov.color !== undefined ? ov.color : 0xb8752e,
-  };
+  const d = resolveZoneDisplay(zuid);
+  return { name: d.name, icon: d.icon, color: d.color };
 }
 
 export function getZoneBounds(zuid: string) {

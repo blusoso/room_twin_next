@@ -1,6 +1,6 @@
 // lib/three/placement.ts
 import * as THREE from "three";
-import { findFloorYAt, findFloorYAtFootprint } from "./roomShell";
+import { findFloorYAt, findFloorYAtFootprint, getBlocksOrigin } from "./roomShell";
 import { surfaceColliders, objectsByUid } from "./scene";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
@@ -21,17 +21,20 @@ export function cellKey(i: number, j: number) {
 
 export function cellCenter(i: number, j: number) {
   const { room } = useRoomTwin.getState();
-  return { x: i * room.cellSize, z: j * room.cellSize };
+  const { oi, oj } = getBlocksOrigin();
+  return { x: (i - oi) * room.cellSize, z: (j - oj) * room.cellSize };
 }
 
 function footprintAllInBlocks(fp: { w: number; d: number }, x: number, z: number) {
   const { room } = useRoomTwin.getState();
   if (room.shape !== "blocks" || !room.blocks) return true;
   const cs = room.cellSize;
-  const iMin = Math.floor((x - fp.w / 2) / cs + 0.5);
-  const iMax = Math.floor((x + fp.w / 2) / cs + 0.5);
-  const jMin = Math.floor((z - fp.d / 2) / cs + 0.5);
-  const jMax = Math.floor((z + fp.d / 2) / cs + 0.5);
+  // ⭐ world → index ต้องบวก origin เพราะ cell (i,j) render ที่ ((i-oi)*cs, (j-oj)*cs)
+  const { oi, oj } = getBlocksOrigin();
+  const iMin = Math.floor((x - fp.w / 2) / cs + oi + 0.5);
+  const iMax = Math.floor((x + fp.w / 2) / cs + oi + 0.5);
+  const jMin = Math.floor((z - fp.d / 2) / cs + oj + 0.5);
+  const jMax = Math.floor((z + fp.d / 2) / cs + oj + 0.5);
   for (let i = iMin; i <= iMax; i++)
     for (let j = jMin; j <= jMax; j++)
       if (!room.blocks.has(`${i},${j}`)) return false;
@@ -41,11 +44,12 @@ function footprintAllInBlocks(fp: { w: number; d: number }, x: number, z: number
 function blocksCentroid() {
   const { room } = useRoomTwin.getState();
   if (!room.blocks) return { x: 0, z: 0 };
+  const { oi, oj } = getBlocksOrigin();
   let sx = 0, sz = 0, n = 0;
   room.blocks.forEach((k) => {
     const [i, j] = k.split(",").map(Number);
-    sx += i * room.cellSize;
-    sz += j * room.cellSize;
+    sx += (i - oi) * room.cellSize;
+    sz += (j - oj) * room.cellSize;
     n++;
   });
   return n ? { x: sx / n, z: sz / n } : { x: 0, z: 0 };
@@ -67,11 +71,12 @@ function clampToBlocks(x: number, z: number, fp: { w: number; d: number }) {
   if (footprintAllInBlocks(fp, nx, nz)) return { x: nx, z: nz };
 
   const { room } = useRoomTwin.getState();
+  const { oi, oj } = getBlocksOrigin();
   let best: { x: number; z: number } | null = null;
   let bestD = Infinity;
   room.blocks?.forEach((k) => {
     const [i, j] = k.split(",").map(Number);
-    const cc = { x: i * room.cellSize, z: j * room.cellSize };
+    const cc = { x: (i - oi) * room.cellSize, z: (j - oj) * room.cellSize };
     if (footprintAllInBlocks(fp, cc.x, cc.z)) {
       const d = (cc.x - x) ** 2 + (cc.z - z) ** 2;
       if (d < bestD) {
@@ -80,7 +85,8 @@ function clampToBlocks(x: number, z: number, fp: { w: number; d: number }) {
       }
     }
   });
-  return best || { x, z };
+  // ⭐ ถ้าไม่มี cell ไหนพอดี ให้ fallback ไป centroid (อยู่ในผังเสมอ) — ไม่ปล่อยหลุดเป็น {x,z} ดิบ
+  return best || c;
 }
 
 export function clampToRoom(x: number, z: number, fp: { w: number; d: number }) {
@@ -93,6 +99,157 @@ export function clampToRoom(x: number, z: number, fp: { w: number; d: number }) 
   return {
     x: Math.max(-maxX, Math.min(maxX, x)),
     z: Math.max(-maxZ, Math.min(maxZ, z)),
+  };
+}
+
+/**
+ * ⭐ ตรวจว่าถ้าเลื่อน item ทุกตัวใน entries ด้วย (dx, dz) แล้ว footprint ยังอยู่ในผังบล็อกครบ
+ *    ใช้สำหรับลากทั้งโซนแบบ rigid (delta เดียวกันทุกตัว)
+ */
+export function allFootprintsInBlocks(
+  entries: ReadonlyArray<{ uid: string; x: number; z: number }>,
+  dx: number,
+  dz: number,
+): boolean {
+  const { room, placedItems } = useRoomTwin.getState();
+  if (room.shape !== "blocks" || !room.blocks || room.blocks.size === 0)
+    return true;
+  return entries.every((si) => {
+    const it = placedItems.find((i) => i.uid === si.uid);
+    if (!it) return true;
+    const fp = footprintOf(it.params, it.rotY || 0);
+    return footprintAllInBlocks(fp, si.x + dx, si.z + dz);
+  });
+}
+
+// ============================================================
+// ⭐ ลากทั้งโซนแบบ rigid — clamp delta ไม่ให้หลุดพื้นที่ห้อง
+// ============================================================
+
+type ZoneDragEntry = { uid: string; x: number; z: number };
+
+/** bbox ของกลุ่ม item ที่ลาก (ใช้ footprint จริงของแต่ละตัว) */
+function bboxOfEntries(entries: ReadonlyArray<ZoneDragEntry>) {
+  const { placedItems } = useRoomTwin.getState();
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  entries.forEach((si) => {
+    const it = placedItems.find((i) => i.uid === si.uid);
+    if (!it) return;
+    const fp = footprintOf(it.params, it.rotY || 0);
+    minX = Math.min(minX, si.x - fp.w / 2);
+    maxX = Math.max(maxX, si.x + fp.w / 2);
+    minZ = Math.min(minZ, si.z - fp.d / 2);
+    maxZ = Math.max(maxZ, si.z + fp.d / 2);
+  });
+  if (!isFinite(minX)) return null;
+  return { minX, maxX, minZ, maxZ };
+}
+
+/**
+ * ⭐ ขอบเขต "พื้นที่ห้อง" ที่โซนต้องอยู่ภายใน
+ *    - rect   : ขอบห้อง (margin 0.03 เท่ากับ clampToRoom)
+ *    - blocks : ขอบ cell ของผัง (margin 0 — ให้ตรงกับที่ render จริง)
+ */
+function roomOuterBounds(): {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+} {
+  const { room } = useRoomTwin.getState();
+  if (room.shape === "blocks" && room.blocks && room.blocks.size > 0) {
+    const cs = room.cellSize;
+    const { oi, oj } = getBlocksOrigin();
+    let minI = Infinity;
+    let maxI = -Infinity;
+    let minJ = Infinity;
+    let maxJ = -Infinity;
+    room.blocks.forEach((k) => {
+      const [i, j] = k.split(",").map(Number);
+      if (i < minI) minI = i;
+      if (i > maxI) maxI = i;
+      if (j < minJ) minJ = j;
+      if (j > maxJ) maxJ = j;
+    });
+    return {
+      minX: (minI - oi) * cs - cs / 2,
+      maxX: (maxI - oi) * cs + cs / 2,
+      minZ: (minJ - oj) * cs - cs / 2,
+      maxZ: (maxJ - oj) * cs + cs / 2,
+    };
+  }
+  const margin = 0.03;
+  return {
+    minX: -room.w / 2 + margin,
+    maxX: room.w / 2 - margin,
+    minZ: -room.d / 2 + margin,
+    maxZ: room.d / 2 - margin,
+  };
+}
+
+/**
+ * ⭐ clamp delta ของ bbox ต่อ 1 แกน ให้ bbox อยู่ใน [lo, hi]
+ *    ถ้า bbox กว้างกว่าห้อง ให้จัดกึ่งกลาง (กัน clamp สองฝั่งหักกันเอง)
+ *    คืนค่าเป็น delta สัมบูรณ์ (ไม่ใช่ค่าปรับเพิ่ม)
+ */
+function clampAxisDelta(
+  min: number,
+  max: number,
+  lo: number,
+  hi: number,
+  raw: number,
+): number {
+  if (max - min > hi - lo) return (lo + hi) / 2 - (min + max) / 2;
+  if (min + raw < lo) return lo - min;
+  if (max + raw > hi) return hi - max;
+  return raw;
+}
+
+/**
+ * ⭐ delta สำหรับลากทั้งโซน (rigid — item ทุกตัวขยับเท่ากัน)
+ *    รับประกันว่า bbox ของโซนไม่หลุดออกนอกพื้นที่ห้อง
+ *    และในห้องแบบ blocks จะพยายามให้ item ทุกตัวยังอยู่ใน cell ที่มีอยู่จริง
+ */
+export function clampZoneDelta(
+  entries: ReadonlyArray<ZoneDragEntry>,
+  rawDx: number,
+  rawDz: number,
+): { dx: number; dz: number } {
+  const bbox = bboxOfEntries(entries);
+  if (!bbox) return { dx: rawDx, dz: rawDz };
+
+  const { room } = useRoomTwin.getState();
+  const isBlocks =
+    room.shape === "blocks" && !!room.blocks && room.blocks.size > 0;
+
+  if (isBlocks) {
+    // ปลายทางอยู่ในผังแล้ว → ใช้ได้เลย
+    if (allFootprintsInBlocks(entries, rawDx, rawDz))
+      return { dx: rawDx, dz: rawDz };
+
+    // เริ่มจาก pose ที่ถูกต้อง → หา delta มากสุดที่ item ทุกตัวยังอยู่ในผัง
+    //    mid=0 = ตำแหน่งปัจจุบัน (valid), mid=1 = ปลายทาง ⇒ valid ให้เก็บ lo
+    if (allFootprintsInBlocks(entries, 0, 0)) {
+      let lo = 0;
+      let hi = 1;
+      for (let k = 0; k < 24; k++) {
+        const mid = (lo + hi) / 2;
+        if (allFootprintsInBlocks(entries, rawDx * mid, rawDz * mid))
+          lo = mid;
+        else hi = mid;
+      }
+      return { dx: rawDx * lo, dz: rawDz * lo };
+    }
+  }
+
+  // กรณี rect หรือเริ่มจาก pose ที่ไม่ครบผัง → จำกัดให้อยู่ในขอบพื้นที่ห้อง
+  const b = roomOuterBounds();
+  return {
+    dx: clampAxisDelta(bbox.minX, bbox.maxX, b.minX, b.maxX, rawDx),
+    dz: clampAxisDelta(bbox.minZ, bbox.maxZ, b.minZ, b.maxZ, rawDz),
   };
 }
 

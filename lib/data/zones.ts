@@ -216,4 +216,21 @@ export const ZONES: ZoneDef[] = [
   },
 ];
 
+/**
+ * ⭐ Single Source of Truth ของ "available zone definitions"
+ * ทุกส่วน (My Room / zone editor / 3D / zone chooser) ต้อง derive จากชุดนี้เท่านั้น
+ * ห้าม hardcode name/icon/color ของโซนซ้ำที่อื่น — ใช้ resolveZoneDisplay() ใน lib/data/zoneResolve.ts
+ */
+export const ZONE_DEFINITIONS: ZoneDef[] = ZONES;
+
+/**
+ * ⭐ ค่า fallback ของโซนที่มี item แต่ resolve ZoneDef ไม่ได้ (ข้อมูลเก่า / ย้ายโซน)
+ * ประกาศที่เดียวทั้งระบบ — ห้าม hardcode ค่านี้ซ้ำใน UI หรือ 3D
+ */
+export const ZONE_FALLBACK = {
+  name: "โซน",
+  icon: "📦",
+  color: 0xb8752e,
+} as const;
+
 export const ZONE_BY_ID = new Map(ZONES.map((z) => [z.id, z]));

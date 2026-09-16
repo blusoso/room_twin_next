@@ -1,4 +1,5 @@
 // lib/data/constants.ts
+import { ZONE_DEFINITIONS } from "./zones";
 
 export const CATEGORIES = [
   { id: "zone", label: "🏠 โซนสำเร็จรูป" },
@@ -67,10 +68,13 @@ export const WALL_V_MIN = 0.55;
 export const WALL_OUTWARD = 0.012;
 export const CEILING_CLEARANCE_MIN = 0.18;
 
-export const ZONE_COLOR_CHOICES = [
-  0xd9a8a8, 0xc9a776, 0x8fafa0, 0x8a8fb0, 0xe0b0c0, 0xa8b890,
-  0xd9c7a8, 0xb8a4d4, 0xe6a878, 0x7ba4c9, 0xc998b8, 0x88b8a8,
-];
+// ⭐ สีเริ่มต้นของแต่ละโซนใน palette ต้องมาจาก ZONE_DEFINITIONS (กันสี drift กับ definition)
+export const ZONE_COLOR_CHOICES = Array.from(
+  new Set([
+    ...ZONE_DEFINITIONS.map((z) => z.color),
+    0xd9c7a8, 0xb8a4d4, 0xe6a878, 0x7ba4c9, 0xc998b8, 0x88b8a8,
+  ]),
+);
 
 export const FLOOR_STYLES = [
   { id: "wood", name: "ไม้โอ๊ค" },

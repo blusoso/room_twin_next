@@ -21,6 +21,7 @@ import {
   applyTransformToDescendants,
   clampToRoom,
   bottomOffsetFor,
+  clampZoneDelta,
 } from "@/lib/three/placement";
 import {
   resolveWallPlacement,
@@ -65,27 +66,6 @@ function collectDescendants(
   };
   roots.forEach((uid) => collect(uid));
   return set;
-}
-
-function computeZoneBBox(
-  placedItems: PlacedItem[],
-  startItems: Array<{ uid: string; x: number; z: number }>,
-): { minX: number; maxX: number; minZ: number; maxZ: number } | null {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minZ = Infinity;
-  let maxZ = -Infinity;
-  startItems.forEach((si) => {
-    const it = placedItems.find((i) => i.uid === si.uid);
-    if (!it) return;
-    const fp = footprintOf(it.params, it.rotY || 0);
-    minX = Math.min(minX, si.x - fp.w / 2);
-    maxX = Math.max(maxX, si.x + fp.w / 2);
-    minZ = Math.min(minZ, si.z - fp.d / 2);
-    maxZ = Math.max(maxZ, si.z + fp.d / 2);
-  });
-  if (!isFinite(minX)) return null;
-  return { minX, maxX, minZ, maxZ };
 }
 
 // ============================================================
@@ -237,7 +217,9 @@ export function usePointerInteraction() {
           zd.startItems = Array.from(allUids)
             .map((uid) => {
               const it = placedItems.find((i) => i.uid === uid);
-              return it ? { uid, x: it.x || 0, z: it.z || 0 } : null;
+              // ⭐ wall item ไม่มีตำแหน่ง x/z — ไม่ร่วมชุดลาก rigid
+              if (!it || it.wallMount) return null;
+              return { uid, x: it.x || 0, z: it.z || 0 };
             })
             .filter(
               (s): s is { uid: string; x: number; z: number } => !!s,
@@ -261,21 +243,13 @@ export function usePointerInteraction() {
           const dzR = p.z - zd.startFloor.z;
           const rawDx = Math.round(dxR / GRID) * GRID;
           const rawDz = Math.round(dzR / GRID) * GRID;
-          const { placedItems, updateItem, room } = useRoomTwin.getState();
-          const bbox = computeZoneBBox(placedItems, zd.startItems);
-          let cdx = rawDx;
-          let cdz = rawDz;
-          if (bbox) {
-            const margin = 0.03;
-            const rMinX = -room.w / 2 + margin;
-            const rMaxX = room.w / 2 - margin;
-            const rMinZ = -room.d / 2 + margin;
-            const rMaxZ = room.d / 2 - margin;
-            if (bbox.minX + cdx < rMinX) cdx = rMinX - bbox.minX;
-            if (bbox.maxX + cdx > rMaxX) cdx = rMaxX - bbox.maxX;
-            if (bbox.minZ + cdz < rMinZ) cdz = rMinZ - bbox.minZ;
-            if (bbox.maxZ + cdz > rMaxZ) cdz = rMaxZ - bbox.maxZ;
-          }
+          const { updateItem } = useRoomTwin.getState();
+          // ⭐ clamp delta ให้ทั้งโซนยังอยู่ในพื้นที่ห้อง (rect/blocks)
+          const { dx: cdx, dz: cdz } = clampZoneDelta(
+            zd.startItems,
+            rawDx,
+            rawDz,
+          );
           zd.startItems.forEach((si) => {
             const newX = si.x + cdx;
             const newZ = si.z + cdz;
@@ -471,8 +445,8 @@ export function usePointerInteraction() {
           try {
             if (zd.captured) el.releasePointerCapture(zd.pointerId);
           } catch {}
-          import("@/lib/three/placement").then(({ resolveRestHeights }) => {
-            resolveRestHeights();
+          import("@/lib/three/reclamp").then(({ reclampAllToRoom }) => {
+            reclampAllToRoom();
           });
           saveState();
         } else {

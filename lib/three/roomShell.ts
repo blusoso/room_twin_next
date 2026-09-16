@@ -1066,6 +1066,26 @@ function setBlocksOrigin(blocks: Set<string>): void {
   _blocksOriginJ = (minJ + maxJ) / 2;
 }
 
+/**
+ * ⭐ origin ของผังบล็อก (bbox center ในหน่วย index) — คำนวณจาก room.blocks
+ *    ตรงกับ _blocksOriginI/J ที่ใช้ render: cell (i,j) อยู่ที่ ((i-oi)*cs, (j-oj)*cs)
+ *    ใช้แปลง world ↔ index ให้ placement clamp ตรงกับผังที่วาดจริง
+ */
+export function getBlocksOrigin(): { oi: number; oj: number } {
+  const { room } = useRoomTwin.getState();
+  const blocks = room.blocks;
+  if (!blocks || blocks.size === 0) return { oi: 0, oj: 0 };
+  let minI = Infinity, maxI = -Infinity, minJ = Infinity, maxJ = -Infinity;
+  blocks.forEach((k) => {
+    const [i, j] = k.split(",").map(Number);
+    if (i < minI) minI = i;
+    if (i > maxI) maxI = i;
+    if (j < minJ) minJ = j;
+    if (j > maxJ) maxJ = j;
+  });
+  return { oi: (minI + maxI) / 2, oj: (minJ + maxJ) / 2 };
+}
+
 export let blockFloorMat: THREE.MeshStandardMaterial | null = null;
 
 function makeBlockFloorTexture(): THREE.CanvasTexture {

@@ -333,7 +333,11 @@ export const useRoomTwin = create<RoomTwinState>()(
     setZoneMeta: (zuid, meta) =>
       set((s) => {
         const m = new Map(s.zoneMeta);
-        m.set(zuid, { ...(m.get(zuid) || {}), ...meta });
+        const next = { ...(m.get(zuid) || {}), ...meta };
+        // ⭐ ไม่มีข้อมูลเหลือเลย → ลบ entry (ไม่เก็บ definition ซ้ำเป็น entry เปล่า)
+        const isEmpty = Object.values(next).every((v) => v === undefined);
+        if (isEmpty) m.delete(zuid);
+        else m.set(zuid, next);
         return { zoneMeta: m };
       }),
 

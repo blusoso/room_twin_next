@@ -23,6 +23,7 @@ import {
 } from "@/lib/three/roomShell";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+import { validateZoneDefinitions } from "@/lib/data/zoneValidation";
 import { isOpeningRemoved } from "@/lib/state/openingFlags";
 import type { PlacedItem } from "@/lib/state/types";
 
@@ -427,6 +428,12 @@ export function useRoomTwinInit() {
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
+
+    // ⭐ dev เท่านั้น — ตรวจ duplicate id/name/icon/color ของ ZONE_DEFINITIONS
+    //    (production: validateZoneDefinitions แค่ console.error ไม่ throw)
+    if (process.env.NODE_ENV !== "production") {
+      validateZoneDefinitions();
+    }
 
     const {
       setRoom,

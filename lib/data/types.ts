@@ -28,23 +28,8 @@ export interface ProductDef {
   extraDefaults?: Record<string, any>;
 }
 
-export interface ZoneSlot {
-  slotId: string;
-  label: string;
-  productId: string;
-  dx: number;
-  dz: number;
-  parentSlot?: string;
-  swapCats: string[];
-}
-
-export interface ZoneDef {
-  id: string;
-  name: string;
-  icon: string;
-  color: number;
-  slots: ZoneSlot[];
-}
+// ⭐ ZoneDef / ZoneSlot ประกาศที่ lib/data/zones.ts เท่านั้น (กัน type drift)
+//    แล้ว re-export ท้ายไฟล์
 
 export interface ZoneTheme {
   id: string;
@@ -90,8 +75,11 @@ export interface ParamSchema {
 }
 
 // ============================================================
-// Re-export state types (เพื่อให้ import จากที่เดียวได้)
+// Re-export types (เพื่อให้ import จากที่เดียวได้)
 // ============================================================
+
+// ⭐ Zone — ประกาศจริงอยู่ใน lib/data/zones.ts (single source of truth)
+export type { ZoneDef, ZoneSlot } from "./zones";
 
 export type {
   PlacedItem,

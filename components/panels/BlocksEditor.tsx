@@ -19,6 +19,10 @@ const CELL_PX_BASE = 22;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
 
+// ⭐ ค่าคงที่ของ .blocks-grid — ใช้ทั้ง inline style และการคำนวณตำแหน่ง overlay (ห้ามให้ drift)
+const GRID_GAP = 1;
+const GRID_PAD = 1;
+
 function cellKey(i: number, j: number) {
   return `${i},${j}`;
 }
@@ -273,6 +277,15 @@ export default function BlocksEditor() {
     [draft, room.cellSize],
   );
 
+  // ⭐ mapping world (เมตร) → px ของผังบล็อก
+  //    cell k อยู่ที่ [GRID_PAD + k*pitch, + cellPx] ⇒ center = GRID_PAD + k*pitch + cellPx/2
+  //    world x → index i = x / cellSize + origin  (cell (i,j) render ที่ ((i-oi)*cs, (j-oj)*cs))
+  const cs = room.cellSize;
+  const pitch = cellPx + GRID_GAP;
+  const pxPerMeter = cs > 0 ? cellPx / cs : 1;
+  const worldToPx = (world: number, origin: number) =>
+    GRID_PAD + (world / cs + origin + extent) * pitch + cellPx / 2;
+
   // ⭐ Cell color from level
   const getCellColor = (i: number, j: number) => {
     const key = cellKey(i, j);
@@ -401,8 +414,8 @@ export default function BlocksEditor() {
                   gridTemplateColumns: `repeat(${N}, ${cellPx}px)`,
                   gridAutoRows: `${cellPx}px`,
                   background: "#e6dfce",
-                  gap: 1,
-                  padding: 1,
+                  gap: GRID_GAP,
+                  padding: GRID_PAD,
                   borderRadius: 4,
                 }}
               >
@@ -454,16 +467,12 @@ export default function BlocksEditor() {
               </div>
               <div className="blocks-structures">
                 {structPlan.map((s) => {
-                  const cs = room.cellSize;
-                  const fi = s.cx / cs + structOrigin.oi;
-                  const fj = s.cz / cs + structOrigin.oj;
-                  const pitch = cellPx + 1; // cell + gap
-                  const pad = 1;
-                  const left = pad + (fi + extent) * pitch;
-                  const top = pad + (fj + extent) * pitch;
-                  const wPx = ((s.hw * 2) / cs) * pitch;
-                  const hPx = ((s.hd * 2) / cs) * pitch;
+                  const wPx = s.hw * 2 * pxPerMeter;
+                  const hPx = s.hd * 2 * pxPerMeter;
                   if (wPx < 0.5 && hPx < 0.5) return null;
+                  // ⭐ ศูนย์กลางรูปต้องตรงกับ cell center ของ world position นั้น
+                  const left = worldToPx(s.cx, structOrigin.oi) - wPx / 2;
+                  const top = worldToPx(s.cz, structOrigin.oj) - hPx / 2;
                   return (
                     <div
                       key={s.uid}

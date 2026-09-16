@@ -15,6 +15,7 @@ import {
 import { resolveRestHeights, footprintOf } from "@/lib/three/placement";
 import { rebuildBaseboards } from "@/lib/three/roomShell";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
@@ -171,11 +172,9 @@ export default function FloatingToolbar() {
     const zoneItems = placedItems.filter(
       (i) => i.zoneUid === selectedZoneUid,
     );
-    const meta = useRoomTwin
-      .getState()
-      .zoneMeta.get(selectedZoneUid) || {};
+    const zoneName = resolveZoneDisplay(selectedZoneUid).name;
     openConfirm(
-      `ลบทั้งโซน "${meta.name || "โซน"}" (${zoneItems.length} ชิ้น)?`,
+      `ลบทั้งโซน "${zoneName}" (${zoneItems.length} ชิ้น)?`,
       () => {
         const hasDoor = zoneItems.some((i) => i.productId === "door");
         removeZoneFull(selectedZoneUid);

@@ -3,28 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { ZONE_THEMES, THEME_BY_ID } from "@/lib/data/themes";
+import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { hexOf } from "@/lib/utils/format";
 import { reinstantiateItem } from "@/lib/three/instantiate";
 import { applyThemeToItem } from "@/lib/three/themeApply";
 import { resolveRestHeights } from "@/lib/three/placement";
 import { useSaveState } from "@/hooks/useSaveState";
-
-interface ZoneMetaLocal {
-  name: string;
-  icon: string;
-  color: number;
-}
-
-function getZoneMeta(zuid: string): ZoneMetaLocal {
-  const { zoneMeta, placedItems } = useRoomTwin.getState();
-  const ov = zoneMeta.get(zuid) || {};
-  const any = placedItems.find((i) => i.zoneUid === zuid);
-  return {
-    name: ov.name || "โซน",
-    icon: ov.icon || "📦",
-    color: ov.color !== undefined ? ov.color : 0xb8752e,
-  };
-}
 
 // ============================================================
 // Theme Apply / Reset
@@ -143,7 +127,7 @@ export default function ZoneThemePanel() {
 
   if (!selectedZoneUid) return null;
 
-  const meta = getZoneMeta(selectedZoneUid);
+  const meta = resolveZoneDisplay(selectedZoneUid);
   const currentMeta = zoneMeta.get(selectedZoneUid) || {};
   const current = currentMeta.themeId || null;
   const showReset = !!(currentMeta.themeBaseline || current);
