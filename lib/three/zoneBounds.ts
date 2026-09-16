@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { zoneBoundaryGroup } from "./scene";
 import { useRoomTwin } from "@/lib/state/store";
 import { footprintOf } from "./placement";
+import { findFloorYAt } from "./roomShell";
 import { interactionState, isAnyDragging } from "./interactionState";
 
 export function getZoneMetaLocal(zuid: string) {
@@ -86,19 +87,48 @@ const BOUNDARY_STYLES: Record<BoundaryMode, BoundaryStyle> = {
 // Build Zone Boundary (with hover support)
 // ============================================================
 
-export function buildZoneBoundary() {
-  // Clear existing
+// ⭐ Cache signature — สร้าง/dispose mesh+material ใหม่เฉพาะตอนที่ input เปลี่ยน
+//    (เดิมสร้างทิ้งใหม่ทุก frame → GC pressure / jank ตอนโซนถูกเลือก)
+let lastSig = "";
+
+interface DrawEntry {
+  zuid: string;
+  mode: BoundaryMode;
+}
+
+function floorSig(): string {
+  const { room } = useRoomTwin.getState();
+  if (room.shape !== "blocks") return "rect";
+  return "blocks" + (room.blocks?.size ?? 0) + "|" + JSON.stringify(room.cellLevels || {});
+}
+
+function drawSig(zonesToDraw: DrawEntry[]): string {
+  const parts: string[] = [floorSig()];
+  zonesToDraw.forEach(({ zuid, mode }) => {
+    const b = getZoneBounds(zuid);
+    if (!b) return;
+    const meta = getZoneMetaLocal(zuid);
+    parts.push(
+      `${zuid}|${mode}|${meta.color}|${b.minX}|${b.maxX}|${b.minZ}|${b.maxZ}`,
+    );
+  });
+  return parts.join(";");
+}
+
+function clearBoundaryGroup() {
   while (zoneBoundaryGroup.children.length) {
     const c = zoneBoundaryGroup.children[0];
     zoneBoundaryGroup.remove(c);
     if ((c as any).geometry) (c as any).geometry.dispose();
     if ((c as any).material) (c as any).material.dispose();
   }
+}
 
+export function buildZoneBoundary() {
   const { selectedZoneUid, selectedUid, placedItems } = useRoomTwin.getState();
 
   // ⭐ List ของ zone ที่ต้องวาด
-  const zonesToDraw: Array<{ zuid: string; mode: BoundaryMode }> = [];
+  const zonesToDraw: DrawEntry[] = [];
 
   // Priority 1: selected zone
   if (selectedZoneUid) {
@@ -125,8 +155,21 @@ export function buildZoneBoundary() {
 
   if (zonesToDraw.length === 0) {
     zoneBoundaryGroup.visible = false;
+    if (lastSig !== "") {
+      lastSig = "";
+      clearBoundaryGroup();
+    }
     return;
   }
+
+  // ⭐ ข้าม rebuild ถ้า input ไม่เปลี่ยน (ไม่ต้อง alloc ทุก frame)
+  const sig = drawSig(zonesToDraw);
+  if (sig === lastSig) {
+    zoneBoundaryGroup.visible = true;
+    return;
+  }
+  lastSig = sig;
+  clearBoundaryGroup();
 
   zoneBoundaryGroup.visible = true;
 
@@ -140,28 +183,38 @@ export function buildZoneBoundary() {
     const w = b.maxX - b.minX;
     const d = b.maxZ - b.minZ;
 
+    // ⭐ ความสูงพื้นจริงใต้โซน (rect=0, blocks=ผิวสแลบ) — ใช้สูงสุดของมุมเพื่อไม่ให้จมใต้สแลบยก
+    const floorY = Math.max(
+      findFloorYAt(b.minX, b.minZ),
+      findFloorYAt(b.maxX, b.minZ),
+      findFloorYAt(b.minX, b.maxZ),
+      findFloorYAt(b.maxX, b.maxZ),
+    );
+
     // Fill
     const fillMat = new THREE.MeshBasicMaterial({
       color: meta.color,
       transparent: true,
       opacity: style.fillOpacity,
       depthWrite: false,
+      // ⭐ ปิด depthTest เพื่อให้เห็นเสมอเหนือพื้น (กัน depth-fighting/ถูกพื้นกลบ)
+      depthTest: false,
       side: THREE.DoubleSide,
     });
     const fillMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, d), fillMat);
     fillMesh.rotation.x = -Math.PI / 2;
-    // ⭐ offset เล็กน้อยเพื่อลด z-fighting ระหว่าง zones
-    fillMesh.position.set(b.cx, 0.004 + idx * 0.001, b.cz);
+    // ⭐ ยกสูงเหนือผิวพื้น ~1 ซม. + offset เล็กน้อยระหว่าง zones กัน z-fighting
+    fillMesh.position.set(b.cx, floorY + 0.01 + idx * 0.001, b.cz);
     fillMesh.renderOrder = 8;
     zoneBoundaryGroup.add(fillMesh);
 
     // Border
     const pts = [
-      new THREE.Vector3(b.minX, 0.01, b.minZ),
-      new THREE.Vector3(b.maxX, 0.01, b.minZ),
-      new THREE.Vector3(b.maxX, 0.01, b.maxZ),
-      new THREE.Vector3(b.minX, 0.01, b.maxZ),
-      new THREE.Vector3(b.minX, 0.01, b.minZ),
+      new THREE.Vector3(b.minX, floorY + 0.01, b.minZ),
+      new THREE.Vector3(b.maxX, floorY + 0.01, b.minZ),
+      new THREE.Vector3(b.maxX, floorY + 0.01, b.maxZ),
+      new THREE.Vector3(b.minX, floorY + 0.01, b.maxZ),
+      new THREE.Vector3(b.minX, floorY + 0.01, b.minZ),
     ];
     const borderGeo = new THREE.BufferGeometry().setFromPoints(pts);
     const borderMat = new THREE.LineDashedMaterial({

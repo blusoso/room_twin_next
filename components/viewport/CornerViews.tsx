@@ -32,7 +32,7 @@ export default function CornerViews() {
         v = CORNER_VIEWS[corner];
       }
 
-      if (v) flyCameraTo(v.x, v.y, v.z, v.targetY);
+      if (v) flyCameraTo(v.x, v.y, v.z, 0, v.targetY, 0);
     },
     [room.h],
   );

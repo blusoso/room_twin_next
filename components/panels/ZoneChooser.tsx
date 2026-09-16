@@ -1,6 +1,7 @@
 // components/panels/ZoneChooser.tsx
 "use client";
 import { useRoomTwin } from "@/lib/state/store";
+import { ZONE_ATTACH_MAX_DIST } from "@/lib/data/constants";
 import { hexOf } from "@/lib/utils/format";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
 
@@ -64,7 +65,7 @@ export default function ZoneChooser() {
     return null;
   }
 
-  const zones = findNearbyZonesAt(item.x, item.z, 0.7);
+  const zones = findNearbyZonesAt(item.x, item.z, ZONE_ATTACH_MAX_DIST);
 
   const assign = (zuid: string | null) => {
     const store = useRoomTwin.getState();

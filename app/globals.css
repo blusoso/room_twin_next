@@ -19,6 +19,30 @@
   --danger: #a6473f;
   --radius-card: 14px;
   --radius-pill: 999px;
+
+  /* ============================================================
+     Layer Scale — ไล่จากล่างขึ้นบน (ทุกค่าใช้ var() เสมอ ห้าม hardcode)
+     กติกา: --z-lock-badge (🔒) ต้องอยู่ต่ำกว่า panel/modal ทุกตัว (29+)
+     เสมอ เพื่อไม่ให้ไอคอนกุญแจทับ panel/modal
+     ============================================================ */
+  --z-inside: 2;            /* ตัวควบคุมซ้อนใน component (cz-toggle input, cart-close) */
+  --z-viewport-ui: 5;       /* floating-hint / cancel-place / wall-status / corner-views */
+  --z-lock-badge: 6;        /* 🔒 lock-badge + lock-toggle-btn — ห้ามสูงกว่า panel/modal */
+  --z-viewport-veil: 6;     /* viewport-wrap.drag-over — เส้นประขณะลากเข้าวิวพอร์ต */
+  --z-toolbar: 7;           /* floating-toolbar */
+  --z-item-panel: 8;        /* item-panel */
+  --z-header: 20;           /* header */
+  --z-toast: 20;            /* placement-toast */
+  --z-panel-backdrop: 29;   /* backdrop ของ panel (ต่ำกว่า panel เล็กน้อย) */
+  --z-panel: 30;            /* customize / zone-theme / room-size / room-setup / rotate-badge */
+  --z-chooser-backdrop: 34; /* backdrop ของ zone chooser */
+  --z-chooser: 35;          /* zone chooser */
+  --z-cart: 40;             /* cart drawer */
+  --z-dialog: 50;           /* confirm dialog */
+  --z-modal: 55;            /* zone-edit modal */
+  --z-modal-top: 60;        /* blocks editor (modal ที่อยู่บนสุด) */
+  --z-drag-ghost: 200;      /* drag ghost */
+  --z-tree-ghost: 400;      /* tree drag ghost */
 }
 
 * {
@@ -63,7 +87,7 @@ header {
   padding: 14px 22px;
   background: var(--panel);
   border-bottom: 1px solid var(--panel-line);
-  z-index: 20;
+  z-index: var(--z-header);
   flex-shrink: 0;
   touch-action: manipulation;
 }
@@ -691,7 +715,7 @@ aside {
   color: var(--ink);
   box-shadow: 0 12px 28px rgba(42, 35, 48, 0.28);
   pointer-events: none;
-  z-index: 400;
+  z-index: var(--z-tree-ghost);
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -811,7 +835,7 @@ aside {
   opacity: 0;
   transition: opacity 0.25s;
   white-space: nowrap;
-  z-index: 5;
+  z-index: var(--z-viewport-ui);
 }
 
 .floating-hint.show {
@@ -830,7 +854,7 @@ aside {
   border-radius: var(--radius-pill);
   cursor: pointer;
   display: none;
-  z-index: 5;
+  z-index: var(--z-viewport-ui);
   font-family: inherit;
   touch-action: manipulation;
 }
@@ -855,7 +879,7 @@ aside {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s, transform 0.2s;
-  z-index: 20;
+  z-index: var(--z-toast);
   text-align: center;
 }
 
@@ -876,7 +900,7 @@ aside {
   border-radius: 50%;
   font-size: 15px;
   cursor: pointer;
-  z-index: 6;
+  z-index: var(--z-lock-badge);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -901,7 +925,7 @@ aside {
   padding: 6px 12px;
   border-radius: var(--radius-pill);
   pointer-events: none;
-  z-index: 5;
+  z-index: var(--z-viewport-ui);
   white-space: nowrap;
 }
 
@@ -912,7 +936,7 @@ aside {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  z-index: 5;
+  z-index: var(--z-viewport-ui);
 }
 
 .corner-view-btn {
@@ -958,7 +982,7 @@ aside {
   height: 64px;
   border-radius: 12px;
   pointer-events: none;
-  z-index: 200;
+  z-index: var(--z-drag-ghost);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -980,7 +1004,7 @@ aside {
   border: 2px dashed var(--ochre);
   border-radius: 16px;
   pointer-events: none;
-  z-index: 6;
+  z-index: var(--z-viewport-veil);
 }
 
 /* ============================================================
@@ -999,7 +1023,7 @@ aside {
   box-shadow: 0 14px 34px rgba(42, 35, 48, 0.18);
   padding: 16px 18px;
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-  z-index: 8;
+  z-index: var(--z-item-panel);
   pointer-events: none;
 }
 
@@ -1116,7 +1140,7 @@ aside {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  z-index: 7;
+  z-index: var(--z-toolbar);
   white-space: nowrap;
 }
 
@@ -1218,7 +1242,7 @@ aside {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 6;
+  z-index: var(--z-lock-badge);
 }
 
 .lock-badge {
@@ -1251,7 +1275,7 @@ aside {
   padding: 5px 10px;
   border-radius: var(--radius-pill);
   pointer-events: none;
-  z-index: 30;
+  z-index: var(--z-panel);
   display: none;
   white-space: nowrap;
   font-family: var(--font-inter), sans-serif;
@@ -1288,7 +1312,7 @@ aside {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: var(--z-dialog);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
@@ -1352,7 +1376,7 @@ aside {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 55;
+  z-index: var(--z-modal);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s;
@@ -1583,7 +1607,7 @@ aside {
   border: 1px solid var(--panel-line);
   border-radius: 18px;
   box-shadow: 0 20px 48px rgba(42, 35, 48, 0.22);
-  z-index: 30;
+  z-index: var(--z-panel);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1616,7 +1640,7 @@ aside {
   position: fixed;
   inset: 0;
   background: transparent;   /* โปร่งใส — แค่จับคลิก */
-  z-index: 29;                /* ต่ำกว่า panel (30) */
+  z-index: var(--z-panel-backdrop);   /* ต่ำกว่า panel (30) */
   display: none;
   opacity: 0;
   transition: opacity 0.18s;
@@ -1643,7 +1667,7 @@ aside {
   border: 1px solid var(--panel-line);
   border-radius: 18px;
   box-shadow: 0 20px 48px rgba(42, 35, 48, 0.22);
-  z-index: 30;
+  z-index: var(--z-panel);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2396,7 +2420,7 @@ aside {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 60;
+  z-index: var(--z-modal-top);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s;
@@ -2695,7 +2719,7 @@ aside {
   border: 1px solid var(--panel-line);
   border-radius: 16px;
   box-shadow: 0 18px 44px rgba(42, 35, 48, 0.2), 0 2px 6px rgba(42, 35, 48, 0.06);
-  z-index: 30;
+  z-index: var(--z-panel);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2931,7 +2955,7 @@ aside {
   margin: 0;
   cursor: pointer;
   position: absolute;
-  z-index: 2;
+  z-index: var(--z-inside);
 }
 
 .cz-toggle-track {
@@ -3028,7 +3052,7 @@ aside {
   border: 1px solid var(--panel-line);
   border-radius: 16px;
   box-shadow: 0 18px 44px rgba(42, 35, 48, 0.2), 0 2px 6px rgba(42, 35, 48, 0.06);
-  z-index: 30;
+  z-index: var(--z-panel);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3245,7 +3269,7 @@ aside {
   border: 1px solid var(--panel-line);
   border-radius: 14px;
   box-shadow: 0 18px 44px rgba(42, 35, 48, 0.2), 0 2px 6px rgba(42, 35, 48, 0.06);
-  z-index: 35;
+  z-index: var(--z-chooser);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3334,7 +3358,7 @@ aside {
   position: fixed;
   inset: 0;
   background: transparent;
-  z-index: 40;
+  z-index: var(--z-cart);
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
@@ -3430,7 +3454,7 @@ aside {
   font-size: 13px;
   color: var(--ink-soft);
   flex-shrink: 0;
-  z-index: 2;
+  z-index: var(--z-inside);
   touch-action: manipulation;
 }
 
@@ -4093,7 +4117,7 @@ aside {
   position: fixed;
   inset: 0;
   background: transparent;
-  z-index: 29;
+  z-index: var(--z-panel-backdrop);
   display: none;
   opacity: 0;
   visibility: hidden;          /* ⭐ */
@@ -4118,10 +4142,10 @@ aside {
 
 /* z-index ต่างๆ ตามระดับของแต่ละ panel */
 .panel-backdrop.z-29 {
-  z-index: 29;
+  z-index: var(--z-panel-backdrop);
 } /* CustomizePanel, ZoneThemePanel, RoomStructurePanel */
 .panel-backdrop.z-34 {
-  z-index: 34;
+  z-index: var(--z-chooser-backdrop);
 } /* ZoneChooser */
 
 /* ============================================================
@@ -4138,7 +4162,7 @@ aside {
   border: 1px solid var(--panel-line);
   border-radius: 16px;
   box-shadow: 0 20px 48px rgba(42, 35, 48, 0.22);
-  z-index: 30;
+  z-index: var(--z-panel);
   display: flex;
   flex-direction: column;
   overflow: hidden;

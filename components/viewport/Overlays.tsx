@@ -101,7 +101,6 @@ export default function Overlays() {
             borderRadius: 12,
             boxShadow: "0 6px 18px rgba(42, 35, 48, 0.22)",
             pointerEvents: "none",
-            zIndex: 20,
             textAlign: "center",
           }}
         >

@@ -6,7 +6,6 @@ import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { getProductIcon } from "@/lib/data/icons";
 import { getProductThumbnail } from "@/lib/three/thumbnails";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
-import { controls } from "@/lib/three/scene";
 import { flyCameraTo } from "@/lib/three/cameraFlight";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
@@ -111,10 +110,8 @@ function ZoneGroup({
     selectZone(zuid);
     const b = getZoneBounds(zuid);
     if (!b) return;
-    flyCameraTo(b.cx + 2.4, 2.4, b.cz + 3.2, 1.1);
-    setTimeout(() => {
-      if (controls) controls.target.set(b.cx, 1.0, b.cz);
-    }, 700);
+    // ⭐ โฟกัสตรงจุดกึ่งกลางโซน — target วิ่งเข้าใกล้โซนพร้อม camera (กัน snap ตอนจบ flight)
+    flyCameraTo(b.cx + 2.4, 2.4, b.cz + 3.2, b.cx, 1.0, b.cz);
   };
 
   const handleTheme = (e: React.MouseEvent) => {

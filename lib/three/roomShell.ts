@@ -11,6 +11,7 @@ import {
   sun,
   meshWallId,
   objectsByUid,
+  wallItemMaterials,
 } from "./scene";
 import { makeFloorTexture, makeFloorCanvas } from "./surfaceTextures";
 import {
@@ -521,16 +522,15 @@ export function updateWallVisibility() {
     if (!item.wallMount) return;
     const wd = getWall(item.wallId!);
     const wo = wd ? (wd as any).mat.opacity : 1;
-    import("./scene").then(({ objectsByUid, wallItemMaterials }) => {
-      const h = objectsByUid.get(item.uid);
-      if (h) h.visible = wo > 0.04;
-      const mats = wallItemMaterials.get(item.uid);
-      if (mats)
-        mats.forEach((m) => {
-          m.opacity = wo;
-          m.depthWrite = wo > 0.5;
-        });
-    });
+    // ⭐ sync ตรง ๆ (เดิม dynamic import ทุก frame → Promise/GC garbage + ล่าหนึ่ง frame)
+    const h = objectsByUid.get(item.uid);
+    if (h) h.visible = wo > 0.04;
+    const mats = wallItemMaterials.get(item.uid);
+    if (mats)
+      mats.forEach((m) => {
+        m.opacity = wo;
+        m.depthWrite = wo > 0.5;
+      });
   });
 
   const text =

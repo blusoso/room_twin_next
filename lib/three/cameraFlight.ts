@@ -15,14 +15,16 @@ export function flyCameraTo(
   x: number,
   y: number,
   z: number,
+  targetX: number,
   targetY: number,
+  targetZ: number,
 ) {
   if (!isInitialized()) return;
   const myToken = ++flyToken;
   const startPos = camera.position.clone();
   const startTarget = controls.target.clone();
   const endPos = new THREE.Vector3(x, y, z);
-  const endTarget = new THREE.Vector3(0, targetY, 0);
+  const endTarget = new THREE.Vector3(targetX, targetY, targetZ);
   const dur = 650,
     t0 = performance.now();
   controls.enabled = false;

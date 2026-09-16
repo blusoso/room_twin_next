@@ -37,28 +37,164 @@ Thai-language room-decoration editor (single-page Next.js App Router app). UI st
 - `.next/dev/types/**` is a `tsconfig` include — run `next dev`/`next build` after adding routes before trusting `tsc` output.
 - History snapshots must round-trip through `JSON.parse` — `Set`s (e.g. `room.blocks`) are serialized as arrays and rebuilt on restore; `zoneMeta` (a `Map`) as entry arrays.
 
-## Code Change Policy
+# Extended Codebase Guidance
 
-When a task affects existing behavior:
+## Mandatory Architecture References
 
-1. Do not assume the named file/function is the complete implementation.
-2. Trace the relevant flow before editing:
-   user interaction
-   → event handler
-   → state/data transformation
-   → dependent systems
-   → rendering/output
-   → persistence when applicable.
+Before changing existing behavior:
 
-3. When changing a function, inspect:
-   - its callers
-   - its important dependencies
-   - how its output is consumed.
+1. Read `CODEBASE_MAP.md` when you need to understand ownership or architecture.
+2. Read `FEATURE_FLOWS.md` when the task changes an existing feature or behavior.
+3. Use the feature flow to identify affected files before editing.
 
-4. Before editing, identify the complete set of affected files.
+These files are architectural references, not optional documentation.
 
-5. Prefer a small complete fix over a narrow local fix.
+---
 
-6. Do not modify unrelated systems just because they are nearby.
+## Dependency Tracing Is Mandatory
 
-7. After editing, verify the original behavior and any directly connected behavior.
+Never assume that the file named by the user contains the complete implementation.
+
+For behavior changes, trace:
+
+```text
+user interaction
+→ event handler
+→ Zustand/state mutation
+→ dependent state/data
+→ Three.js/runtime effects
+→ persistence
+→ history/restore
+```
+
+When relevant, also trace:
+
+```text
+CustomEvent dispatch
+→ CustomEvent listener
+→ side effect
+```
+
+---
+
+## Source of Truth
+
+Use this separation:
+
+```text
+Zustand
+    = application source of truth
+
+PlacedItem / RoomShape / SurfaceState
+    = persistent domain data
+
+Three.js Object3D
+    = runtime representation
+
+React component state
+    = local UI state only
+```
+
+Do not introduce a second source of truth.
+
+Do not store persistent room/furniture state only inside a Three.js object.
+
+---
+
+## Before Editing
+
+For non-trivial changes, identify:
+
+```text
+1. Entry point
+2. State owner
+3. State mutation
+4. Runtime consumer
+5. Dependent systems
+6. Persistence
+7. History
+8. CustomEvents
+```
+
+Then edit the smallest complete set of files.
+
+---
+
+## High-Risk Changes
+
+Always perform dependency tracing before changing:
+
+* room dimensions
+* room shape
+* room height
+* wall/floor/ceiling geometry
+* furniture placement
+* wall-mounted objects
+* ceiling-mounted objects
+* zones
+* PlacedItem structure
+* serialization
+* persistence
+* history
+* CustomEvents
+
+---
+
+## Serialized State
+
+When serialized state changes:
+
+1. Update TypeScript types.
+2. Update serialization.
+3. Update restoration.
+4. Update migrations when required.
+5. Bump `STORAGE_KEY`.
+6. Verify localStorage restore.
+7. Verify undo/redo.
+
+Do not change serialized shape without considering existing saved state.
+
+---
+
+## Verification
+
+After a behavior change:
+
+1. Run the TypeScript check.
+2. Verify the changed feature.
+3. Verify directly connected behavior.
+4. If state changed, verify localStorage restore.
+5. If state/history changed, verify undo/redo.
+6. If room geometry changed, verify furniture placement.
+7. If CustomEvents changed, verify both dispatcher and listener.
+
+Do not claim a change is complete based only on compilation.
+
+---
+
+## OpenCode Investigation Workflow
+
+When the task is unclear or an existing behavior is difficult to trace:
+
+1. Search the repository for the relevant UI label, function, state field, product ID, event name, or action.
+2. Identify callers and consumers.
+3. Read the relevant feature flow in `FEATURE_FLOWS.md`.
+4. Inspect the implementation chain.
+5. State the affected files before editing.
+6. Make the smallest complete change.
+7. Verify connected behavior.
+
+Prefer repository evidence over assumptions.
+
+---
+
+## Important
+
+Do not "fix" unrelated code discovered during investigation.
+
+If unrelated problems are found:
+
+* mention them separately;
+* do not modify them unless required for the requested behavior.
+
+The goal is a complete change, not a broad refactor.
