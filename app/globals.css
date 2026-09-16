@@ -1833,6 +1833,45 @@ aside {
   font-weight: 600;
 }
 
+/* ⭐ โครงสร้างห้องบน preview (ประตู/หน้าต่าง/เสา/ฉากกั้น) */
+.rsp-structure--door {
+  fill: rgba(196, 148, 88, 0.72);
+  stroke: #7c4a1e;
+  stroke-width: 1.4;
+}
+
+.rsp-structure--window {
+  fill: rgba(178, 210, 226, 0.72);
+  stroke: #4f7f97;
+  stroke-width: 1.4;
+}
+
+.rsp-structure--slidingdoor {
+  fill: rgba(158, 188, 206, 0.72);
+  stroke: #2f6074;
+  stroke-width: 1.4;
+}
+
+.rsp-structure--column {
+  fill: rgba(232, 220, 196, 0.92);
+  stroke: #7c4a1e;
+  stroke-width: 1.8;
+}
+
+.rsp-structure--partition {
+  fill: rgba(120, 112, 100, 0.55);
+  stroke: #4c463c;
+  stroke-width: 1.4;
+}
+
+.rsp-structure-label {
+  font-size: 7px;
+  fill: #5a4a30;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .rsp-dim {
   margin-bottom: 14px;
 }
@@ -2660,6 +2699,69 @@ aside {
 
 .blocks-cell.hidden-grid {
   background: transparent;
+}
+
+/* ⭐ โครงสร้างห้องบนผังบล็อก (ประตู/หน้าต่าง/เสา/ฉากกั้น) */
+.blocks-structures {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.blocks-structure {
+  position: absolute;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blocks-structure-rect {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+}
+
+.blocks-structure--door .blocks-structure-rect {
+  background: rgba(196, 148, 88, 0.72);
+  border: 1.5px solid #7c4a1e;
+}
+
+.blocks-structure--window .blocks-structure-rect {
+  background: rgba(178, 210, 226, 0.72);
+  border: 1.5px solid #4f7f97;
+}
+
+.blocks-structure--slidingdoor .blocks-structure-rect {
+  background: rgba(158, 188, 206, 0.72);
+  border: 1.5px solid #2f6074;
+}
+
+.blocks-structure--column .blocks-structure-rect {
+  background: rgba(232, 220, 196, 0.92);
+  border: 2px solid #7c4a1e;
+}
+
+.blocks-structure--partition .blocks-structure-rect {
+  background: rgba(120, 112, 100, 0.55);
+  border: 1.5px solid #4c463c;
+}
+
+.blocks-structure-label {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  line-height: 1;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 700;
+  color: #4c3a20;
+  white-space: nowrap;
+  background: rgba(255, 253, 247, 0.85);
+  padding: 1px 3px;
+  border-radius: 3px;
 }
 
 .blocks-foot {

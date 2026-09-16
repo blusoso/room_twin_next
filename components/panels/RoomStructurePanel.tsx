@@ -1,6 +1,6 @@
 // components/panels/RoomStructurePanel.tsx
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import {
   FLOOR_STYLES,
@@ -28,6 +28,10 @@ import {
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { useSaveState } from "@/hooks/useSaveState";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
+import {
+  structurePlanItems,
+  blocksOrigin,
+} from "@/lib/three/structurePlan";
 import type { PlacedItem } from "@/lib/state/types";
 
 type Tab = "size" | "surfaces" | "openings";
@@ -190,6 +194,12 @@ const PREVIEW_MAX_D = 128;
 
 function RoomPreviewSvg() {
   const room = useRoomTwin((s) => s.room);
+  const placedItems = useRoomTwin((s) => s.placedItems);
+
+  const structPlan = useMemo(
+    () => structurePlanItems(placedItems),
+    [placedItems],
+  );
 
   const handleOpenBlocks = useCallback(() => {
     if (room.shape === "rect") {
@@ -297,6 +307,42 @@ function RoomPreviewSvg() {
             />
           </>
         )}
+        {(() => {
+          const { oi, oj } = blocksOrigin(room.blocks);
+          const cs = room.cellSize;
+          return structPlan.map((s) => {
+            const pxc = sx(s.cx + oi * cs);
+            const pyc = sy(s.cz + oj * cs);
+            const pw = s.hw * 2 * scale;
+            const ph = s.hd * 2 * scale;
+            if (pw < 0.4 && ph < 0.4) return null;
+            const labelY = pyc - Math.max(ph / 2, 3) - 3;
+            return (
+              <g key={s.uid}>
+                <g transform={`rotate(${s.deg} ${pxc} ${pyc})`}>
+                  <rect
+                    x={pxc - pw / 2}
+                    y={pyc - ph / 2}
+                    width={Math.max(pw, 1)}
+                    height={Math.max(ph, 1)}
+                    rx="1"
+                    className={`rsp-structure rsp-structure--${s.productId}`}
+                  />
+                </g>
+                {pw >= 12 && (
+                  <text
+                    className="rsp-structure-label"
+                    textAnchor="middle"
+                    x={pxc}
+                    y={labelY}
+                  >
+                    {s.label}
+                  </text>
+                )}
+              </g>
+            );
+          });
+        })()}
         <text
           className="rsp-preview-label"
           textAnchor="middle"

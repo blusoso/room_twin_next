@@ -10,6 +10,10 @@ import {
   remapOrphanedWallItems,
 } from "@/hooks/useRoomTwinInit";
 import { LEVEL_PRESETS, LEVEL_STEP } from "@/lib/data/constants";
+import {
+  structurePlanItems,
+  blocksOrigin,
+} from "@/lib/three/structurePlan";
 
 const CELL_PX_BASE = 22;
 const MIN_ZOOM = 0.5;
@@ -66,8 +70,23 @@ export default function BlocksEditor() {
   const [paintLevel, setPaintLevel] = useState(0);
 
   const room = useRoomTwin((s) => s.room);
+  const placedItems = useRoomTwin((s) => s.placedItems);
   const { saveState } = useSaveState();
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // ⭐ โครงสร้างห้องตามตำแหน่งจริง (ประตู/หน้าต่าง/เสา/ฉากกั้น) — overlay บนผัง
+  const structPlan = useMemo(
+    () => structurePlanItems(placedItems),
+    [placedItems],
+  );
+  const structOrigin = useMemo(
+    () => {
+      if (room.shape === "blocks" && room.blocks && room.blocks.size > 0)
+        return blocksOrigin(room.blocks);
+      return blocksOrigin(draft);
+    },
+    [room.shape, room.blocks, draft],
+  );
 
   // ===== Open =====
   useEffect(() => {
@@ -427,6 +446,37 @@ export default function BlocksEditor() {
                           }}
                         >
                           {(y * 100).toFixed(0)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="blocks-structures">
+                {structPlan.map((s) => {
+                  const cs = room.cellSize;
+                  const fi = s.cx / cs + structOrigin.oi;
+                  const fj = s.cz / cs + structOrigin.oj;
+                  const pitch = cellPx + 1; // cell + gap
+                  const pad = 1;
+                  const left = pad + (fi + extent) * pitch;
+                  const top = pad + (fj + extent) * pitch;
+                  const wPx = ((s.hw * 2) / cs) * pitch;
+                  const hPx = ((s.hd * 2) / cs) * pitch;
+                  if (wPx < 0.5 && hPx < 0.5) return null;
+                  return (
+                    <div
+                      key={s.uid}
+                      className={`blocks-structure blocks-structure--${s.productId}`}
+                      style={{ left, top, width: wPx, height: hPx }}
+                    >
+                      <div
+                        className="blocks-structure-rect"
+                        style={{ transform: `rotate(${s.deg}deg)` }}
+                      />
+                      {wPx >= 12 && (
+                        <span className="blocks-structure-label">
+                          {s.label}
                         </span>
                       )}
                     </div>
