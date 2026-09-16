@@ -1,7 +1,7 @@
 // lib/three/placement.ts
 import * as THREE from "three";
-import { findFloorYAt } from "./roomShell";
-import { surfaceColliders } from "./scene";
+import { findFloorYAt, findFloorYAtFootprint } from "./roomShell";
+import { surfaceColliders, objectsByUid } from "./scene";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { GRID } from "@/lib/data/constants";
@@ -223,6 +223,31 @@ export function computeRestY(parentUid: string | null | undefined): number {
   return (p.restY || 0) + sr * (p.params.h / 100);
 }
 
+/**
+ * ⭐ bottom offset ของ mesh — ระยะจาก origin ลงมาถึงขอบล่างจริงของ model
+ * คำนวณจาก Box3 ครั้งเดียวตอน instantiate (หมุนเฉพาะแกน Y จึงไม่กระทบ min.y)
+ * default = 0 สำหรับ product ที่ pivot อยู่ base
+ */
+export function bottomOffsetFor(uid: string): number {
+  return objectsByUid.get(uid)?.userData.bottomOffset ?? 0;
+}
+
+/** ⭐ หา floor Y จาก center + 4 มุม footprint (max); rug ยังใช้ center ตามเดิม */
+function floorYForItem(item: {
+  x?: number;
+  z?: number;
+  params: any;
+  rotY?: number;
+  productId: string;
+}): number {
+  const x = item.x ?? 0;
+  const z = item.z ?? 0;
+  const isRug = item.productId === "roundrug" || item.productId === "rectrug";
+  return isRug
+    ? findFloorYAt(x, z)
+    : findFloorYAtFootprint(x, z, footprintOf(item.params, item.rotY || 0));
+}
+
 export function resolveRestHeights() {
   const { placedItems, updateItem } = useRoomTwin.getState();
   const resolved = new Map<string, number>();
@@ -233,7 +258,7 @@ export function resolveRestHeights() {
       // ⭐ โครงสร้าง (เสา/ฉาก/บันได) ยึดกับพิกัดโครงสร้างห้อง — ไม่ตามระดับพื้น
       resolved.set(i.uid, i.restY ?? 0);
     } else if (!i.parentUid) {
-      resolved.set(i.uid, findFloorYAt(i.x!, i.z!));
+      resolved.set(i.uid, floorYForItem(i));
     }
   });
 
@@ -260,8 +285,11 @@ export function resolveRestHeights() {
   placedItems.forEach((i) => {
     if (i.wallMount) return;
     if (i.ceilingMount) return;
-    if (i.parentUid && !placedItems.find((p) => p.uid === i.parentUid))
+    if (i.parentUid && !placedItems.find((p) => p.uid === i.parentUid)) {
       updateItem(i.uid, { parentUid: null });
+      // ⭐ orphan — parent หายไปแล้ว ให้ fallback ลงพื้นด้วย footprint (ไม่ใช่ 0)
+      resolved.set(i.uid, floorYForItem(i));
+    }
     const newY = resolved.has(i.uid) ? resolved.get(i.uid)! : 0;
     if (Math.abs(newY - (i.restY || 0)) > 1e-6)
       updateItem(i.uid, { restY: newY });

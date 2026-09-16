@@ -16,7 +16,7 @@ import {
   rebuildBaseboards,
 } from "@/lib/three/roomShell";
 import { instantiate } from "@/lib/three/instantiate";
-import { resolveRestHeights } from "@/lib/three/placement";
+import { resolveRestHeights, bottomOffsetFor } from "@/lib/three/placement";
 import { reclampAllToRoom } from "@/lib/three/reclamp";
 import {
   ensureDefaultOpenings,
@@ -191,7 +191,11 @@ export default function Canvas3D() {
         );
         obj.rotation.y = item.rotY ?? 0;
       } else {
-        obj.position.set(item.x ?? 0, item.restY ?? 0, item.z ?? 0);
+        obj.position.set(
+          item.x ?? 0,
+          (item.restY ?? 0) - bottomOffsetFor(item.uid),
+          item.z ?? 0,
+        );
         obj.rotation.y = item.rotY ?? 0;
       }
     });

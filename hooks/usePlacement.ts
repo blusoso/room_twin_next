@@ -23,7 +23,7 @@ import {
   raycastCeilingPlacement,
 } from "@/lib/three/raycast";
 import { instantiate, reinstantiateItem } from "@/lib/three/instantiate";
-import { rebuildBaseboards, getWallRotY, findFloorYAt } from "@/lib/three/roomShell";
+import { rebuildBaseboards, getWallRotY, findFloorYAt, findFloorYAtFootprint } from "@/lib/three/roomShell";
 import { findNearbyZonesAt, assignItemToZone } from "@/lib/three/zoneHelpers";
 import {
   ZONE_ATTACH_MAX_DIST,
@@ -182,7 +182,11 @@ function addFloorItem(
   const uid = "i" + Math.random().toString(36).slice(2, 10);
   const fp = footprintOf(params, 0);
   const c = resolvePlacement(null, snap(x), snap(z), fp, host, p.rug);
-  const restY = host ? computeRestY(host) : findFloorYAt(c.x, c.z);
+  const restY = host
+    ? computeRestY(host)
+    : p.rug
+      ? findFloorYAt(c.x, c.z)
+      : findFloorYAtFootprint(c.x, c.z, fp);
 
   const item: PlacedItem = {
     uid,
@@ -318,7 +322,11 @@ function addZone(zid: string, cx: number, cz: number): string | null {
     const uid = "i" + Math.random().toString(36).slice(2, 10);
     const fp = footprintOf(params, 0);
     const c = resolvePlacement(null, snap(tx), snap(tz), fp, hostUid, p.rug);
-    const restY = hostUid ? computeRestY(hostUid) : findFloorYAt(c.x, c.z);
+    const restY = hostUid
+      ? computeRestY(hostUid)
+      : p.rug
+        ? findFloorYAt(c.x, c.z)
+        : findFloorYAtFootprint(c.x, c.z, fp);
 
     const item: PlacedItem = {
       uid,

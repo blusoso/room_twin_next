@@ -817,6 +817,32 @@ export function findFloorYAt(x: number, z: number): number {
   return found ? bestY : 0;
 }
 
+/**
+ * ⭐ floor Y จากทั้ง footprint (center + 4 มุม) — ใช้ค่า max
+ * กันไม่ให้ item ฝังลงไปใน slab ที่ยกสูง เมื่อ center อยู่บน cell ต่ำ
+ * แต่ตัว mesh เหลื่อมทับ raised region (bottom จะวางทับพื้นสูงสุดที่ footprint สัมผัส)
+ */
+export function findFloorYAtFootprint(
+  x: number,
+  z: number,
+  fp: { w: number; d: number },
+): number {
+  let bestY = findFloorYAt(x, z);
+  const hw = fp.w / 2;
+  const hd = fp.d / 2;
+  const corners: Array<[number, number]> = [
+    [x - hw, z - hd],
+    [x + hw, z - hd],
+    [x - hw, z + hd],
+    [x + hw, z + hd],
+  ];
+  for (const [cx, cz] of corners) {
+    const y = findFloorYAt(cx, cz);
+    if (y > bestY) bestY = y;
+  }
+  return bestY;
+}
+
 // ============================================================
 // Baseboards
 // ============================================================

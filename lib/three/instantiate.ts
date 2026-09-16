@@ -41,6 +41,19 @@ export function instantiate(item: any) {
     g.add(collider);
     surfaceColliders.set(item.uid, collider);
   }
+
+  // ⭐ bottomOffset — ระยะจาก origin ถึงขอบล่างจริงของ mesh
+  //    roomGroup เป็น identity transform → world min.y − position.y = local bottom
+  //    default = 0 สำหรับ product ที่ pivot base; รองรับ product ที่ pivot กลางในอนาคต
+  const _bndBox = new THREE.Box3().setFromObject(g);
+  if (!_bndBox.isEmpty()) {
+    const bottomOffset = _bndBox.min.y - g.position.y;
+    g.userData.bottomOffset = bottomOffset;
+    if (Math.abs(bottomOffset) > 1e-9) {
+      g.position.y = (item.restY || 0) - bottomOffset;
+    }
+  }
+
   roomGroup.add(g);
   objectsByUid.set(item.uid, g);
 }

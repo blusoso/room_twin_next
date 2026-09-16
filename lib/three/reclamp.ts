@@ -5,6 +5,7 @@ import {
   footprintOf,
   resolvePlacement,
   resolveRestHeights,
+  bottomOffsetFor,
 } from "./placement";
 import {
   resolveWallPlacement,
@@ -143,7 +144,7 @@ export function reclampAllToRoom() {
     } else {
       obj.position.x = item.x!;
       obj.position.z = item.z!;
-      obj.position.y = item.restY || 0;
+      obj.position.y = (item.restY || 0) - bottomOffsetFor(item.uid);
       obj.rotation.y = item.rotY || 0;
     }
   });

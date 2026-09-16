@@ -20,6 +20,7 @@ import {
   computeRestY,
   applyTransformToDescendants,
   clampToRoom,
+  bottomOffsetFor,
 } from "@/lib/three/placement";
 import {
   resolveWallPlacement,
@@ -27,7 +28,7 @@ import {
   wallItemWorldXZ,
 } from "@/lib/three/wallPlacement";
 import { resolveCeilingPlacement } from "@/lib/three/ceilingPlacement";
-import { getWallRotY, rebuildBaseboards, findFloorYAt } from "@/lib/three/roomShell";
+import { getWallRotY, rebuildBaseboards, findFloorYAt, findFloorYAtFootprint } from "@/lib/three/roomShell";
 import {
   hitTestGizmoHandle,
   beginGizmoRotate,
@@ -317,7 +318,8 @@ export function usePointerInteraction() {
           if (obj && item) {
             if (item.ceilingMount)
               obj.position.y = useRoomTwin.getState().room.h;
-            else if (!item.wallMount) obj.position.y = 0.02;
+            else if (!item.wallMount)
+              obj.position.y = bottomOffsetFor(id.uid) + 0.02;
           }
           el.style.cursor = "grabbing";
         }
@@ -396,7 +398,11 @@ export function usePointerInteraction() {
         const ox = item.x!;
         const oz = item.z!;
         applyTransformToDescendants(item.uid, ox, oz, c.x, c.z, 0);
-        const restY = hostUid ? computeRestY(hostUid) : findFloorYAt(c.x, c.z);
+        const restY = hostUid
+          ? computeRestY(hostUid)
+          : product.rug
+            ? findFloorYAt(c.x, c.z)
+            : findFloorYAtFootprint(c.x, c.z, fp);
         updateItem(item.uid, {
           x: c.x,
           z: c.z,
@@ -404,7 +410,12 @@ export function usePointerInteraction() {
           restY,
         });
         const obj = objectsByUid.get(item.uid);
-        if (obj) obj.position.set(c.x, restY + 0.02, c.z);
+        if (obj)
+          obj.position.set(
+            c.x,
+            restY + 0.02 - bottomOffsetFor(item.uid),
+            c.z,
+          );
         return;
       }
 
@@ -502,7 +513,7 @@ export function usePointerInteraction() {
           if (obj && it) {
             if (it.ceilingMount) obj.position.y = store.room.h;
             else if (it.wallMount) obj.position.y = it.v!;
-            else obj.position.y = it.restY || 0;
+            else obj.position.y = (it.restY || 0) - bottomOffsetFor(it.uid);
           }
           saveState();
           store.selectItem(id.uid);

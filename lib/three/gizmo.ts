@@ -26,6 +26,7 @@ import {
   footprintOf,
   resolvePlacement,
   applyTransformToDescendants,
+  bottomOffsetFor,
 } from "./placement";
 import { resolveCeilingPlacement } from "./ceilingPlacement";
 import { interactionState } from "./interactionState";
@@ -189,7 +190,11 @@ export function updateRotateGizmo() {
     gizmoRing.rotation.set(-Math.PI / 2, 0, 0);
     gizmoRing.scale.set(r, r, 1);
 
-    gizmoGroup.position.set(item.x!, (item.restY || 0) + 0.006, item.z!);
+    gizmoGroup.position.set(
+      item.x!,
+      (item.restY || 0) - bottomOffsetFor(item.uid) + 0.006,
+      item.z!,
+    );
     gizmoGroup.rotation.set(0, 0, 0);
 
     const hx = r * Math.sin(rotY);
@@ -333,7 +338,7 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
     showRotateBadge(cx, cy, s.deg, s.snapped);
   } else {
     // Floor item rotation
-    const hit = raycastFloorY(cx, cy, item.restY || 0);
+    const hit = raycastFloorY(cx, cy, (item.restY || 0) - bottomOffsetFor(item.uid));
     if (!hit) return;
     const dx = hit.x - item.x!;
     const dz = hit.z - item.z!;
@@ -370,7 +375,7 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
     import("./scene").then(({ objectsByUid }) => {
       const obj = objectsByUid.get(item.uid);
       if (obj) {
-        obj.position.set(c.x, item.restY || 0, c.z);
+        obj.position.set(c.x, (item.restY || 0) - bottomOffsetFor(item.uid), c.z);
         obj.rotation.y = rawRot;
       }
     });
@@ -492,7 +497,7 @@ export function rotateItemBy90(uid: string, dir: 1 | -1) {
   ]).then(([{ objectsByUid }, { resolveRestHeights }]) => {
     const obj = objectsByUid.get(uid);
     if (obj) {
-      obj.position.set(c.x, item.restY || 0, c.z);
+      obj.position.set(c.x, (item.restY || 0) - bottomOffsetFor(item.uid), c.z);
       obj.rotation.y = newRotY;
     }
     resolveRestHeights();
