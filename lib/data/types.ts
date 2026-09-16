@@ -18,6 +18,11 @@ export interface ProductDef {
   dims: Dims;
   price: number;
   color: number;
+  /**
+   * ⭐ คำค้น/คำพ้องสำหรับ smart search (ไทย + อังกฤษ)
+   *    ใช้เฉพาะ lib/data/productSearch.ts — ไม่มีผลต่อ build()/geometry/serialized state
+   */
+  tags?: string[];
   build: (dims: any, color: number, opts?: any) => THREE.Group;
   surface?: number;
   rug?: boolean;

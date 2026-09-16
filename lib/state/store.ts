@@ -10,6 +10,10 @@ import {
   markOpeningRemoved,
   clearOpeningRemoved,
 } from "./openingFlags";
+import {
+  makeDefaultCatalogFilters,
+  type CatalogFilters,
+} from "@/lib/data/productSearch";
 import type {
   PlacedItem,
   RoomShape,
@@ -72,6 +76,22 @@ export interface RoomTwinState {
   setActivePanel: (p: "build" | "room") => void;
   activeCat: string;
   setActiveCat: (c: string) => void;
+
+  // ⭐ ค้นหา/กรองสินค้าในแคตตาล็อก — transient ล้วน
+  //    ไม่เข้า serialize/history/localStorage และไม่กระทบ undo/redo
+  catalogQuery: string;
+  catalogFilters: CatalogFilters;
+  catalogSearchFocusNonce: number;
+  /** ⭐ สถานะเปิด/ปิด floating filter panel (ข้าง sidebar) — transient */
+  catalogFiltersOpen: boolean;
+  setCatalogQuery: (q: string) => void;
+  setCatalogFilters: (patch: Partial<CatalogFilters>) => void;
+  /** ล้างทั้งคำค้นและตัวกรอง (ใช้กับปุ่ม "ล้างการค้นหา" และ Escape ในช่องค้นหา) */
+  clearCatalogSearch: () => void;
+  /** ขอโฟกัสช่องค้นหา (nonce — ใช้จาก keyboard shortcut ที่อยู่คนละ component) */
+  requestCatalogSearchFocus: () => void;
+  setCatalogFiltersOpen: (open: boolean) => void;
+  toggleCatalogFilters: () => void;
 
   currentWallIdx: number;
   setCurrentWallIdx: (i: number) => void;
@@ -414,10 +434,44 @@ export const useRoomTwin = create<RoomTwinState>()(
       set({ customizeTargetUid: uid }),
 
     activePanel: "build",
-    setActivePanel: (p) => set({ activePanel: p }),
+    // ⭐ ออกจากแท็บ "สร้างห้อง" → ปิด floating filter panel ด้วย
+    //    (กันแผงโผล่ซ้ำแบบไม่คาดคิดเมื่อกลับมา)
+    setActivePanel: (p) =>
+      set(
+        p === "room"
+          ? { activePanel: p, catalogFiltersOpen: false }
+          : { activePanel: p },
+      ),
 
     activeCat: "zone",
     setActiveCat: (c) => set({ activeCat: c }),
+
+    // ============================================================
+    // Catalog search (transient — ไม่เข้า serialize/history)
+    // ============================================================
+    catalogQuery: "",
+    catalogFilters: makeDefaultCatalogFilters(),
+    catalogSearchFocusNonce: 0,
+
+    setCatalogQuery: (q) => set({ catalogQuery: q }),
+
+    setCatalogFilters: (patch) =>
+      set((s) => ({ catalogFilters: { ...s.catalogFilters, ...patch } })),
+
+    clearCatalogSearch: () =>
+      set({ catalogQuery: "", catalogFilters: makeDefaultCatalogFilters() }),
+
+    requestCatalogSearchFocus: () =>
+      set((s) => ({
+        catalogSearchFocusNonce: s.catalogSearchFocusNonce + 1,
+      })),
+
+    catalogFiltersOpen: false,
+
+    setCatalogFiltersOpen: (open) => set({ catalogFiltersOpen: open }),
+
+    toggleCatalogFilters: () =>
+      set((s) => ({ catalogFiltersOpen: !s.catalogFiltersOpen })),
 
     currentWallIdx: 0,
     setCurrentWallIdx: (i) => set({ currentWallIdx: i }),

@@ -3,6 +3,7 @@
 import type { ProductDef } from "@/lib/data/types";
 import { themeDisplayName, themedSwatchColor } from "@/lib/data/themes";
 import { hexOf, priceStr } from "@/lib/utils/format";
+import HighlightedText from "./HighlightedText";
 
 interface Props {
   product: ProductDef;
@@ -17,6 +18,10 @@ interface Props {
   isSwapping: boolean;
   isCurrent: boolean;
   onSwapClick?: () => void;
+  // ⭐ ใช้เฉพาะตอนแสดงผลการค้นหา (ข้ามหมวด/ข้ามธีม)
+  catBadge?: string;
+  themeName?: string;
+  query?: string;
 }
 
 export default function ProductCard({
@@ -26,6 +31,9 @@ export default function ProductCard({
   isSwapping,
   isCurrent,
   onSwapClick,
+  catBadge,
+  themeName,
+  query,
 }: Props) {
   const isThemed = !!themeId;
   const displayName =
@@ -67,7 +75,7 @@ export default function ProductCard({
       />
 
       <div className="item-name">
-        {displayName}
+        <HighlightedText text={displayName} query={query} />
         {isCurrent && isSwapping && " ✓"}
       </div>
 
@@ -76,6 +84,15 @@ export default function ProductCard({
       <div className="item-dims">
         {product.dims.w}×{product.dims.d}×{product.dims.h} ซม.
       </div>
+
+      {(catBadge || (isThemed && themeName)) && (
+        <div className="card-badges">
+          {catBadge && <span className="cat-badge">{catBadge}</span>}
+          {isThemed && themeName && (
+            <span className="theme-badge">{themeName}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

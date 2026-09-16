@@ -413,6 +413,404 @@ aside {
   box-shadow: 0 0 0 2px rgba(184, 117, 46, 0.25);
 }
 
+/* ============================================================
+   Smart search & filter (catalog)
+   ============================================================ */
+
+.catalog-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 0 14px;
+  border-bottom: 1px solid var(--panel-line);
+}
+
+.catalog-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.catalog-search-icon {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.catalog-search-input {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius-pill);
+  padding: 8px 12px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.catalog-search-input:focus {
+  border-color: var(--ochre);
+  box-shadow: 0 0 0 2px rgba(184, 117, 46, 0.16);
+}
+
+.catalog-search-input::placeholder {
+  color: var(--ink-soft);
+  opacity: 0.75;
+}
+
+.catalog-search-clear {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.catalog-search-clear:hover {
+  border-color: var(--ochre);
+  color: var(--ochre-deep);
+}
+
+.catalog-filter-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  font-size: 11.5px;
+  padding: 7px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  touch-action: manipulation;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.catalog-filter-btn.open,
+.catalog-filter-btn:hover {
+  border-color: var(--ochre);
+  color: var(--ochre-deep);
+}
+
+.catalog-filter-btn .count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--ochre);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ============================================================
+   Floating filter panel (ข้าง sidebar — mount ใน .viewport-wrap)
+   ============================================================ */
+
+.catalog-filter-panel {
+  position: absolute;
+  top: 12px;
+  left: 12px; /* ⭐ ชิดขวาของ sidebar — อยู่ข้างๆ ไม่ทับ */
+  width: min(300px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--panel-line);
+  border-radius: 16px;
+  box-shadow: 0 20px 48px rgba(42, 35, 48, 0.22),
+    0 2px 6px rgba(42, 35, 48, 0.06);
+  z-index: var(--z-panel);
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0.22s;
+}
+
+.catalog-filter-panel.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s,
+    visibility 0s 0s;
+}
+
+.cfp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--panel-line);
+  background: linear-gradient(180deg, #fbf8f2, #f6f1e6);
+  flex-shrink: 0;
+}
+
+.cfp-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-fraunces), var(--font-noto), serif;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.cfp-count {
+  font-family: var(--font-noto), var(--font-inter), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.cfp-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.cfp-close:hover {
+  border-color: var(--ochre);
+  color: var(--ochre-deep);
+}
+
+.cfp-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* ⭐ scroll container ของตัวเอง — กัน touch-action: none ของ .viewport-wrap */
+  touch-action: pan-y;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cfp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--panel-line);
+  background: linear-gradient(180deg, #fbf8f2, #f6f1e6);
+  flex-shrink: 0;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.filter-note {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  opacity: 0.85;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip {
+  font-family: inherit;
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink-soft);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.chip:hover:not(:disabled):not(.active) {
+  border-color: #c9bea3;
+  color: var(--ink);
+}
+
+.chip.active {
+  background: var(--ink);
+  color: var(--panel);
+  border-color: var(--ink);
+}
+
+.chip:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.catalog-filter-panel select {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.catalog-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+.catalog-status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-status button {
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: 11.5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink-soft);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.catalog-status button:hover {
+  border-color: var(--ochre);
+  color: var(--ochre-deep);
+}
+
+.catalog-section-head {
+  grid-column: 1 / -1;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  padding: 2px 0;
+}
+
+.catalog-section-head span {
+  font-weight: 500;
+}
+
+.catalog-empty {
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 1px dashed var(--panel-line);
+  border-radius: var(--radius-card);
+  padding: 18px 14px;
+  text-align: center;
+}
+
+.catalog-empty-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.catalog-empty-sub {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
+.catalog-empty-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.cat-badge,
+.theme-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.cat-badge {
+  background: #f3efe6;
+  border: 1px solid var(--panel-line);
+  color: var(--ink-soft);
+}
+
+.theme-badge {
+  background: #f7ecd9;
+  border: 1px solid #e5d6b4;
+  color: #8a6a2f;
+}
+
+mark.hl {
+  background: rgba(184, 117, 46, 0.22);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
 .item-swatch {
   width: 100%;
   height: 56px;
@@ -4627,6 +5025,34 @@ aside {
     padding: 0 12px 8px 12px;
     flex-wrap: nowrap;
     overflow-x: auto;
+  }
+  /* ⭐ ค้นหา/กรองบนมือถือ — แถวค้นหาเลื่อนได้ ไม่ดันแคตตาล็อกตกจอ */
+  .catalog-search {
+    padding: 8px 12px 0 12px;
+    gap: 6px;
+  }
+  .catalog-search-input {
+    font-size: 12.5px;
+    padding: 7px 10px;
+  }
+  .catalog-filter-btn {
+    font-size: 11px;
+    padding: 6px 9px;
+  }
+  /* ⭐ floating filter panel บนมือถือ — อยู่ในพื้นที่ 3D เหนือ drawer เสมอ */
+  .catalog-filter-panel {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: calc(100% - 16px);
+  }
+  .cfp-body {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .catalog-status {
+    padding-bottom: 6px;
   }
   .wall-status {
     top: 10px;

@@ -9,3 +9,5 @@ export { useCardDrag } from "./useCardDrag";
 export { useTreeItemDrag } from "./useTreeItemDrag";
 export { useSwapHighlight } from "./useSwapHighlight";
 export { usePlacingHighlight } from "./usePlacingHighlight";
+export { useCatalogSearchShortcut } from "./useCatalogSearchShortcut";
+export { useCatalogSearchResult } from "./useCatalogSearchResult";

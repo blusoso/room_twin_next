@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { loadFromStorage } from "@/lib/state/storage";
+import { CATALOG_SEARCH_INPUT_ID } from "@/lib/data/constants";
 import { useSaveState } from "./useSaveState";
 
 export function useKeyboardShortcuts() {
@@ -13,6 +14,36 @@ export function useKeyboardShortcuts() {
       const ctrl = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
       const code = e.code;
+
+      // ===== Escape: floating filter panel ปิดก่อนเสมอ =====
+      //   (คำค้น/ตัวกรองยังอยู่ — ต่างจาก Escape ในช่องค้นหาที่ล้างค่า)
+      if (
+        (key === "escape" || code === "Escape") &&
+        useRoomTwin.getState().catalogFiltersOpen
+      ) {
+        e.preventDefault();
+        useRoomTwin.getState().setCatalogFiltersOpen(false);
+        return;
+      }
+
+      // ===== ช่องค้นหาสินค้า: ปล่อยให้เป็นหน้าที่ของ input =====
+      //   Escape → ล้างคำค้น/ตัวกรอง + เลิกโฟกัส (ไม่ไปสั่ง cancelPlacing/closeItemPanel)
+      //   Ctrl/⌘+Z|Y → ให้ browser ทำ undo/redo ของข้อความเอง
+      const target = e.target as HTMLElement | null;
+      if (target && target.id === CATALOG_SEARCH_INPUT_ID) {
+        if (key === "escape" || code === "Escape") {
+          e.preventDefault();
+          useRoomTwin.getState().clearCatalogSearch();
+          target.blur();
+          return;
+        }
+        if (
+          ctrl &&
+          (key === "z" || key === "y" || code === "KeyZ" || code === "KeyY")
+        ) {
+          return;
+        }
+      }
 
       // ===== Undo / Redo =====
       if (

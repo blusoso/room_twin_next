@@ -23,6 +23,9 @@ export const LEGACY_STORAGE_KEYS = [
 /** ⭐ view preference: โหมดแสดงผนังรอบด้าน — เก็บแยกจาก SerializedState (ไม่ผูกกับห้อง/undo) */
 export const SHOW_ALL_WALLS_KEY = "roomtwin_show_all_walls";
 
+/** ⭐ id ของช่องค้นหาสินค้าในแคตตาล็อก (ใช้ร่วมกันระหว่าง UI กับ keyboard shortcut) */
+export const CATALOG_SEARCH_INPUT_ID = "catalogSearchInput";
+
 // ⭐ แหล่งเดียวของสีผนัง — ใช้ร่วมกันทั้ง header/panel/per-wall/คัสตอม
 export const WALL_COLOR_PALETTE = [
   0xf2e9dc, 0xdce6dd, 0xe7d6cc, 0xd7dee6, 0xf5efe3, 0xc8d4c0,

@@ -3,6 +3,7 @@
 import type { ZoneDef } from "@/lib/data/types";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { hexOf, priceStr } from "@/lib/utils/format";
+import HighlightedText from "./HighlightedText";
 
 interface Props {
   zone: ZoneDef;
@@ -14,9 +15,11 @@ interface Props {
     themeId?: string | null,
   ) => void;
   disabled?: boolean;
+  /** ⭐ ไฮไลต์คำค้น (ใช้ตอนแสดงผลการค้นหา) */
+  query?: string;
 }
 
-export default function ZoneCard({ zone, startDrag, disabled }: Props) {
+export default function ZoneCard({ zone, startDrag, disabled, query }: Props) {
   const total = zone.slots.reduce(
     (s, sl) => s + (PRODUCT_BY_ID.get(sl.productId)?.price || 0),
     0,
@@ -49,7 +52,9 @@ export default function ZoneCard({ zone, startDrag, disabled }: Props) {
         <span className="zone-count-badge">{zone.slots.length} ชิ้น</span>
       </div>
 
-      <div className="item-name">{zone.name}</div>
+      <div className="item-name">
+        <HighlightedText text={zone.name} query={query} />
+      </div>
 
       <div className="item-price">เริ่มต้น {priceStr(total)}</div>
 

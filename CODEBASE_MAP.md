@@ -108,10 +108,19 @@ Responsible for:
 * browsing categories
 * browsing products
 * browsing zones
+* searching / filtering products (smart search — search bar in `components/sidebar/CatalogSearch.tsx`,
+  floating filter panel in `components/panels/CatalogFilterPanel.tsx`, engine in `lib/data/productSearch.ts`)
 * room tree
 * build actions
 * starting placement
 * selecting room/build modes
+
+Search/filter state (`catalogQuery`, `catalogFilters`, `catalogFiltersOpen`, `catalogSearchFocusNonce`)
+lives in the Zustand store, but is **transient**: it is never serialized, never part of history,
+and never persisted. `hooks/useCatalogSearchResult.ts` is the single source of the current result set,
+shared by the sidebar catalog and the floating filter panel.
+When a query or any facet is active the catalog switches from "tabs" (browse) to "search" mode;
+cards still go through the unchanged `ProductCard` / `useCardDrag` → `startPlacing` path.
 
 Typical flow:
 
@@ -146,6 +155,16 @@ Important domains include:
 * zone selection
 * zone/theme customization
 * item customization
+* product catalog filters (`CatalogFilterPanel` — floating, non-modal, no backdrop)
+
+Positioning convention:
+
+```text
+floating panels are position:absolute inside .viewport-wrap (components/viewport/Viewport.tsx)
+→ they can never overlay the sidebar (aside) or the mobile drawer
+→ toggled with a .show class + inline visibility/pointer-events + inert when closed
+CatalogFilterPanel sits at top-left (left:12px) = immediately right of the sidebar
+```
 
 Typical flow:
 
@@ -162,6 +181,9 @@ save/history
 ```
 
 A panel change is not complete if only the UI changes.
+
+Note: `CatalogFilterPanel` is an exception to the save/history step — it only mutates transient
+catalog-filter state, so it never touches `saveState()`, history snapshots, or Three.js.
 
 ---
 
@@ -344,9 +366,20 @@ ProductDef
 ├── category
 ├── dimensions
 ├── metadata
+├── tags          (คำค้น/คำพ้องสำหรับ smart search — ไทย + อังกฤษ)
 └── build(...)
         ↓
     THREE.Group
+```
+
+Search & filter engine:
+
+```text
+lib/data/productSearch.ts
+├── searchCatalog({ query, filters, room })   → { hits, zones }
+├── CatalogFilters (cats / price / mounts / theme / fitRoom / sort)
+├── ฟังก์ชันช่วย: mountsOf, fitsRoom, inPriceBand, normalizeText, isSearchMode
+└── ไม่รู้จัก store / React / localStorage (pure) → ไม่กระทบ serialized state
 ```
 
 Important:

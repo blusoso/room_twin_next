@@ -11,6 +11,7 @@ import {
   ZoneThemePanel,
   ZoneChooser,
   BlocksEditor,
+  CatalogFilterPanel,
 } from "@/components/panels";
 import { usePointerInteraction } from "@/hooks/usePointerInteraction";
 import { useSwapHighlight } from "@/hooks/useSwapHighlight";
@@ -30,6 +31,8 @@ export default function Viewport() {
       <CornerViews />
       <RoomStructurePanel />
       {/* ⭐ ลบ <RoomSetupPanel /> ออก */}
+      {/* ⭐ floating filter panel — ลอยข้าง sidebar (mount ก่อน CustomizePanel เพื่อให้ panel อื่นทับด้านบนได้) */}
+      <CatalogFilterPanel />
       <CustomizePanel />
       <ZoneThemePanel />
       <ZoneChooser />

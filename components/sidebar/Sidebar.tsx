@@ -1,6 +1,7 @@
 // components/sidebar/Sidebar.tsx
 "use client";
 import { useRoomTwin } from "@/lib/state/store";
+import { useCatalogSearchShortcut } from "@/hooks/useCatalogSearchShortcut";
 import BuildPanel from "./BuildPanel";
 import RoomPanel from "./RoomPanel";
 
@@ -10,6 +11,9 @@ export default function Sidebar() {
   const drawerExpanded = useRoomTwin((s) => s.drawerExpanded);
   const toggleDrawer = useRoomTwin((s) => s.toggleDrawer);
   const closeItemPanel = useRoomTwin((s) => s.closeItemPanel);
+
+  // ⭐ "/" หรือ Ctrl/⌘+K → เปิดแท็บสร้างห้อง + โฟกัสช่องค้นหาสินค้า
+  useCatalogSearchShortcut();
 
   return (
     <aside id="asideEl" className={drawerExpanded ? "expanded" : ""}>

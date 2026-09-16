@@ -896,3 +896,82 @@ History
 must be considered together where applicable.
 
 A fix is not complete merely because the visible UI appears correct.
+
+---
+
+# 22. ค้นหา & กรองสินค้า (Smart Search)
+
+Flow:
+
+```text
+CatalogSearch (components/sidebar/CatalogSearch.tsx — แถบค้นหาใน sidebar)
+    ↓
+Zustand transient slice: catalogQuery / catalogFilters / catalogSearchFocusNonce /
+                         catalogFiltersOpen   (ไม่เข้า serialize/history → ไม่ bump STORAGE_KEY)
+    ↓
+useCatalogSearchResult()  (hooks/useCatalogSearchResult.ts — แหล่งเดียวของผลลัพธ์)
+    ↓
+searchCatalog()  (lib/data/productSearch.ts — pure)
+    ├─ อ่าน PRODUCTS + tags + THEME / ZONES + room.w/d/h
+    └─ ให้คะแนนแล้วเรียงลำดับ + กรอง facet
+    ↓
+ผู้ใช้ 2 ราย:
+    ├─ BuildPanel: browse mode (เดิม) vs search mode
+    │     ├─ browse mode = tabs + activeCat (พฤติกรรมเดิมทั้งหมด)
+    │     └─ search mode = ซ่อน tabs, แสดงโซนที่ตรง + สินค้าที่ตรง (มี badge หมวด/ธีม)
+    └─ CatalogFilterPanel (components/panels/CatalogFilterPanel.tsx)
+          ⭐ floating panel — mount จาก components/viewport/Viewport.tsx ใน .viewport-wrap
+          position:absolute; top:12px; left:12px → ลอย "ข้างขวาของ sidebar"
+          มือถือ (≤820px): .viewport-wrap อยู่เหนือ drawer → panel อยู่เหนือ drawer เสมอ
+    ↓
+การ์ดเดิม (ProductCard / ZoneCard) → useCardDrag → startPlacing / placeProduct
+```
+
+กติกา:
+
+```text
+⭐ สองโหมดแยกกันชัดเจน
+   browse  = query ว่าง และไม่มี facet ใดๆ เปิด (sort เป็น "แนะนำ") → เหมือนก่อนแก้ทุกประการ
+   search  = มี query หรือ facet → ค้นข้ามทุกหมวดและซ่อน tabs (facet หมวดหมู่ทำหน้าที่แทน)
+
+⭐ คะแนน: ชื่อตรง 100 → ชื่อขึ้นต้น 80 → ชื่อมีคำ 60 → id 40 → tag 30 → ขนาด 20 → ราคาตรง 18
+   ทุก token ต้อง match (AND) — ขนาด/ราคา match เฉพาะคำค้นยาว ≥ 2 ตัวอักษร
+
+⭐ themed variant เข้าร่วมผลค้นหาเมื่อมี themeDisplayName (เหมือนที่แคตตาล็อกแสดง)
+   โหมดเปลี่ยนสินค้า (swapTargetUid) แสดงเฉพาะสินค้าพื้นฐาน และไม่แสดงโซน
+
+⭐ filter = floating panel ไม่ใช่ inline
+   - อยู่ใน .viewport-wrap (position:absolute) → ไม่มีทางทับ sidebar / drawer บนมือถือ
+   - ไม่มี backdrop → sidebar ยังคลิก/สกรอลล์/ลากการ์ดวางของได้ขณะแผงเปิด
+   - ปิดด้วย ✕ / ปุ่ม "ปิด" / คลิกนอกแผง (ยกเว้นในแผงและใน .catalog-search) / Escape
+   - สลับไปแท็บ "ห้องของฉัน" → setActivePanel() ปิดแผงให้ด้วย
+
+⭐ Escape priority (hooks/useKeyboardShortcuts.ts)
+   1) แผงตัวกรองเปิดอยู่ → ปิดแผง (คำค้น/ตัวกรองยังอยู่)
+   2) ช่องค้นหาโฟกัส → ล้างคำค้น+ตัวกรอง + blur
+   3) ที่เหลือ → chain เดิม (cancelPlacing / closeItemPanel / swap / closePanels)
+
+⭐ ปุ่ม "/" หรือ Ctrl/⌘+K (hooks/useCatalogSearchShortcut.ts)
+   → setActivePanel("build") + expandDrawer (มือถือ) + requestCatalogSearchFocus()
+
+⭐ ไม่แตะ serialized shape, history, Three.js runtime หรือ placement flow → ไม่ bump STORAGE_KEY
+```
+
+Inspect:
+
+```text
+components/sidebar/CatalogSearch.tsx
+components/panels/CatalogFilterPanel.tsx      ← floating filter panel
+components/sidebar/BuildPanel.tsx
+components/sidebar/ProductCard.tsx
+components/sidebar/ZoneCard.tsx
+components/sidebar/HighlightedText.tsx
+components/viewport/Viewport.tsx              ← mount CatalogFilterPanel
+lib/data/productSearch.ts
+lib/data/products.ts        ← tags
+lib/state/store.ts          ← transient slice (รวม catalogFiltersOpen)
+hooks/useCatalogSearchResult.ts
+hooks/useCatalogSearchShortcut.ts
+hooks/useKeyboardShortcuts.ts
+app/globals.css             ← .catalog-search / .catalog-filter-panel / .chip / mark.hl
+```
