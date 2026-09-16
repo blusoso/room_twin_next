@@ -14,7 +14,9 @@ export const CATEGORIES = [
 
 export const CELL_SIZE = 0.5;
 export const GRID = 0.1;
-export const STORAGE_KEY = "roomtwin_state_v11";
+export const STORAGE_KEY = "roomtwin_state_v12";
+/** ⭐ key รุ่นก่อน — อ่านเป็น fallback ใน loadFromStorage() เพื่อไม่ให้ห้องที่เซฟไว้หาย */
+export const LEGACY_STORAGE_KEYS = ["roomtwin_state_v11"];
 
 // ⭐ แหล่งเดียวของสีผนัง — ใช้ร่วมกันทั้ง header/panel/per-wall/คัสตอม
 export const WALL_COLOR_PALETTE = [

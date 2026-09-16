@@ -370,6 +370,17 @@ zoneMeta
 save/history
 ```
 
+Important:
+
+```text
+วางสินค้าบนพื้นใกล้โซน → handleZoneDrop() (hooks/usePlacement.ts)
+auto-assign เข้าโซนที่ใกล้สุด / เด้ง ZoneChooser เมื่อกำกวม
+
+⭐ ยกเว้นสินค้าหมวด structure + fixtures (ประตู/หน้าต่าง/เสา/ฉากกั้น/บันได/ม่าน/แอร์)
+   isAutoZoneExcludedProduct() (lib/data/products.ts) → ข้าม auto-zone ทั้งหมด
+   (การลากเข้าโซนเองผ่าน RoomTree / ZoneChooser ยังทำได้)
+```
+
 Inspect:
 
 ```text
@@ -378,6 +389,8 @@ lib/state/store.ts
 lib/state/types.ts
 lib/three/zoneActions.ts
 lib/three/instantiate.ts
+hooks/usePlacement.ts
+lib/data/products.ts
 ```
 
 ---

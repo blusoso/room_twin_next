@@ -606,7 +606,13 @@ lib/data/constants.ts
 Current storage key:
 
 ```text
-roomtwin_state_v11
+roomtwin_state_v12
+```
+
+Legacy keys (read as fallback in `loadFromStorage()` so saved rooms migrate instead of being lost):
+
+```text
+lib/data/constants.ts → LEGACY_STORAGE_KEYS = ["roomtwin_state_v11"]
 ```
 
 Important rule:

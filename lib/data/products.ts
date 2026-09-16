@@ -384,6 +384,19 @@ export const PRODUCTS: ProductDef[] = [
 
 export const PRODUCT_BY_ID = new Map(PRODUCTS.map((p) => [p.id, p]));
 
+/** ⭐ หมวดที่ห้ามจัดเข้าโซนอัตโนมัติ (โครงสร้างพื้นฐาน + ม่าน & แอร์) */
+export const AUTO_ZONE_EXCLUDED_CATS = new Set(["structure", "fixtures"]);
+
+/**
+ * ⭐ ไอเทมกลุ่มโครงสร้าง (ประตู/หน้าต่าง/เสา/ฉากกั้น/บันได) และม่าน & แอร์
+ *    ต้องไม่ถูกจัดเข้าโซนอัตโนมัติเมื่อวางบนพื้น
+ *    (การลากเข้าโซนเองของผู้ใช้ยังทำได้ตามเดิม)
+ */
+export function isAutoZoneExcludedProduct(productId: string): boolean {
+  const p = PRODUCT_BY_ID.get(productId);
+  return !!p && AUTO_ZONE_EXCLUDED_CATS.has(p.cat);
+}
+
 export function defaultParamsFor(product: ProductDef): Params {
   const p: Params = {
     w: product.dims.w,

@@ -2,7 +2,11 @@
 "use client";
 import { useCallback } from "react";
 import { useRoomTwin } from "@/lib/state/store";
-import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+import {
+  PRODUCT_BY_ID,
+  defaultParamsFor,
+  isAutoZoneExcludedProduct,
+} from "@/lib/data/products";
 import { ZONE_BY_ID } from "@/lib/data/zones";
 import { pickUniqueZoneName } from "@/lib/data/zoneResolve";
 import { applyThemeToItem } from "@/lib/three/themeApply";
@@ -349,6 +353,12 @@ function addZone(zid: string, cx: number, cz: number): string | null {
 }
 
 function handleZoneDrop(uid: string, x: number, z: number) {
+  const { placedItems } = useRoomTwin.getState();
+  const item = placedItems.find((i) => i.uid === uid);
+  // ⭐ โครงสร้าง/ม่าน & แอร์ (เสา ฉาก ประตู แอร์ ฯลฯ) ห้ามเข้าโซนอัตโนมัติ
+  //    — ไม่ auto-assign และไม่เด้ง ZoneChooser
+  if (!item || isAutoZoneExcludedProduct(item.productId)) return;
+
   const nearby = findNearbyZonesAt(x, z).filter(
     (r) => r.dist < ZONE_ATTACH_MAX_DIST,
   );
