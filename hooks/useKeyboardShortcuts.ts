@@ -19,6 +19,10 @@ export function useKeyboardShortcuts() {
         ctrl &&
         (key === "z" || key === "y" || code === "KeyZ" || code === "KeyY")
       ) {
+        // ⭐ ขณะ Blocks Editor เปิดอยู่ → ให้ editor จัดการ draft history ของตัวเอง
+        //    (global undo/redo ต้องไม่ทำงาน เพราะ draft ยังไม่ถูก apply)
+        if (useRoomTwin.getState().blocksEditorOpen) return;
+
         e.preventDefault();
         e.stopPropagation();
         const isShift = e.shiftKey;
@@ -44,6 +48,11 @@ export function useKeyboardShortcuts() {
         e.preventDefault();
         const store = useRoomTwin.getState();
 
+        // ⭐ Blocks Editor เปิดอยู่ → ปิด editor ก่อน (ไม่ apply draft)
+        if (store.blocksEditorOpen) {
+          store.setBlocksEditorOpen(false);
+          return;
+        }
         if (store.placingProductId || store.placingZoneId) {
           store.cancelPlacing();
           return;

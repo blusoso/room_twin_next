@@ -382,6 +382,46 @@ lib/three/instantiate.ts
 
 ---
 
+# 11.1 Move Item Between Zones (Room Tree Drag)
+
+Flow:
+
+```text
+Room Tree item row (แท็บ "ห้องของฉัน")
+    ↓
+pointerdown → useTreeItemDrag.startDrag
+    ↓
+pointermove (เกิน threshold 6px) → drag ghost + drop indicator
+    ↓
+detect drop target (.tree-group[data-zone-uid] / .tree-group[data-standalone])
+    ↓
+pointerup → moveItemIntoZoneFull(uid, zoneUid, insertBeforeUid?)
+    ↓
+assignItemToZone  → patch zoneUid / zoneDefId / slotId + reorder ใน placedItems
+    ↓
+resolveRestHeights
+    ↓
+saveState (localStorage + history — 1 ครั้ง = 1 undo step)
+    ↓
+roomtwin:treeExpandZone → ขยายกลุ่มปลายทางที่ย่ออยู่
+```
+
+Inspect:
+
+```text
+components/sidebar/RoomTree.tsx
+hooks/useTreeItemDrag.ts
+lib/three/zoneHelpers.ts
+lib/three/zoneActions.ts
+```
+
+Important:
+
+โซนไม่มี record ของตัวเอง — สมาชิกโซน derive จาก `PlacedItem.zoneUid` และ identity ของโซน
+(`zoneDefId`) สืบทอดจาก item แรกในโซนเป้าหมาย; ย้าย item ออกจากโซนจนไม่เหลือ item = โซนหายไปทั้งกลุ่ม
+
+---
+
 # 12. Delete Zone
 
 Flow:

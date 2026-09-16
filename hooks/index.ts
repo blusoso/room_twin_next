@@ -6,3 +6,4 @@ export { usePlacement } from "./usePlacement";
 export { usePointerInteraction } from "./usePointerInteraction";
 export { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 export { useCardDrag } from "./useCardDrag";
+export { useTreeItemDrag } from "./useTreeItemDrag";

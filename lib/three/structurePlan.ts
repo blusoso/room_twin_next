@@ -1,5 +1,6 @@
 // lib/three/structurePlan.ts
 import type { PlacedItem } from "@/lib/state/types";
+import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { getWallGeom, wallPointXZ } from "./roomShell";
 
 // ⭐ โครงสร้างที่ควรแสดงใน floor plan (ผังห้องแบบบล็อก)
@@ -13,6 +14,17 @@ export const STRUCTURE_PLAN_PRODUCTS = new Set([
   "ac",
 ]);
 
+// ⭐ ชื่อย่อชนิดโครงสร้าง — ใช้บนผังบล็อกที่พื้นที่จำกัด
+export const STRUCTURE_SHORT_NAME: Record<string, string> = {
+  door: "ประตู",
+  window: "หน้าต่าง",
+  slidingdoor: "ประตูเลื่อน",
+  column: "เสา",
+  partition: "ฉากกั้น",
+  curtain: "ม่าน",
+  ac: "แอร์",
+};
+
 export interface StructurePlan {
   uid: string;
   productId: string;
@@ -22,6 +34,10 @@ export interface StructurePlan {
   hd: number;
   deg: number;
   label: string;
+  /** ⭐ ชื่อเต็มของโครงสร้าง (ใช้ใน legend/ป้าย) */
+  name: string;
+  /** ⭐ ชื่อย่อของชนิดโครงสร้าง */
+  shortName: string;
   wallMount: boolean;
 }
 
@@ -49,6 +65,8 @@ export function structurePlanItems(items: PlacedItem[]): StructurePlan[] {
     const w = (item.params.w ?? 95) / 100;
     const d = (item.params.d ?? 6) / 100;
     const isCol = item.productId === "column" || item.productId === "partition";
+    const shortName =
+      STRUCTURE_SHORT_NAME[item.productId] ?? item.productId;
     const sp: StructurePlan = {
       uid: item.uid,
       productId: item.productId,
@@ -60,6 +78,8 @@ export function structurePlanItems(items: PlacedItem[]): StructurePlan[] {
       label: isCol
         ? `${Math.round(item.params.w ?? 0)}×${Math.round(item.params.d ?? 0)} ซม.`
         : `${Math.round(item.params.w ?? 0)} ซม.`,
+      name: item.displayName || PRODUCT_BY_ID.get(item.productId)?.name || shortName,
+      shortName,
       wallMount: !!item.wallMount,
     };
 

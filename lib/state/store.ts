@@ -101,6 +101,10 @@ export interface RoomTwinState {
   showLockBadges: boolean;
   toggleLockBadges: () => void;
 
+  // ⭐ สถานะเปิด/ปิด Blocks Editor (transient — ไม่เข้า serialize/history)
+  blocksEditorOpen: boolean;
+  setBlocksEditorOpen: (open: boolean) => void;
+
   resetAll: () => void;
 }
 
@@ -438,6 +442,9 @@ export const useRoomTwin = create<RoomTwinState>()(
     toggleLockBadges: () =>
       set((s) => ({ showLockBadges: !s.showLockBadges })),
 
+    blocksEditorOpen: false,
+    setBlocksEditorOpen: (open) => set({ blocksEditorOpen: open }),
+
     // ============================================================
     // Reset
     // ============================================================
@@ -452,6 +459,7 @@ export const useRoomTwin = create<RoomTwinState>()(
         pendingZoneChooserUid: null,
         swapTargetUid: null,
         customizeTargetUid: null,
+        blocksEditorOpen: false,
         surface: {
           floor: "wood",
           wallUniform: true,

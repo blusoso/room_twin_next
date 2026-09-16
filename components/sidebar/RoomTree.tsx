@@ -10,6 +10,7 @@ import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { flyCameraTo } from "@/lib/three/cameraFlight";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
+import { useTreeItemDrag } from "@/hooks/useTreeItemDrag";
 import {
   removeZoneFull,
   moveItemOutOfZoneFull,
@@ -98,6 +99,17 @@ function ZoneGroup({
   const zoneIcon = display.icon;
   const zoneColor = display.color;
   const hasTheme = !!zoneMeta.get(zuid)?.themeId;
+
+  // ⭐ ขยายกลุ่มเมื่อ item ถูกลากมาวางในโซนนี้ (จาก useTreeItemDrag)
+  useEffect(() => {
+    const onExpand = (e: Event) => {
+      const detail = (e as CustomEvent<{ zuid?: string }>).detail;
+      if (detail?.zuid === zuid) setCollapsed(false);
+    };
+    window.addEventListener("roomtwin:treeExpandZone", onExpand);
+    return () =>
+      window.removeEventListener("roomtwin:treeExpandZone", onExpand);
+  }, [zuid]);
 
   const handleFocus = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -281,6 +293,7 @@ function TreeItem({
   const selectItem = useRoomTwin((s) => s.selectItem);
   const removeItem = useRoomTwin((s) => s.removeItem);
   const { saveState } = useSaveState();
+  const { startDrag } = useTreeItemDrag();
 
   const product = PRODUCT_BY_ID.get(item.productId);
   if (!product) return null;
@@ -292,10 +305,10 @@ function TreeItem({
     <div
       className={`tree-item${selected ? " selected" : ""}`}
       data-uid={item.uid}
-      onClick={(e) => {
-        if ((e.target as HTMLElement).closest(".tree-action-btn")) return;
-        selectItem(item.uid);
-      }}
+      onPointerDown={(e) =>
+        // ⭐ ลาก = ย้ายโซน/จัดลำดับ, tap = select (จัดการบน pointerup ใน hook)
+        startDrag(e, item.uid, e.currentTarget, () => selectItem(item.uid))
+      }
     >
       <span className="item-icon">
         <ThumbIcon productId={item.productId} />

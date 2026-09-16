@@ -2554,6 +2554,16 @@ aside {
   color: var(--ink);
 }
 
+.blocks-icon-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.blocks-icon-btn:disabled:hover {
+  background: #fff;
+  color: var(--ink-soft);
+}
+
 .blocks-close {
   width: 32px;
   height: 32px;
@@ -2633,6 +2643,17 @@ aside {
   background: #f0ead9;
 }
 
+/* ⭐ ปุ่มเลือกเครื่องมือ วาด / ยางลบ */
+.blocks-tool-toggle.active {
+  background: var(--ochre);
+  border-color: var(--ochre-deep);
+  color: #fff;
+}
+
+.blocks-tool-toggle.active:hover {
+  background: var(--ochre-deep);
+}
+
 .blocks-canvas {
   flex: 1;
   min-height: 0;
@@ -2668,6 +2689,15 @@ aside {
   position: relative;
   user-select: none;
   touch-action: none;
+}
+
+/* ⭐ cursor ตามเครื่องมือ (ย้ายจาก inline style ของ cell) */
+.blocks-grid.tool-paint .blocks-cell {
+  cursor: crosshair;
+}
+
+.blocks-grid.tool-erase .blocks-cell {
+  cursor: cell;
 }
 
 .blocks-cell:hover {
@@ -2721,41 +2751,56 @@ aside {
   position: absolute;
   inset: 0;
   border-radius: 2px;
+  /* ⭐ สีกำหนดจาก custom property ต่อชนิด — chip ใน legend ใช้ค่าเดียวกัน */
+  background: var(--sp-fill, rgba(196, 148, 88, 0.72));
+  border: var(--sp-bw, 1.5px) solid var(--sp-line, #7c4a1e);
 }
 
-.blocks-structure--door .blocks-structure-rect {
-  background: rgba(196, 148, 88, 0.72);
-  border: 1.5px solid #7c4a1e;
+.blocks-structure--door {
+  --sp-fill: rgba(196, 148, 88, 0.72);
+  --sp-line: #7c4a1e;
 }
 
-.blocks-structure--window .blocks-structure-rect {
-  background: rgba(178, 210, 226, 0.72);
-  border: 1.5px solid #4f7f97;
+.blocks-structure--window {
+  --sp-fill: rgba(178, 210, 226, 0.72);
+  --sp-line: #4f7f97;
 }
 
-.blocks-structure--slidingdoor .blocks-structure-rect {
-  background: rgba(158, 188, 206, 0.72);
-  border: 1.5px solid #2f6074;
+.blocks-structure--slidingdoor {
+  --sp-fill: rgba(158, 188, 206, 0.72);
+  --sp-line: #2f6074;
 }
 
-.blocks-structure--column .blocks-structure-rect {
-  background: rgba(232, 220, 196, 0.92);
-  border: 2px solid #7c4a1e;
+.blocks-structure--column {
+  --sp-fill: rgba(232, 220, 196, 0.92);
+  --sp-line: #7c4a1e;
+  --sp-bw: 2px;
 }
 
-.blocks-structure--partition .blocks-structure-rect {
-  background: rgba(120, 112, 100, 0.55);
-  border: 1.5px solid #4c463c;
+.blocks-structure--partition {
+  --sp-fill: rgba(120, 112, 100, 0.55);
+  --sp-line: #4c463c;
 }
 
-.blocks-structure--curtain .blocks-structure-rect {
-  background: rgba(216, 183, 174, 0.72);
-  border: 1.5px solid #a07060;
+.blocks-structure--curtain {
+  --sp-fill: rgba(216, 183, 174, 0.72);
+  --sp-line: #a07060;
 }
 
-.blocks-structure--ac .blocks-structure-rect {
-  background: rgba(200, 210, 220, 0.72);
-  border: 1.5px solid #607080;
+.blocks-structure--ac {
+  --sp-fill: rgba(200, 210, 220, 0.72);
+  --sp-line: #607080;
+}
+
+/* ⭐ ไฮไลต์โครงสร้างที่ hover จาก legend */
+.blocks-structure.is-hover {
+  z-index: 2;
+}
+
+.blocks-structure.is-hover .blocks-structure-rect {
+  box-shadow:
+    0 0 0 2px var(--ochre-deep),
+    0 0 8px rgba(184, 117, 46, 0.45);
 }
 
 .blocks-structure-label {
@@ -2763,6 +2808,10 @@ aside {
   bottom: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   font-size: 8px;
   line-height: 1;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -2772,6 +2821,103 @@ aside {
   background: rgba(255, 253, 247, 0.85);
   padding: 1px 3px;
   border-radius: 3px;
+}
+
+.blocks-structure-label .bsl-dim {
+  font-size: 7px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* ============================================================
+   Blocks Editor — Legend โครงสร้างในห้อง
+   ============================================================ */
+
+.blocks-structs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  background: #fffdf6;
+  border-bottom: 1px solid var(--panel-line);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.bss-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bss-empty {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  opacity: 0.75;
+}
+
+.bss-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.bst-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: help;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.12s;
+}
+
+.bst-chip:hover,
+.bst-chip:focus-visible,
+.bst-chip.is-hover {
+  border-color: var(--sp-line, var(--ochre-deep));
+  box-shadow: 0 0 0 2px rgba(184, 117, 46, 0.18);
+  outline: none;
+}
+
+.bst-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--sp-fill, #e8dcc4);
+  border: 1px solid var(--sp-line, #7c4a1e);
+  flex-shrink: 0;
+}
+
+.bst-dim {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ochre-deep);
+}
+
+.bst-mount {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: rgba(42, 35, 48, 0.06);
+  padding: 1px 5px;
+  border-radius: 5px;
 }
 
 .blocks-foot {
@@ -4594,6 +4740,17 @@ aside {
   font-weight: 700;
   color: var(--ink-soft);
   letter-spacing: 0.3px;
+}
+
+/* ⭐ โหมดยางลบ — ระดับพื้นไม่ถูกใช้ */
+.blocks-level-picker.is-dim .blp-chips,
+.blocks-level-picker.is-dim .blp-custom {
+  opacity: 0.45;
+}
+
+.blp-note {
+  font-weight: 500;
+  color: var(--ochre-deep);
 }
 
 .blp-chips {

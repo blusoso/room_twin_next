@@ -3,6 +3,7 @@ import { useRoomTwin } from "@/lib/state/store";
 import { removeInstantiated, reinstantiateItem } from "./instantiate";
 import { resolveRestHeights } from "./placement";
 import { rebuildBaseboards } from "./roomShell";
+import { assignItemToZone } from "./zoneHelpers";
 
 /**
  * ลบทั้งโซน — ลบ items ทั้งหมดในโซน + scene objects + zoneMeta
@@ -37,6 +38,27 @@ export function moveItemOutOfZoneFull(uid: string) {
     zoneDefId: null,
     slotId: undefined,
   });
+  resolveRestHeights();
+  saveStateSafe();
+}
+
+/**
+ * ย้าย item เข้าโซน (หรือออกจากโซนเมื่อ zuid = null) + จัดลำดับ + อัปเดต height
+ * @param insertBeforeUid ใช้ตอนลากจัดลำดับในโซนเดียวกัน (แทรกก่อน item นี้)
+ */
+export function moveItemIntoZoneFull(
+  uid: string,
+  zuid: string | null,
+  insertBeforeUid?: string,
+) {
+  const store = useRoomTwin.getState();
+  const item = store.placedItems.find((i) => i.uid === uid);
+  if (!item) return;
+
+  const currentZone = item.zoneUid ?? null;
+  if (currentZone === zuid && !insertBeforeUid) return;
+
+  assignItemToZone(uid, zuid, insertBeforeUid);
   resolveRestHeights();
   saveStateSafe();
 }

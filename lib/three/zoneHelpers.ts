@@ -1,5 +1,6 @@
 // lib/three/zoneHelpers.ts
 import { useRoomTwin } from "@/lib/state/store";
+import type { PlacedItem } from "@/lib/state/types";
 import { getZoneBounds } from "./zoneBounds";
 import { raycastFloorPoint } from "./raycast";
 
@@ -36,25 +37,43 @@ export function findNearbyZonesAt(x: number, z: number): ZoneHit[] {
   return res;
 }
 
-export function assignItemToZone(uid: string, zuid: string | null) {
-  const { placedItems, updateItem } = useRoomTwin.getState();
+/**
+ * ⭐ ย้าย item เข้า/ออกโซน — patch zoneUid/zoneDefId/slotId
+ * @param insertBeforeUid ถ้าระบุ จะย้าย item ไปแทรกก่อน item นี้ใน placedItems
+ *                        (ใช้ตอนลากจัดลำดับในโซนเดียวกัน) — ถ้าไม่พบจะต่อท้าย
+ */
+export function assignItemToZone(
+  uid: string,
+  zuid: string | null,
+  insertBeforeUid?: string | null,
+) {
+  const { placedItems, replaceItems } = useRoomTwin.getState();
   const item = placedItems.find((i) => i.uid === uid);
   if (!item) return;
+  if (insertBeforeUid === uid) return;
 
-  if (zuid) {
-    const any = placedItems.find((i) => i.zoneUid === zuid && i.zoneDefId);
-    updateItem(uid, {
-      zoneUid: zuid,
-      zoneDefId: any ? any.zoneDefId : null,
-      slotId: undefined,
-    });
-  } else {
-    updateItem(uid, {
-      zoneUid: null,
-      zoneDefId: null,
-      slotId: undefined,
-    });
+  const any = zuid
+    ? placedItems.find((i) => i.zoneUid === zuid && i.zoneDefId)
+    : null;
+
+  // ⭐ patch สมาชิกโซน + จัดลำดับใหม่ใน update เดียว (atomic)
+  const patched: PlacedItem = {
+    ...item,
+    zoneUid: zuid,
+    zoneDefId: zuid ? (any ? any.zoneDefId : null) : null,
+    slotId: undefined,
+  };
+
+  let next = placedItems.map((i) => (i.uid === uid ? patched : i));
+
+  if (insertBeforeUid) {
+    next = next.filter((i) => i.uid !== uid);
+    const bi = next.findIndex((i) => i.uid === insertBeforeUid);
+    if (bi >= 0) next.splice(bi, 0, patched);
+    else next.push(patched);
   }
+
+  replaceItems(next);
 }
 
 /**
