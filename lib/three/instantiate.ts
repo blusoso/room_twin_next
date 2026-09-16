@@ -7,6 +7,8 @@ import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { getThemeStyle } from "@/lib/data/themes";
 import { wallItemWorld } from "./wallPlacement";
 import { useRoomTwin } from "@/lib/state/store";
+import { applyItemEnvIntensity } from "./materialQuality";
+import { attachLampLight, detachLampLight } from "./lampLights";
 
 export function instantiate(item: any) {
   if (item.wallMount) return instantiateWallItem(item);
@@ -56,6 +58,10 @@ export function instantiate(item: any) {
 
   roomGroup.add(g);
   objectsByUid.set(item.uid, g);
+
+  // ⭐ คุณภาพวัสดุ (IBL) + ไฟจริงของโคม (ถ้าเป็นโคม)
+  applyItemEnvIntensity(g);
+  attachLampLight(item.uid);
 }
 
 export function instantiateWallItem(item: any) {
@@ -86,6 +92,9 @@ export function instantiateWallItem(item: any) {
   wallItemMaterials.set(item.uid, mats);
   roomGroup.add(holder);
   objectsByUid.set(item.uid, holder);
+
+  applyItemEnvIntensity(holder);
+  attachLampLight(item.uid);
 }
 
 export function instantiateCeilingItem(item: any) {
@@ -102,6 +111,9 @@ export function instantiateCeilingItem(item: any) {
   g.traverse((o) => (o.userData.uid = item.uid));
   roomGroup.add(g);
   objectsByUid.set(item.uid, g);
+
+  applyItemEnvIntensity(g);
+  attachLampLight(item.uid);
 }
 
 export function reinstantiateItem(uid: string) {
@@ -119,6 +131,9 @@ export function reinstantiateItem(uid: string) {
 }
 
 export function removeInstantiated(uid: string) {
+  // ⭐ ไฟจริงของโคม (ถ้ามี) ต้องถูกถอดออกจาก registry ก่อน
+  detachLampLight(uid);
+
   const o = objectsByUid.get(uid);
   if (o) {
     o.traverse((child: any) => {

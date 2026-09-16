@@ -1,6 +1,7 @@
 // lib/state/storage.ts
-import { LEGACY_STORAGE_KEYS, STORAGE_KEY, SHOW_ALL_WALLS_KEY, MEASURE_KEY } from "@/lib/data/constants";
+import { LEGACY_STORAGE_KEYS, STORAGE_KEY, SHOW_ALL_WALLS_KEY, MEASURE_KEY, LIGHTING_PREF_KEY } from "@/lib/data/constants";
 import { isAutoZoneExcludedProduct } from "@/lib/data/products";
+import { LAMP_PRODUCT_IDS, isLightingMode, type LightingMode } from "@/lib/data/lighting";
 import type { SerializedState } from "./types";
 
 export function saveToStorage(state: SerializedState): void {
@@ -82,6 +83,26 @@ function sanitizeMountLinks(state: SerializedState): boolean {
 }
 
 /**
+ * ⭐ Migration: โคมไฟรุ่นก่อนยังไม่มีสวิตช์เปิด/ปิดไฟ (params.lightOn)
+ *    → เติม true ให้โคมทุกตัว เพื่อให้ของเดิมยังสว่างเหมือนก่อนมีสวิตช์
+ * @returns true ถ้ามีการแก้ข้อมูลจริง (ต้องเขียนกลับ)
+ */
+function fillLampLightFlags(state: SerializedState): boolean {
+  if (!Array.isArray(state.items)) return false;
+
+  let changed = false;
+  state.items.forEach((it) => {
+    if (!LAMP_PRODUCT_IDS.has(it.productId)) return;
+    if (!it.params) return;
+    if ((it.params as any).lightOn !== undefined) return;
+    (it.params as any).lightOn = true;
+    changed = true;
+  });
+
+  return changed;
+}
+
+/**
  * ⭐ Normalize/migrate SerializedState ให้เป็นรูปปัจจุบัน
  *
  *    ใช้ร่วมกัน 2 ทาง:
@@ -114,6 +135,9 @@ export function normalizeSerializedState(parsed: SerializedState): {
 
   // ⭐ Migration: link การแขวนกับพื้นผิวไอเทมอื่น (mountUid/mountFace)
   if (sanitizeMountLinks(parsed)) changed = true;
+
+  // ⭐ Migration: สวิตช์เปิด/ปิดไฟของโคม (params.lightOn)
+  if (fillLampLightFlags(parsed)) changed = true;
 
   return { state: parsed, changed };
 }
@@ -223,6 +247,45 @@ export function saveMeasurePref(v: boolean): void {
   try {
     if (v) localStorage.setItem(MEASURE_KEY, "1");
     else localStorage.removeItem(MEASURE_KEY);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+// ============================================================
+// ⭐ View preference: โหมดแสงในฉาก (☀️/🌆/🌙) + สวิตช์ไฟโคม (💡)
+//    เก็บแยกจาก SerializedState — ไม่กระทบ undo/redo
+//    (ไม่ต้อง bump STORAGE_KEY เพราะไม่ใช่ข้อมูลห้อง)
+// ============================================================
+
+export interface LightingPref {
+  mode: LightingMode;
+  lampsOn: boolean;
+}
+
+export function loadLightingPref(): LightingPref | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LIGHTING_PREF_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LightingPref>;
+    const mode = isLightingMode(parsed?.mode) ? parsed.mode : "day";
+    return { mode, lampsOn: parsed?.lampsOn === true };
+  } catch (e) {
+    return null;
+  }
+}
+
+export function saveLightingPref(pref: LightingPref): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      LIGHTING_PREF_KEY,
+      JSON.stringify({
+        mode: isLightingMode(pref.mode) ? pref.mode : "day",
+        lampsOn: pref.lampsOn === true,
+      }),
+    );
   } catch (e) {
     /* ignore */
   }

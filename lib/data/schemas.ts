@@ -170,6 +170,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchema> = {
       { key: "poleColor", label: "เสา" },
       { key: "baseColor", label: "ฐาน" },
     ],
+    bools: [{ key: "lightOn", label: "เปิดไฟ" }],
   },
   tablelamp: {
     dims: [
@@ -181,6 +182,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchema> = {
       { key: "poleColor", label: "เสา" },
       { key: "baseColor", label: "ฐาน" },
     ],
+    bools: [{ key: "lightOn", label: "เปิดไฟ" }],
   },
   mirror: {
     dims: [
@@ -250,6 +252,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchema> = {
       { key: "cordColor", label: "สาย/ฝ้า" },
       { key: "bulbColor", label: "หลอด" },
     ],
+    bools: [{ key: "lightOn", label: "เปิดไฟ" }],
   },
   ceilingfan: {
     dims: [
@@ -271,6 +274,7 @@ export const PARAM_SCHEMA: Record<string, ParamSchema> = {
       { key: "color", label: "เลนส์" },
       { key: "trimColor", label: "ขอบ" },
     ],
+    bools: [{ key: "lightOn", label: "เปิดไฟ" }],
   },
   hangingplant: {
     dims: [

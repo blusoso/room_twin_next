@@ -977,6 +977,31 @@ export function rebuildBaseboards() {
       baseboardGroup.add(m);
     });
   });
+
+  notifyShellRebuilt();
+}
+
+// ============================================================
+// ⭐ Hook ให้ระบบแสง (lib/three/lighting.ts) re-apply envMapIntensity
+//    หลัง rebuild shell/baseboard ทุกครั้ง
+//
+//    roomShell อยู่ล่างสุดของ dependency graph — ผู้ที่อยู่ชั้นบนลงทะเบียน
+//    callback ได้ เพื่อไม่ให้เกิด import วนกลับ (roomShell → lighting → roomShell)
+// ============================================================
+
+let _shellRebuildListener: (() => void) | null = null;
+
+export function setShellRebuildListener(fn: (() => void) | null) {
+  _shellRebuildListener = fn;
+}
+
+function notifyShellRebuilt() {
+  if (!_shellRebuildListener) return;
+  try {
+    _shellRebuildListener();
+  } catch (err) {
+    console.warn("[roomShell] shell rebuild listener ล้มเหลว", err);
+  }
 }
 
 // ============================================================

@@ -14,9 +14,10 @@ export const CATEGORIES = [
 
 export const CELL_SIZE = 0.5;
 export const GRID = 0.1;
-export const STORAGE_KEY = "roomtwin_state_v13";
+export const STORAGE_KEY = "roomtwin_state_v14";
 /** ⭐ key รุ่นก่อน — อ่านเป็น fallback ใน loadFromStorage() เพื่อไม่ให้ห้องที่เซฟไว้หาย */
 export const LEGACY_STORAGE_KEYS = [
+  "roomtwin_state_v13",
   "roomtwin_state_v12",
   "roomtwin_state_v11",
 ];
@@ -24,6 +25,8 @@ export const LEGACY_STORAGE_KEYS = [
 export const SHOW_ALL_WALLS_KEY = "roomtwin_show_all_walls";
 /** ⭐ view preference: โหมดวัดขนาด (📏) — เก็บแยกจาก SerializedState (ไม่ผูกกับห้อง/undo) */
 export const MEASURE_KEY = "roomtwin_show_measure";
+/** ⭐ view preference: โหมดแสงในฉาก + สวิตช์ไฟโคม — เก็บแยกจาก SerializedState (ไม่ผูกกับห้อง/undo) */
+export const LIGHTING_PREF_KEY = "roomtwin_lighting_pref";
 
 /** ⭐ id ของช่องค้นหาสินค้าในแคตตาล็อก (ใช้ร่วมกันระหว่าง UI กับ keyboard shortcut) */
 export const CATALOG_SEARCH_INPUT_ID = "catalogSearchInput";

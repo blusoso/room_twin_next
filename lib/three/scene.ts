@@ -22,6 +22,7 @@ export const meshWallId = new Map<THREE.Mesh, string>();
 // ===== Deferred instances =====
 export let renderer: THREE.WebGLRenderer;
 export let controls: OrbitControls;
+export let hemi: THREE.HemisphereLight;
 export let sun: THREE.DirectionalLight;
 export let fill: THREE.DirectionalLight;
 
@@ -52,6 +53,8 @@ export function initScene(holder: HTMLElement) {
   renderer.setSize(holder.clientWidth, holder.clientHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // ⭐ ACES tone mapping — ค่าจริง (exposure) ถูกตั้งใน lib/three/lighting.ts ตามโหมดแสง
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.domElement.style.touchAction = "none";
   holder.appendChild(renderer.domElement);
 
@@ -70,7 +73,10 @@ export function initScene(holder: HTMLElement) {
   controls.update();
 
   // Lights
-  scene.add(new THREE.HemisphereLight(0xfff3e0, 0xcfc6b0, 0.75));
+  // ⭐ ค่าสี/ความเข้ม/ตำแหน่งจริงถูกตั้งโดย applyLightingMode() (lib/three/lighting.ts)
+  //    ค่าตรงนี้เป็นค่าเริ่มต้นของโหมด "วัน" เพื่อให้ฉากใช้ได้แม้ยังไม่ init lighting
+  hemi = new THREE.HemisphereLight(0xfff3e0, 0xcfc6b0, 0.75);
+  scene.add(hemi);
 
   sun = new THREE.DirectionalLight(0xfff2df, 1.05);
   sun.position.set(-3.2, 4.5, 2.6);
@@ -80,7 +86,12 @@ export function initScene(holder: HTMLElement) {
   sun.shadow.camera.right = 4.5;
   sun.shadow.camera.top = 4.5;
   sun.shadow.camera.bottom = -4.5;
-  sun.shadow.bias = -0.0015;
+  sun.shadow.camera.near = 0.5;
+  sun.shadow.camera.far = 20;
+  // ⭐ bias น้อยลง + normalBias → ลดรอยหยัก (acne) โดยไม่ทำเงาลอย (peter-panning)
+  sun.shadow.bias = -0.0008;
+  sun.shadow.normalBias = 0.02;
+  sun.shadow.camera.updateProjectionMatrix();
   scene.add(sun);
 
   fill = new THREE.DirectionalLight(0xd9e3f0, 0.28);

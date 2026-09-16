@@ -63,6 +63,54 @@ export function addContactShadow(group: THREE.Group, w: number, d: number) {
   group.add(m);
 }
 
+// ===== ⭐ โคมไฟ: anchor + เครื่องหมายหลอด/โป๊ะ =====
+//
+//    ไฟจริง (Point/SpotLight) ถูกสร้างใน lib/three/lampLights.ts
+//    builder แค่บอก "จุดวางไฟ" และ "mesh ไหนคือหลอด/โป๊ะ" ผ่าน userData
+//    → ไม่มี state ถาวรอยู่ใน Object3D (source of truth ยังเป็น store)
+
+/** สีหลอดไฟมาตรฐานของโคมทุกชนิด */
+const LAMP_BULB_COLOR = 0xffe9b8;
+
+/** จุดวางไฟของโคม (lampLights.ts จะสร้างไฟเป็นลูกของ anchor นี้) */
+function addLampAnchor(g: THREE.Group, y: number): THREE.Object3D {
+  const anchor = new THREE.Object3D();
+  anchor.name = "lightAnchor";
+  anchor.position.set(0, y, 0);
+  g.add(anchor);
+  return anchor;
+}
+
+/** ทำเครื่องหมาย mesh หลอดไฟ + จำค่า emissive เดิมไว้ให้ lampLights.ts ใช้ */
+function markLampBulb(
+  m: THREE.Mesh,
+  baseEmissive: number,
+  baseIntensity: number,
+): THREE.Mesh {
+  const mat = m.material as THREE.MeshStandardMaterial;
+  mat.emissive = new THREE.Color(baseEmissive);
+  mat.emissiveIntensity = baseIntensity;
+  m.userData.lampBulb = true;
+  m.userData.baseEmissive = baseEmissive;
+  m.userData.baseEmissiveIntensity = baseIntensity;
+  m.castShadow = false;
+  return m;
+}
+
+/** หลอดไฟเล็ก ๆ ที่วางเป็นลูกของ anchor */
+function makeLampBulb(radius: number, baseIntensity = 0.55): THREE.Mesh {
+  const b = mesh(new THREE.SphereGeometry(radius, 12, 12), LAMP_BULB_COLOR, {
+    roughness: 0.3,
+  });
+  return markLampBulb(b, 0xffce7a, baseIntensity);
+}
+
+/** ทำเครื่องหมาย mesh โป๊ะไฟ (ตอนเปิดไฟจะเรืองแสงตามสีไฟ) */
+function markLampShade(m: THREE.Mesh): THREE.Mesh {
+  m.userData.lampShade = true;
+  return m;
+}
+
 // ===== BUILDERS =====
 
 export function buildDoor(dims: any, color: number, opts: any = {}) {
@@ -694,10 +742,13 @@ export function buildFloorLamp(dims: any, color: number, opts: any = {}) {
     g.add(p);
     const s = cyl(w * 0.5, w * 0.5, h * 0.42, color, 24, { roughness: 0.95 });
     s.position.y = h * 0.78;
+    markLampShade(s);
     g.add(s);
     const c = cyl(w * 0.5, w * 0.5, 0.02, pc, 24);
     c.position.y = h * 0.99;
     g.add(c);
+    // ⭐ จุดวางไฟ + หลอดเรืองแสง (ไฟจริงสร้างใน lampLights.ts)
+    addLampAnchor(g, h * 0.78).add(makeLampBulb(w * 0.16));
   } else if (ls === "woven-dome") {
     for (let i = 0; i < 3; i++) {
       const leg = cyl(0.012, 0.018, h * 0.7, pc, 6);
@@ -709,7 +760,9 @@ export function buildFloorLamp(dims: any, color: number, opts: any = {}) {
     }
     const s = cyl(w * 0.55, w * 0.7, h * 0.35, color, 24, { roughness: 0.95 });
     s.position.y = h * 0.82;
+    markLampShade(s);
     g.add(s);
+    addLampAnchor(g, h * 0.78).add(makeLampBulb(w * 0.18));
   } else if (ls === "drum") {
     const b = cyl(w * 0.45, w * 0.45, 0.03, bc, 20);
     b.position.y = 0.015;
@@ -719,7 +772,9 @@ export function buildFloorLamp(dims: any, color: number, opts: any = {}) {
     g.add(p);
     const s = cyl(w * 0.5, w * 0.5, h * 0.3, color, 24, { roughness: 0.95 });
     s.position.y = h * 0.87;
+    markLampShade(s);
     g.add(s);
+    addLampAnchor(g, h * 0.87).add(makeLampBulb(w * 0.16));
   } else {
     const b = cyl(w / 2, w / 2, 0.02, bc, 24);
     b.position.y = 0.01;
@@ -729,7 +784,9 @@ export function buildFloorLamp(dims: any, color: number, opts: any = {}) {
     g.add(p);
     const s = cyl(w * 0.5, w * 0.35, h * 0.28, color, 24, { roughness: 0.9 });
     s.position.y = h * 0.75 + h * 0.14 + 0.02;
+    markLampShade(s);
     g.add(s);
+    addLampAnchor(g, h * 0.75 + h * 0.14).add(makeLampBulb(w * 0.16));
   }
 
   addContactShadow(g, w, w);
@@ -754,7 +811,9 @@ export function buildTableLamp(dims: any, color: number, opts: any = {}) {
     const sh = h * 0.42;
     const s = cyl(w * 0.5, w * 0.5, sh, color, 24, { roughness: 0.95 });
     s.position.y = h * 0.6 + sh / 2;
+    markLampShade(s);
     g.add(s);
+    addLampAnchor(g, h * 0.78).add(makeLampBulb(w * 0.16));
   } else if (lb === "rattan") {
     const b = cyl(w * 0.42, w * 0.42, h * 0.4, bc, 16, { roughness: 0.95 });
     b.position.y = h * 0.2;
@@ -767,7 +826,9 @@ export function buildTableLamp(dims: any, color: number, opts: any = {}) {
     const sh = h * 0.4;
     const s = cyl(w * 0.5, w * 0.4, sh, color, 24, { roughness: 0.95 });
     s.position.y = h * 0.4 + sh / 2;
+    markLampShade(s);
     g.add(s);
+    addLampAnchor(g, h * 0.56).add(makeLampBulb(w * 0.16));
   } else if (lb === "ceramic-white") {
     const b = cyl(w * 0.35, w * 0.4, h * 0.35, bc, 20, { roughness: 0.6 });
     b.position.y = h * 0.175;
@@ -778,7 +839,9 @@ export function buildTableLamp(dims: any, color: number, opts: any = {}) {
     const sh = h * 0.4;
     const s = cyl(w * 0.5, w * 0.42, sh, color, 24, { roughness: 0.95 });
     s.position.y = h * 0.55 + sh / 2;
+    markLampShade(s);
     g.add(s);
+    addLampAnchor(g, h * 0.72).add(makeLampBulb(w * 0.16));
   } else {
     const b = cyl(w * 0.32, w * 0.36, h * 0.14, bc, 20);
     b.position.y = h * 0.07;
@@ -788,7 +851,9 @@ export function buildTableLamp(dims: any, color: number, opts: any = {}) {
     g.add(st);
     const s = cyl(w * 0.38, w * 0.26, h * 0.42, color, 20, { roughness: 0.9 });
     s.position.y = h * 0.14 + h * 0.35 + h * 0.21;
+    markLampShade(s);
     g.add(s);
+    addLampAnchor(g, h * 0.68).add(makeLampBulb(w * 0.16));
   }
 
   addContactShadow(g, w, w);
@@ -1029,10 +1094,12 @@ export function buildPendantLamp(dims: any, color: number, opts: any = {}) {
   const b = mesh(new THREE.SphereGeometry(w * 0.12, 12, 12), bc, {
     roughness: 0.3,
   });
-  (b.material as THREE.MeshStandardMaterial).emissive = new THREE.Color(0xffce7a);
-  (b.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.55;
+  markLampBulb(b, 0xffce7a, 0.55);
   b.position.y = -0.03 - ch - sh * 0.3;
   g.add(b);
+
+  // ⭐ จุดวางไฟของโคมแขวน (ไฟจริงสร้างใน lampLights.ts)
+  addLampAnchor(g, b.position.y);
 
   return g;
 }
@@ -1084,10 +1151,12 @@ export function buildDownlight(dims: any, color: number, opts: any = {}) {
     color,
     { roughness: 0.4 },
   );
-  (l.material as THREE.MeshStandardMaterial).emissive = new THREE.Color(0xffefc7);
-  (l.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.45;
+  markLampBulb(l, 0xffefc7, 0.45);
   l.position.y = -h * 0.4 - h * 0.175;
   g.add(l);
+
+  // ⭐ จุดวางไฟดาวน์ไลท์ (สปอตยิงลงล่าง — targetY ดู LAMP_LIGHT_SPECS)
+  addLampAnchor(g, l.position.y);
 
   return g;
 }

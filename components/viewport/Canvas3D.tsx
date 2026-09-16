@@ -25,6 +25,7 @@ import {
 } from "@/hooks/useRoomTwinInit";
 import { useAnimationLoop } from "@/hooks/useAnimationLoop";
 import { useRoomTwin } from "@/lib/state/store";
+import { initLighting, disposeLighting } from "@/lib/three/lighting";
 
 export default function Canvas3D() {
   const holderRef = useRef<HTMLDivElement>(null);
@@ -51,6 +52,8 @@ export default function Canvas3D() {
     }
     initScene(holderRef.current);
     initRoomShell();
+    // ⭐ ระบบแสง (IBL + โหมดแสง) — ต้องหลัง initScene/initRoomShell
+    initLighting();
     setSceneReady(true);
 
     const onResize = () => {
@@ -64,6 +67,8 @@ export default function Canvas3D() {
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
+      // ⭐ คืน env map / ไฟของโคม ก่อน dispose scene
+      disposeLighting();
       disposeScene();
       setSceneReady(false);
     };

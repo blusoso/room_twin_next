@@ -4,7 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useRoomTwin } from "@/lib/state/store";
 import { getWallStatusText } from "@/lib/three/roomShell";
-import { saveShowAllWallsPref, saveMeasurePref } from "@/lib/state/storage";
+import {
+  saveShowAllWallsPref,
+  saveMeasurePref,
+  saveLightingPref,
+} from "@/lib/state/storage";
+import {
+  LIGHTING_MODES,
+  LIGHTING_MODE_LABELS,
+  LIGHTING_MODE_TITLES,
+  type LightingMode,
+} from "@/lib/data/lighting";
 import { objectsByUid, camera, renderer } from "@/lib/three/scene";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 
@@ -18,6 +28,10 @@ export default function Overlays() {
   const toggleAllWalls = useRoomTwin((s) => s.toggleAllWalls);
   const showMeasure = useRoomTwin((s) => s.showMeasure);
   const toggleMeasure = useRoomTwin((s) => s.toggleMeasure);
+  const lightingMode = useRoomTwin((s) => s.lightingMode);
+  const setLightingMode = useRoomTwin((s) => s.setLightingMode);
+  const lampsOn = useRoomTwin((s) => s.lampsOn);
+  const toggleLamps = useRoomTwin((s) => s.toggleLamps);
 
   const [wallStatus, setWallStatus] = useState("");
   const [toast, setToast] = useState<{ msg: string; show: boolean }>({
@@ -56,6 +70,22 @@ export default function Overlays() {
     const next = !showMeasure;
     toggleMeasure();
     saveMeasurePref(next);
+  };
+
+  // ⭐ โหมดแสง (วัน/เย็น/คืน) + สวิตช์ไฟโคม — persist แยก key
+  const persistLighting = () => {
+    const s = useRoomTwin.getState();
+    saveLightingPref({ mode: s.lightingMode, lampsOn: s.lampsOn });
+  };
+
+  const handleSetLightingMode = (m: LightingMode) => {
+    setLightingMode(m);
+    persistLighting();
+  };
+
+  const handleToggleLamps = () => {
+    toggleLamps();
+    persistLighting();
   };
 
   let hintText = "";
@@ -133,6 +163,37 @@ export default function Overlays() {
       >
         📏 วัดขนาด
       </button>
+
+      {/* ⭐ โหมดแสงในฉาก + สวิตช์ไฟโคม — อยู่ใต้ปุ่มวัดขนาด */}
+      <div className="lighting-control" id="lightingControl">
+        {LIGHTING_MODES.map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={`lo-btn${lightingMode === m ? " active" : ""}`}
+            title={LIGHTING_MODE_TITLES[m]}
+            aria-pressed={lightingMode === m}
+            onClick={() => handleSetLightingMode(m)}
+          >
+            {LIGHTING_MODE_LABELS[m]}
+          </button>
+        ))}
+        <span className="lo-sep" />
+        <button
+          type="button"
+          className={`lo-btn${lampsOn ? " active" : ""}`}
+          id="lampsToggle"
+          title={
+            lampsOn
+              ? "ปิดไฟทุกดวงในห้อง (โคมที่ปิดไว้ยังคงปิด)"
+              : "เปิดไฟทุกดวงในห้อง"
+          }
+          aria-pressed={lampsOn}
+          onClick={handleToggleLamps}
+        >
+          💡 ไฟ
+        </button>
+      </div>
 
       {showLockBadges && <LockBadges />}
 

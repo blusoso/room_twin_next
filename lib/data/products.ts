@@ -227,7 +227,7 @@ export const PRODUCTS: ProductDef[] = [
     price: 1590,
     color: 0xc9a15a,
     build: B.buildFloorLamp,
-    extraDefaults: { baseColor: 0x3a3138, poleColor: 0xb8862b },
+    extraDefaults: { baseColor: 0x3a3138, poleColor: 0xb8862b, lightOn: true },
   },
   {
     id: "tablelamp",
@@ -238,7 +238,7 @@ export const PRODUCTS: ProductDef[] = [
     price: 890,
     color: 0xe8dcc4,
     build: B.buildTableLamp,
-    extraDefaults: { baseColor: 0xe0d4bc, poleColor: 0xc9a15a },
+    extraDefaults: { baseColor: 0xe0d4bc, poleColor: 0xc9a15a, lightOn: true },
   },
   {
     id: "mirror",
@@ -321,7 +321,7 @@ export const PRODUCTS: ProductDef[] = [
     color: 0xc9a15a,
     build: B.buildPendantLamp,
     ceilingMount: true,
-    extraDefaults: { cordColor: 0x3a3138, bulbColor: 0xffe9b8 },
+    extraDefaults: { cordColor: 0x3a3138, bulbColor: 0xffe9b8, lightOn: true },
   },
   {
     id: "ceilingfan",
@@ -345,7 +345,7 @@ export const PRODUCTS: ProductDef[] = [
     color: 0xe8dcc4,
     build: B.buildDownlight,
     ceilingMount: true,
-    extraDefaults: { trimColor: 0x3a3138 },
+    extraDefaults: { trimColor: 0x3a3138, lightOn: true },
   },
   {
     id: "hangingplant",

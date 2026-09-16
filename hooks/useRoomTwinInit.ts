@@ -6,6 +6,7 @@ import {
   loadFromStorage,
   loadShowAllWallsPref,
   loadMeasurePref,
+  loadLightingPref,
 } from "@/lib/state/storage";
 import { getStoredActiveRoomId } from "@/lib/cloud/activeRoom";
 import {
@@ -506,6 +507,14 @@ export function useRoomTwinInit() {
 
     // ⭐ โหลด view preference "วัดขนาด" (ไม่เข้า snapshot/history)
     useRoomTwin.getState().setShowMeasure(loadMeasurePref());
+
+    // ⭐ โหลด view preference "โหมดแสง + ไฟโคม" (ไม่เข้า snapshot/history)
+    //    ตั้ง lampsOn ทีหลัง setLightingMode เพื่อให้ค่าที่บันทึกไว้ชนะค่าอัตโนมัติของโหมด night
+    const lightingPref = loadLightingPref();
+    if (lightingPref) {
+      useRoomTwin.getState().setLightingMode(lightingPref.mode);
+      useRoomTwin.getState().setLampsOn(lightingPref.lampsOn);
+    }
 
     const s = useRoomTwin.getState();
     const snapshot = JSON.stringify({

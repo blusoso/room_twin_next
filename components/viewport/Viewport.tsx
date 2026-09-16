@@ -16,10 +16,12 @@ import {
 } from "@/components/panels";
 import { usePointerInteraction } from "@/hooks/usePointerInteraction";
 import { useSwapHighlight } from "@/hooks/useSwapHighlight";
+import { useLighting } from "@/hooks/useLighting";
 
 export default function Viewport() {
   usePointerInteraction();
   useSwapHighlight();
+  useLighting();
 
   return (
     <div className="viewport-wrap" id="viewportWrap">

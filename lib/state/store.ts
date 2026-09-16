@@ -21,6 +21,7 @@ import type {
   ZoneMeta,
 } from "./types";
 import type { CloudRoomSummary } from "@/lib/shared/roomShare";
+import type { LightingMode } from "@/lib/data/lighting";
 
 const MAX_HISTORY = 60;
 
@@ -134,6 +135,16 @@ export interface RoomTwinState {
   showMeasure: boolean;
   setShowMeasure: (v: boolean) => void;
   toggleMeasure: () => void;
+
+  // ⭐ โหมดแสงในฉาก (☀️ วัน / 🌆 เย็น / 🌙 คืน) + สวิตช์ไฟโคม (💡)
+  //    เป็น view preference ชั่วคราว (ไม่เข้า serialize/history) แต่ persist แยก key
+  //    - ไฟของโคมแต่ละดวงเปิดเมื่อ lampsOn && params.lightOn !== false
+  //    - เลือกโหมด night แล้วเปิด lampsOn ให้อัตโนมัติ
+  lightingMode: LightingMode;
+  setLightingMode: (m: LightingMode) => void;
+  lampsOn: boolean;
+  setLampsOn: (v: boolean) => void;
+  toggleLamps: () => void;
 
   // ⭐ สถานะเปิด/ปิด Blocks Editor (transient — ไม่เข้า serialize/history)
   blocksEditorOpen: boolean;
@@ -592,6 +603,15 @@ export const useRoomTwin = create<RoomTwinState>()(
     showMeasure: false,
     setShowMeasure: (v) => set({ showMeasure: v }),
     toggleMeasure: () => set((s) => ({ showMeasure: !s.showMeasure })),
+
+    // ⭐ โหมดแสงในฉาก — transient view preference (persist แยก key ใน storage.ts)
+    lightingMode: "day",
+    // ⭐ เข้าโหมดกลางคืน = เปิดไฟในห้องให้อัตโนมัติ (ผู้ใช้กดปิดเองได้)
+    setLightingMode: (m) =>
+      set(m === "night" ? { lightingMode: m, lampsOn: true } : { lightingMode: m }),
+    lampsOn: false,
+    setLampsOn: (v) => set({ lampsOn: v }),
+    toggleLamps: () => set((s) => ({ lampsOn: !s.lampsOn })),
 
     blocksEditorOpen: false,
     setBlocksEditorOpen: (open) => set({ blocksEditorOpen: open }),
