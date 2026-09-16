@@ -322,4 +322,24 @@ export const PARAM_SCHEMA: Record<string, ParamSchema> = {
       { key: "glassColor", label: "สีกระจก" },
     ],
   },
+  curtain: {
+    dims: [
+      { key: "w", label: "กว้าง", min: 60, max: 300, step: 5 },
+      { key: "h", label: "สูง", min: 100, max: 300, step: 5 },
+    ],
+    colors: [
+      { key: "color", label: "สีผ้าม่าน" },
+      { key: "foldColor", label: "สีพับ" },
+    ],
+  },
+  ac: {
+    dims: [
+      { key: "w", label: "กว้าง", min: 60, max: 120, step: 5 },
+      { key: "h", label: "สูง", min: 20, max: 45, step: 5 },
+    ],
+    colors: [
+      { key: "color", label: "สีตัวเครื่อง" },
+      { key: "ventColor", label: "สีช่องลม" },
+    ],
+  },
 };

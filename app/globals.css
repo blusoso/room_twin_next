@@ -2748,6 +2748,16 @@ aside {
   border: 1.5px solid #4c463c;
 }
 
+.blocks-structure--curtain .blocks-structure-rect {
+  background: rgba(216, 183, 174, 0.72);
+  border: 1.5px solid #a07060;
+}
+
+.blocks-structure--ac .blocks-structure-rect {
+  background: rgba(200, 210, 220, 0.72);
+  border: 1.5px solid #607080;
+}
+
 .blocks-structure-label {
   position: absolute;
   bottom: calc(100% + 2px);

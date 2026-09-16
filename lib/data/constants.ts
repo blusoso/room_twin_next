@@ -6,6 +6,7 @@ export const CATEGORIES = [
   { id: "sleep", label: "🛏️ เตียง & ที่นั่ง" },
   { id: "storage", label: "🗄️ โต๊ะ & จัดเก็บ" },
   { id: "light", label: "💡 โคมไฟ & ตกแต่ง" },
+  { id: "fixtures", label: "🔧 ม่าน & แอร์" },
   { id: "floor", label: "🟫 พรม & อื่นๆ" },
   { id: "ceiling", label: "⬜ เพดาน" },
 ] as const;

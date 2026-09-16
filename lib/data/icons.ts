@@ -29,6 +29,8 @@ export const PRODUCT_ICONS: Record<string, string> = {
   ceilingfan: "🌀",
   downlight: "💡",
   hangingplant: "🌿",
+  curtain: "🪟",
+  ac: "❄️",
 };
 
 export function getProductIcon(p: { id: string }): string {

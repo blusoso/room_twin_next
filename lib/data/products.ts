@@ -16,6 +16,7 @@ export interface ProductDef {
   wallMount?: boolean;
   ceilingMount?: boolean;
   groundAnchor?: boolean;
+  structural?: boolean;
   extraDefaults?: Record<string, any>;
 }
 
@@ -297,6 +298,31 @@ export const PRODUCTS: ProductDef[] = [
     ceilingMount: true,
     extraDefaults: { cordColor: 0x3a3138 },
   },
+  // ===== fixtures (ม่าน & แอร์) =====
+  {
+    id: "curtain",
+    name: "ม่านแขวนผนัง",
+    cat: "fixtures",
+    dims: { w: 150, d: 4, h: 240 },
+    price: 890,
+    color: 0xd8b7ae,
+    build: B.buildCurtain,
+    wallMount: true,
+    groundAnchor: true,
+    extraDefaults: { foldColor: 0xc9a88f },
+  },
+  {
+    id: "ac",
+    name: "แอร์ติดผนัง",
+    cat: "fixtures",
+    dims: { w: 80, d: 22, h: 30 },
+    price: 12900,
+    color: 0xe8e8e8,
+    build: B.buildAc,
+    wallMount: true,
+    extraDefaults: { ventColor: 0x4a4550 },
+  },
+
   // ===== room structure =====
   {
     id: "column",

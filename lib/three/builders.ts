@@ -1143,6 +1143,159 @@ export function buildHangingPlant(dims: any, color: number, opts: any = {}) {
 }
 
 // ============================================================
+// ⭐ Curtain (ม่านแขวนผนัง)
+// ============================================================
+
+export function buildCurtain(dims: any, color: number, opts: any = {}) {
+  const g = new THREE.Group();
+  const w = dims.w / 100;
+  const d = dims.d / 100;
+  const h = dims.h / 100;
+  const fc = P(opts, "foldColor", 0xc9a88f);
+
+  // Rod (ราวม่าน)
+  const rodMat = new THREE.MeshStandardMaterial({
+    color: 0x8a6a4f,
+    roughness: 0.4,
+    metalness: 0.3,
+  });
+  const rod = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.012, w + 0.12, 10),
+    rodMat,
+  );
+  rod.rotation.z = Math.PI / 2;
+  rod.position.set(0, h / 2, 0);
+  g.add(rod);
+
+  // Rod end caps
+  [-1, 1].forEach((sx) => {
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.018, 8, 8),
+      rodMat,
+    );
+    cap.position.set(sx * (w / 2 + 0.06), h / 2, 0);
+    g.add(cap);
+  });
+
+  // Curtain fabric — multiple vertical folds
+  const fabricMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.95,
+    side: THREE.DoubleSide,
+  });
+  const foldMat = new THREE.MeshStandardMaterial({
+    color: fc,
+    roughness: 0.95,
+    side: THREE.DoubleSide,
+  });
+  const foldCount = Math.max(3, Math.round(w / 0.25));
+  const foldW = w / foldCount;
+  const fabricH = h * 0.95;
+
+  for (let i = 0; i < foldCount; i++) {
+    const x = -w / 2 + foldW * (i + 0.5);
+    const isAccent = i % 3 === 1;
+    const m = isAccent ? foldMat : fabricMat;
+    // Each fold is a slightly curved plane (simulate drape)
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(foldW * 1.05, fabricH, 1, 4),
+      m,
+    );
+    // Slight sine wave for drape effect
+    const geo = panel.geometry;
+    const pos = geo.attributes.position;
+    for (let k = 0; k < pos.count; k++) {
+      const py = pos.getY(k);
+      const t = (py + fabricH / 2) / fabricH; // 0 at bottom, 1 at top
+      // Wider at bottom, narrower at top (natural drape)
+      pos.setX(k, pos.getX(k) * (0.85 + 0.15 * t));
+      // Subtle fold curvature
+      pos.setZ(k, Math.sin(t * Math.PI) * 0.012 * (i % 2 === 0 ? 1 : -1));
+    }
+    geo.computeVertexNormals();
+    panel.position.set(x, 0, d / 2 + 0.005);
+    g.add(panel);
+  }
+
+  // Weighted bottom hem
+  const hem = box(w, 0.015, d + 0.01, 0x6b5a42);
+  hem.position.set(0, -h / 2 + 0.008, 0);
+  g.add(hem);
+
+  return g;
+}
+
+// ============================================================
+// ⭐ AC (แอร์ติดผนัง)
+// ============================================================
+
+export function buildAc(dims: any, color: number, opts: any = {}) {
+  const g = new THREE.Group();
+  const w = dims.w / 100;
+  const d = dims.d / 100;
+  const h = dims.h / 100;
+  const vc = P(opts, "ventColor", 0x4a4550);
+
+  // Main body — slightly tapered front
+  const body = box(w, h, d, color, { roughness: 0.5, metalness: 0.05 });
+  body.position.y = 0;
+  g.add(body);
+
+  // Front panel (slightly protruding)
+  const front = box(w * 0.96, h * 0.85, 0.008, color, {
+    roughness: 0.4,
+    metalness: 0.08,
+  });
+  front.position.set(0, 0, d / 2 + 0.004);
+  g.add(front);
+
+  // Bottom vent strip (air outlet)
+  const ventMat = new THREE.MeshStandardMaterial({
+    color: vc,
+    roughness: 0.6,
+    metalness: 0.1,
+  });
+  const vent = new THREE.Mesh(
+    new THREE.BoxGeometry(w * 0.82, h * 0.12, 0.01),
+    ventMat,
+  );
+  vent.position.set(0, -h / 2 + h * 0.14, d / 2 + 0.006);
+  g.add(vent);
+
+  // Vent louvers (3 horizontal slats)
+  for (let i = 0; i < 3; i++) {
+    const louver = new THREE.Mesh(
+      new THREE.BoxGeometry(w * 0.78, 0.004, 0.012),
+      ventMat,
+    );
+    louver.position.set(
+      0,
+      -h / 2 + h * 0.08 + i * h * 0.04,
+      d / 2 + 0.012,
+    );
+    louver.rotation.x = -0.3;
+    g.add(louver);
+  }
+
+  // Top brand strip
+  const strip = box(w * 0.3, 0.008, 0.006, 0x888888);
+  strip.position.set(0, h * 0.3, d / 2 + 0.005);
+  g.add(strip);
+
+  // Side edges (subtle detail)
+  [-1, 1].forEach((sx) => {
+    const edge = box(0.008, h * 0.9, d * 0.95, color, {
+      roughness: 0.45,
+      metalness: 0.06,
+    });
+    edge.position.set(sx * (w / 2 - 0.004), 0, 0);
+    g.add(edge);
+  });
+
+  return g;
+}
+
+// ============================================================
 // ⭐ Column (เสาโครงสร้าง) — เรียบๆ
 // ============================================================
 

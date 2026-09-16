@@ -9,6 +9,8 @@ export const STRUCTURE_PLAN_PRODUCTS = new Set([
   "slidingdoor",
   "column",
   "partition",
+  "curtain",
+  "ac",
 ]);
 
 export interface StructurePlan {
