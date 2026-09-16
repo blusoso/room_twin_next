@@ -170,14 +170,23 @@ function LockBadges() {
         box.getCenter(center);
         ndc.copy(center).project(camera);
 
-        if (ndc.z > 1) {
+        // ⭐ Hide object behind/off the frustum edge
+        if (Math.abs(ndc.x) > 1 || ndc.y > 1 || ndc.z > 1) {
           const el = els.get(item.uid);
           if (el) el.style.display = "none";
           return;
         }
 
-        const sx = (ndc.x * 0.5 + 0.5) * rect.width;
-        const sy = (-ndc.y * 0.5 + 0.5) * rect.height;
+        // ⭐ Clamp — badge (30px) อยู่ภายใน viewport เสมอ ไม่ล้นไปทับ sidebar/ขอบจอ
+        const MARGIN = 18;
+        const sx = Math.min(
+          rect.width - MARGIN,
+          Math.max(MARGIN, (ndc.x * 0.5 + 0.5) * rect.width),
+        );
+        const sy = Math.min(
+          rect.height - MARGIN,
+          Math.max(MARGIN, (-ndc.y * 0.5 + 0.5) * rect.height),
+        );
 
         let el = els.get(item.uid);
         if (!el) {

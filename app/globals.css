@@ -1242,6 +1242,7 @@ aside {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  overflow: hidden; /* ⭐ คลิป badge ไม่ให้ล้นออกนอก viewport → ไม่ทับ sidebar/ขอบจอ */
   z-index: var(--z-lock-badge);
 }
 
