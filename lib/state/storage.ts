@@ -40,6 +40,47 @@ function stripExcludedZoneMembership(state: SerializedState): boolean {
   return changed;
 }
 
+/**
+ * ⭐ Migration: ตรวจ link การแขวนกับพื้นผิวไอเทมอื่น (mountUid / mountFace)
+ *    - item ที่อ้าง host ที่ไม่มีอยู่แล้ว → ลบทิ้ง (นโยบาย "ลบ host = ลบของที่แขวนทั้งชุด")
+ *    - mountFace ไม่ถูกต้อง / host เป็นของที่แขวนซ้อนอีกชั้น → ล้าง link เป็นของติดผนังห้อง
+ * @returns true ถ้ามีการแก้ข้อมูลจริง (ต้องเขียนกลับ)
+ */
+function sanitizeMountLinks(state: SerializedState): boolean {
+  if (!Array.isArray(state.items)) return false;
+
+  const byUid = new Map(state.items.map((i) => [i.uid, i]));
+  const validFaces = new Set(["pz", "nz", "px", "nx"]);
+  let changed = false;
+
+  state.items = state.items.filter((it) => {
+    if (!it.mountUid) return true;
+
+    if (!validFaces.has(it.mountFace as string)) {
+      delete it.mountUid;
+      delete it.mountFace;
+      changed = true;
+      return true;
+    }
+
+    const host = byUid.get(it.mountUid);
+    if (!host) {
+      changed = true;
+      return false;
+    }
+
+    // host ที่แขวนซ้อนกับ host อื่นอีกชั้น — ไม่รองรับ → ถือเป็นของติดผนัง
+    if (host.mountUid) {
+      delete it.mountUid;
+      delete it.mountFace;
+      changed = true;
+    }
+    return true;
+  });
+
+  return changed;
+}
+
 export function loadFromStorage(): SerializedState | null {
   if (typeof window === "undefined") return null;
   try {
@@ -74,6 +115,9 @@ export function loadFromStorage(): SerializedState | null {
 
     // ⭐ Migration: โครงสร้าง/ม่าน & แอร์ ห้ามอยู่ในโซน
     if (stripExcludedZoneMembership(parsed)) migrated = true;
+
+    // ⭐ Migration: link การแขวนกับพื้นผิวไอเทมอื่น (mountUid/mountFace)
+    if (sanitizeMountLinks(parsed)) migrated = true;
 
     if (migrated) {
       // เขียนกลับ key ใหม่ก่อน — สำเร็จแล้วค่อยทิ้ง key เดิม

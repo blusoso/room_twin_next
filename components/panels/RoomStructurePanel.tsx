@@ -19,8 +19,9 @@ import {
   wallSpan,
   getWallGeom,
 } from "@/lib/three/roomShell";
-import { reclampAllToRoom } from "@/lib/three/reclamp";
+import { reclampAllToRoom, reclampAttachmentsOf } from "@/lib/three/reclamp";
 import { instantiate } from "@/lib/three/instantiate";
+import { deleteItemTree } from "@/lib/three/itemTree";
 import {
   resolveWallPlacement,
   wallFootprint,
@@ -110,7 +111,7 @@ function addOpeningOfType(pid: string) {
 
   const c = resolveWallPlacement(
     null,
-    wallId,
+    { kind: "wall", wallId },
     0,
     v,
     halfU,
@@ -153,7 +154,7 @@ function updateWallItemPosition(
 
   const c = resolveWallPlacement(
     uid,
-    wallId,
+    { kind: "wall", wallId },
     patch.u ?? item.u!,
     patch.v ?? item.v!,
     halfU,
@@ -183,6 +184,9 @@ function updateWallItemPosition(
   }
 
   if (product.groundAnchor) rebuildBaseboards();
+
+  // ⭐ ประตู/หน้าต่างถูกย้าย → ของที่แขวนอยู่บนพื้ นผิวขยับตาม
+  reclampAttachmentsOf(uid);
 }
 
 // ============================================================
@@ -807,7 +811,8 @@ function OpeningsTab() {
               }
               roomShape={room.shape}
               onDelete={() => {
-                useRoomTwin.getState().removeItem(o.uid);
+                // ⭐ ลบ object ใน 3D + state (รวมของที่แขวนอยู่กับพื้ นผิวนี้)
+                deleteItemTree(o.uid);
                 setOpenUid(null);
                 saveState();
               }}

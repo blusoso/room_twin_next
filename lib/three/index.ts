@@ -9,3 +9,4 @@ export * from "./ceilingPlacement";
 export * from "./zoneBounds";
 export * from "./thumbnails";
 export * from "./instantiate";
+export * from "./itemTree";

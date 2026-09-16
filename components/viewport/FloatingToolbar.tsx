@@ -8,11 +8,13 @@ import { getZoneBounds } from "@/lib/three/zoneBounds";
 import { rotateItemBy90 } from "@/lib/three/gizmo";
 import { removeZoneFull } from "@/lib/three/zoneActions";
 import {
-  removeInstantiated,
   reinstantiateItem,
   instantiate,
 } from "@/lib/three/instantiate";
+import { deleteItemTree } from "@/lib/three/itemTree";
 import { resolveRestHeights, footprintOf } from "@/lib/three/placement";
+import { targetOfItem } from "@/lib/three/wallPlacement";
+import { reclampAttachmentsOf } from "@/lib/three/reclamp";
 import { rebuildBaseboards } from "@/lib/three/roomShell";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
@@ -35,7 +37,6 @@ export default function FloatingToolbar() {
   const selectZone = useRoomTwin((s) => s.selectZone);
   const deselectZone = useRoomTwin((s) => s.deselectZone);
   const updateItem = useRoomTwin((s) => s.updateItem);
-  const removeItem = useRoomTwin((s) => s.removeItem);
   const closeItemPanel = useRoomTwin((s) => s.closeItemPanel);
   const { saveState } = useSaveState();
 
@@ -152,8 +153,8 @@ export default function FloatingToolbar() {
   const handleDelete = () => {
     if (!item) return;
     const wasDoor = item.productId === "door";
-    removeInstantiated(item.uid);
-    removeItem(item.uid);
+    // ⭐ ลบของที่แขวนอยู่กับพื้ นผิวของ item นี้ไปด้วยทั้งชุด
+    deleteItemTree(item.uid);
     closeItemPanel();
     if (wasDoor) rebuildBaseboards();
     saveState();
@@ -374,12 +375,13 @@ function duplicateItem(uid: string) {
   const newUid = "i" + Math.random().toString(36).slice(2, 10);
 
   if (item.wallMount) {
+    // ⭐ คัดลอก link พื้ นผิวเดิม (ผนัง หรือ host) แล้วคลื่ อนตามแนวพื้ นผิวเล็กน้อย
+    const target = targetOfItem(item);
     const newItem: PlacedItem = {
       uid: newUid,
       productId: item.productId,
       params: clonedParams,
       wallMount: true,
-      wallId: item.wallId,
       u: (item.u || 0) + 0.15,
       v: item.v,
       rotY: item.rotY,
@@ -387,6 +389,12 @@ function duplicateItem(uid: string) {
       themeOverride: item.themeOverride,
       displayName: item.displayName,
     };
+    if (target?.kind === "item") {
+      newItem.mountUid = target.hostUid;
+      newItem.mountFace = target.face;
+    } else {
+      newItem.wallId = item.wallId;
+    }
     store.addItem(newItem);
     instantiate(newItem);
     if (item.productId === "door") rebuildBaseboards();
@@ -582,6 +590,9 @@ function rotateZone(zuid: string, dir: -1 | 1) {
       obj.position.z = nz;
       obj.rotation.y = nrotY;
     }
+
+    // ⭐ ของที่แขวนอยู่กับพื้ นผิวของ item นี้ หมุน/ขยับตาม
+    reclampAttachmentsOf(it.uid);
   });
 
   // ===== 6. Re-resolve rest heights =====

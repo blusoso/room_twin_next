@@ -53,8 +53,11 @@ export default function Overlays() {
   if (placingZoneId) hintText = "แตะจุดบนพื้นเพื่อวางโซนนี้";
   else if (placingProductId) {
     const p = PRODUCT_BY_ID.get(placingProductId);
-    if (p?.wallMount) hintText = "แตะบนผนังเพื่อแขวนไอเทมนี้";
-    else if (p?.ceilingMount)
+    if (p?.wallMount) {
+      hintText = p.attachToSurface
+        ? "แตะบนผนัง/เสา/ฉากกั้น/ประตู/หน้าต่างเพื่อแขวนไอเทมนี้"
+        : "แตะบนผนังเพื่อติดไอเทมนี้";
+    } else if (p?.ceilingMount)
       hintText = "แตะจุดบนเพดานเพื่อแขวนไอเทมนี้";
     else hintText = "แตะจุดในห้องเพื่อวางไอเทมนี้";
   }

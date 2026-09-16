@@ -17,6 +17,10 @@ export interface ProductDef {
   ceilingMount?: boolean;
   groundAnchor?: boolean;
   structural?: boolean;
+  /** ⭐ เป็นพื้นผิวให้ของติดผนังอื่นแขวนได้ (เสา/ฉากกั้น/ประตู/หน้าต่าง) */
+  hostSurface?: boolean;
+  /** ⭐ แขวนกับพื้นผิวของไอเทมอื่นได้ (กรอบภาพ/แอร์/ม่าน) */
+  attachToSurface?: boolean;
   extraDefaults?: Record<string, any>;
 }
 
@@ -32,6 +36,7 @@ export const PRODUCTS: ProductDef[] = [
     build: B.buildDoor,
     wallMount: true,
     groundAnchor: true,
+    hostSurface: true,
     extraDefaults: { frameColor: 0xf7f3ea },
   },
   {
@@ -43,6 +48,7 @@ export const PRODUCTS: ProductDef[] = [
     color: 0xcfe0e8,
     build: B.buildWindow,
     wallMount: true,
+    hostSurface: true,
     extraDefaults: {
       frameColor: 0xf7f3ea,
       glassColor: 0xcfe0e8,
@@ -209,6 +215,7 @@ export const PRODUCTS: ProductDef[] = [
     color: 0x2a2330,
     build: B.buildWallArt,
     wallMount: true,
+    attachToSurface: true,
     extraDefaults: { canvasColor: 0xd8b7ae, accentColor: 0x8fafa0 },
   },
   {
@@ -309,6 +316,7 @@ export const PRODUCTS: ProductDef[] = [
     build: B.buildCurtain,
     wallMount: true,
     groundAnchor: true,
+    attachToSurface: true,
     extraDefaults: { foldColor: 0xc9a88f },
   },
   {
@@ -320,6 +328,7 @@ export const PRODUCTS: ProductDef[] = [
     color: 0xe8e8e8,
     build: B.buildAc,
     wallMount: true,
+    attachToSurface: true,
     extraDefaults: { ventColor: 0x4a4550 },
   },
 
@@ -333,6 +342,7 @@ export const PRODUCTS: ProductDef[] = [
     color: 0xe8dcc4,
     build: B.buildColumn,
     structural: true,
+    hostSurface: true,
     extraDefaults: {
       baseColor: 0xf7f3ea,
       accentColor: 0xb9a88f,
@@ -347,6 +357,7 @@ export const PRODUCTS: ProductDef[] = [
     color: 0xf0ece4,
     build: B.buildPartition,
     structural: true,
+    hostSurface: true,
     extraDefaults: {
       frameColor: 0xb9a88f,
     },
@@ -375,6 +386,7 @@ export const PRODUCTS: ProductDef[] = [
     build: B.buildSlidingDoor,
     wallMount: true,
     groundAnchor: true,
+    hostSurface: true,
     extraDefaults: {
       frameColor: 0xf7f3ea,
       glassColor: 0xcfe0e8,
@@ -395,6 +407,22 @@ export const AUTO_ZONE_EXCLUDED_CATS = new Set(["structure", "fixtures"]);
 export function isAutoZoneExcludedProduct(productId: string): boolean {
   const p = PRODUCT_BY_ID.get(productId);
   return !!p && AUTO_ZONE_EXCLUDED_CATS.has(p.cat);
+}
+
+/**
+ * ⭐ ไอเทมนี้เป็น "พื้นผิว" ให้ของติดผนังอื่นแขวนได้หรือไม่
+ *    (เสา / ฉากกั้น / ประตู / ประตูเลื่อน / หน้าต่าง)
+ */
+export function isHostSurfaceProduct(productId: string): boolean {
+  return !!PRODUCT_BY_ID.get(productId)?.hostSurface;
+}
+
+/**
+ * ⭐ ไอเทมนี้แขวนกับพื้นผิวของไอเทมอื่นได้หรือไม่
+ *    (กรอบภาพ / แอร์ / ม่าน) — ประตู/หน้าต่างยังติดได้แค่ผนังห้อง
+ */
+export function isAttachToSurfaceProduct(productId: string): boolean {
+  return !!PRODUCT_BY_ID.get(productId)?.attachToSurface;
 }
 
 export function defaultParamsFor(product: ProductDef): Params {

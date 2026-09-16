@@ -294,6 +294,8 @@ z
 restY
 rotY
 wallId
+mountUid
+mountFace
 u
 v
 rotZ
@@ -360,28 +362,44 @@ hooks/usePointerInteraction.ts
 
 # 9. Wall-Mounted Furniture
 
-Flow:
+ของติดผนังแขวนได้บน **พื้ นผิว 2 ชนิด**: ผนังห้อง (`wallId`) หรือผิวด้านตั้งของไอเทม
+(`mountUid` + `mountFace` = เสา/ฉากกั้น/ประตู/หน้าต่าง)
 
 ```text
-Wall object
+Wall object (wallart / ac / curtain)
     ↓
-wall placement data
+mount target
+    ├─ ผนังห้อง  → wallId
+    └─ ไอเทม     → mountUid + mountFace (pz/nz/px/nx ใน local frame ของ host)
     ↓
-wallId / u / v / rotation
+mountPlane() หา { cx, cz, dx, dz, nx, nz, len, baseY, topY, rotY }
     ↓
-wallPlacement.ts
+u (ตามแนวพื้ นผิว) / v (สูงจาก baseY ของพื้ นผิว) / rotZ
     ↓
-Three.js transform
+wallPlacement.ts  →  Three.js transform
 ```
 
-Room geometry changes may affect wall-mounted objects.
+กติกา:
+
+```text
+- v นับจาก baseY ของพื้ นผิว → ผนังห้อง baseY = 0 จึงเหมือนเดิมทุกประการ
+- host ถูกย้าย/หมุน/เปลี่ยนขนาด → เรียก reclampAttachmentsOf(hostUid)
+- host ถูกลบ → ลบของที่แขวนด้วยทั้งชุด (lib/three/itemTree.ts deleteItemTree)
+- host ที่เป็นพื้ นผิวได้ = ProductDef.hostSurface (เสา/ฉากกั้น/ประตู/ประตูเลื่อน/หน้าต่าง)
+- ของที่แขวนบน host ได้ = ProductDef.attachToSurface (กรอบภาพ/แอร์/ม่าน)
+  ประตู/หน้าต่างยังติดได้แค่ผนังห้องจริง
+```
+
+การเปลี่ยน room geometry มีผลกับของติดผนัง (โดยเฉพาะของที่แขวนบนประตู/หน้าต่าง)
 
 Always inspect:
 
 ```text
-lib/three/wallPlacement.ts
-lib/three/reclamp.ts
+lib/three/wallPlacement.ts   ← mountPlane / clamp / overlap / world pose
+lib/three/reclamp.ts         ← reclampWallItems / reclampAttachmentsOf
+lib/three/raycast.ts         ← raycastWallPlacement (ผนัง + ผิว host)
 lib/three/roomShell.ts
+lib/three/itemTree.ts        ← ลบ host + ของที่แขวน
 ```
 
 ---

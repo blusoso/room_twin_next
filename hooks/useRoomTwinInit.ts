@@ -21,7 +21,9 @@ import {
   rebuildBaseboards,
   MergedWall,
 } from "@/lib/three/roomShell";
-import { objectsByUid, roomGroup } from "@/lib/three/scene";
+import { objectsByUid } from "@/lib/three/scene";
+import { deleteItemTree } from "@/lib/three/itemTree";
+import { reclampAttachmentsOf } from "@/lib/three/reclamp";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { validateZoneDefinitions } from "@/lib/data/zoneValidation";
 import { isOpeningRemoved } from "@/lib/state/openingFlags";
@@ -291,12 +293,8 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
 
     const wall = findBestWallForSide(snap.side);
     if (!wall) {
-      store.removeItem(snap.uid);
-      const obj = objectsByUid.get(snap.uid);
-      if (obj) {
-        roomGroup.remove(obj);
-        objectsByUid.delete(snap.uid);
-      }
+      // ⭐ ลบพร้อมของที่แขวนอยู่กับพื้ นผิวนี้ด้วย
+      deleteItemTree(snap.uid);
       return;
     }
 
@@ -308,7 +306,7 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
     const { halfU, halfV } = wallFootprint(item.params, item.rotZ || 0);
     const c = resolveWallPlacement(
       item.uid,
-      wall.id,
+      { kind: "wall", wallId: wall.id },
       newU,
       snap.v,
       halfU,
@@ -329,6 +327,9 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
       obj.position.set(p.x, c.v, p.z);
       obj.rotation.y = wall.rotY;
     }
+
+    // ⭐ ของที่แขวนอยู่บนพื้ นผิวของประตู/หน้าต่างนี้ ขยับตาม
+    reclampAttachmentsOf(item.uid);
   });
 
   rebuildBaseboards();
@@ -392,7 +393,7 @@ export function remapOrphanedWallItems(snapshots: OpeningSnapshot[]): void {
     const { halfU, halfV } = wallFootprint(item.params, snap.rotZ || 0);
     const c = resolveWallPlacement(
       item.uid,
-      wall.id,
+      { kind: "wall", wallId: wall.id },
       newU,
       snap.v,
       halfU,
@@ -413,6 +414,9 @@ export function remapOrphanedWallItems(snapshots: OpeningSnapshot[]): void {
       obj.position.set(p.x, c.v, p.z);
       obj.rotation.y = wall.rotY;
     }
+
+    // ⭐ ของที่แขวนอยู่บนพื้ นผิวของประตู/หน้าต่างนี้ ขยับตาม
+    reclampAttachmentsOf(item.uid);
   });
 
   rebuildBaseboards();
@@ -561,7 +565,7 @@ function seedDoorRect() {
   const dp = defaultParamsFor(doorP);
   const { halfU, halfV } = wallFootprint(dp, 0);
   const c = resolveWallPlacement(
-    null, "front", -1.35, 0, halfU, halfV,
+    null, { kind: "wall", wallId: "front" }, -1.35, 0, halfU, halfV,
     doorP.groundAnchor || false,
   );
   const uid = "i" + Math.random().toString(36).slice(2, 10);
@@ -584,7 +588,7 @@ function seedWindowRect() {
   const wp = defaultParamsFor(winP);
   const { halfU, halfV } = wallFootprint(wp, 0);
   const c = resolveWallPlacement(
-    null, "back", 1.15, 1.55, halfU, halfV, false,
+    null, { kind: "wall", wallId: "back" }, 1.15, 1.55, halfU, halfV, false,
   );
   const uid = "i" + Math.random().toString(36).slice(2, 10);
   store.addItem({
@@ -641,7 +645,7 @@ function seedDoorBlocks() {
   if (!wall) return;
 
   const c = resolveWallPlacement(
-    null, wall.id, 0, 0, halfU, halfV,
+    null, { kind: "wall", wallId: wall.id }, 0, 0, halfU, halfV,
     doorP.groundAnchor || false,
   );
   const uid = "i" + Math.random().toString(36).slice(2, 10);
@@ -666,7 +670,7 @@ function seedWindowBlocks() {
   if (!wall) return;
 
   const c = resolveWallPlacement(
-    null, wall.id, 0, 1.55, halfU, halfV, false,
+    null, { kind: "wall", wallId: wall.id }, 0, 1.55, halfU, halfV, false,
   );
   const uid = "i" + Math.random().toString(36).slice(2, 10);
   useRoomTwin.getState().addItem({

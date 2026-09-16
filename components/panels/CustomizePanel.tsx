@@ -197,14 +197,16 @@ function applyParamEdit(item: PlacedItem, key: string, value: any) {
 
         if (it.wallMount) {
           import("@/lib/three/wallPlacement").then(
-            ({ resolveWallPlacement, wallFootprint }) => {
+            ({ resolveWallPlacement, wallFootprint, targetOfItem }) => {
+              const target = targetOfItem(it);
+              if (!target) return;
               const { halfU, halfV } = wallFootprint(
                 newParams,
                 it.rotZ || 0,
               );
               const c = resolveWallPlacement(
                 it.uid,
-                it.wallId!,
+                target,
                 it.u!,
                 it.v!,
                 halfU,
@@ -214,6 +216,10 @@ function applyParamEdit(item: PlacedItem, key: string, value: any) {
               updateItem(it.uid, { u: c.u, v: c.v });
               reinstantiateItem(it.uid);
               if (product.id === "door") rebuildBaseboards();
+              // ⭐ ประตู/หน้าต่างเปลี่ยนขนาด → ของที่แขวนอยู่บนพื้ นผิวตามขนาดใหม่
+              import("@/lib/three/reclamp").then(({ reclampAttachmentsOf }) =>
+                reclampAttachmentsOf(it.uid),
+              );
             },
           );
           return;
@@ -247,10 +253,17 @@ function applyParamEdit(item: PlacedItem, key: string, value: any) {
         updateItem(it.uid, { x: c.x, z: c.z });
         reinstantiateItem(it.uid);
         rrh();
+        // ⭐ เสา/ฉากกั้นเปลี่ยนขนาด → ของที่แขวนอยู่บนพื้ นผิวตามพื้ นผิวใหม่
+        import("@/lib/three/reclamp").then(({ reclampAttachmentsOf }) =>
+          reclampAttachmentsOf(it.uid),
+        );
       },
     );
   } else {
     reinstantiateItem(item.uid);
+    import("@/lib/three/reclamp").then(({ reclampAttachmentsOf }) =>
+      reclampAttachmentsOf(item.uid),
+    );
   }
 }
 

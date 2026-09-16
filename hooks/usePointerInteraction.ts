@@ -12,7 +12,9 @@ import {
   raycastCeilingPlacement,
   raycastFloorPoint,
 } from "@/lib/three/raycast";
-import { hitTestZoneBounds } from "@/lib/three/zoneHelpers";
+import {
+  hitTestZoneBounds,
+} from "@/lib/three/zoneHelpers";
 import {
   footprintOf,
   resolvePlacement,
@@ -26,10 +28,14 @@ import {
 import {
   resolveWallPlacement,
   wallFootprint,
-  wallItemWorldXZ,
+  targetOfItem,
+  mountPlane,
+  mountPointXZ,
+  mountOutwardFor,
 } from "@/lib/three/wallPlacement";
 import { resolveCeilingPlacement } from "@/lib/three/ceilingPlacement";
-import { getWallRotY, rebuildBaseboards, findFloorYAt, findFloorYAtFootprint } from "@/lib/three/roomShell";
+import { reclampAttachmentsOf } from "@/lib/three/reclamp";
+import { rebuildBaseboards, findFloorYAt, findFloorYAtFootprint } from "@/lib/three/roomShell";
 import {
   hitTestGizmoHandle,
   beginGizmoRotate,
@@ -42,7 +48,10 @@ import {
   setZoneDragging,
   setHoveredZone,
 } from "@/lib/three/interactionState";
-import { PRODUCT_BY_ID } from "@/lib/data/products";
+import {
+  PRODUCT_BY_ID,
+  isAttachToSurfaceProduct,
+} from "@/lib/data/products";
 import { GRID } from "@/lib/data/constants";
 import type { PlacedItem } from "@/lib/state/types";
 
@@ -262,6 +271,8 @@ export function usePointerInteraction() {
               obj.position.x = newX;
               obj.position.z = newZ;
             }
+            // ⭐ ของที่แขวนอยู่กับพื้ นผิวของ item นี้ ขยับตามทันที
+            reclampAttachmentsOf(si.uid);
           });
         }
         return;
@@ -309,33 +320,57 @@ export function usePointerInteraction() {
 
         // Wall item
         if (item.wallMount) {
-          const hit = raycastWallPlacement(e.clientX, e.clientY);
-          if (!hit) return;
           const product = PRODUCT_BY_ID.get(item.productId);
           if (!product) return;
+          const hit = raycastWallPlacement(e.clientX, e.clientY, {
+            allowHost: isAttachToSurfaceProduct(item.productId),
+            excludeUid: item.uid,
+          });
+          if (!hit) return;
           const { halfU, halfV } = wallFootprint(item.params, item.rotZ || 0);
           const c = resolveWallPlacement(
             item.uid,
-            hit.wallId,
+            hit.target,
             hit.u,
             hit.v,
             halfU,
             halfV,
             product.groundAnchor || false,
           );
-          updateItem(item.uid, {
-            wallId: hit.wallId,
-            rotY: getWallRotY(hit.wallId),
+          const plane = mountPlane(hit.target);
+          const rotY = plane?.rotY ?? item.rotY ?? 0;
+
+          // ⭐ ย้ายระหว่างพื้ นผิว — ล้าง link เก่าให้หมดก่อนเซ็ต link ใหม่
+          const patch: Partial<PlacedItem> = {
             u: c.u,
             v: c.v,
-          });
+            rotY,
+            wallId: undefined,
+            mountUid: null,
+            mountFace: undefined,
+          };
+          if (hit.target.kind === "wall") {
+            patch.wallId = hit.target.wallId;
+          } else {
+            patch.mountUid = hit.target.hostUid;
+            patch.mountFace = hit.target.face;
+          }
+
+          updateItem(item.uid, patch);
+
           const obj = objectsByUid.get(item.uid);
-          if (obj) {
-            const w = wallItemWorldXZ({ wallId: hit.wallId, u: c.u });
-            obj.position.set(w.x, c.v, w.z);
-            obj.rotation.y = getWallRotY(hit.wallId);
+          if (obj && plane) {
+            const w = mountPointXZ(
+              plane,
+              c.u,
+              mountOutwardFor(hit.target, item.params.d),
+            );
+            obj.position.set(w.x, plane.baseY + c.v, w.z);
+            obj.rotation.y = rotY;
           }
           if (product.id === "door") rebuildBaseboards();
+          // ⭐ ประตู/หน้าต่างถูกย้ายพื้ นผิว → ของที่แขวนอยู่บนนั้นขยับตาม
+          reclampAttachmentsOf(item.uid);
           return;
         }
 
@@ -393,6 +428,8 @@ export function usePointerInteraction() {
             restY + 0.02 - bottomOffsetFor(item.uid),
             c.z,
           );
+        // ⭐ เสา/ฉากกั้นถูกย้าย → ของที่แขวนอยู่บนพื้ นผิวขยับตาม
+        reclampAttachmentsOf(item.uid);
         return;
       }
 
@@ -489,8 +526,12 @@ export function usePointerInteraction() {
           const it = placedItems.find((i) => i.uid === id.uid);
           if (obj && it) {
             if (it.ceilingMount) obj.position.y = store.room.h;
-            else if (it.wallMount) obj.position.y = it.v!;
-            else obj.position.y = (it.restY || 0) - bottomOffsetFor(it.uid);
+            else if (it.wallMount) {
+              // ⭐ y = ฐานของพื้ นผิว + v (host ที่อยู่สูงกว่าพื้นต้องไม่ลอยกลับลงมา)
+              const target = targetOfItem(it);
+              const plane = target ? mountPlane(target) : null;
+              obj.position.y = plane ? plane.baseY + (it.v ?? 0) : it.v!;
+            } else obj.position.y = (it.restY || 0) - bottomOffsetFor(it.uid);
           }
           saveState();
           store.selectItem(id.uid);

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { WALL_LABEL_FULL } from "@/lib/data/constants";
-import { instantiate, removeInstantiated } from "@/lib/three/instantiate";
+import { instantiate } from "@/lib/three/instantiate";
+import { deleteItemTree } from "@/lib/three/itemTree";
 import { rebuildBaseboards } from "@/lib/three/roomShell";
 import { resolveRestHeights } from "@/lib/three/placement";
 import { openConfirm } from "@/components/modals";
@@ -44,7 +45,6 @@ export default function RoomSetupPanel() {
   const placedItems = useRoomTwin((s) => s.placedItems);
   const selectedUid = useRoomTwin((s) => s.selectedUid);
   const selectItem = useRoomTwin((s) => s.selectItem);
-  const removeItem = useRoomTwin((s) => s.removeItem);
   const { saveState } = useSaveState();
 
   // ============================================================
@@ -193,14 +193,14 @@ export default function RoomSetupPanel() {
 
       openConfirm(`ลบ "${setupItem.label}" ออกจากห้อง?`, () => {
         const isDoor = it.productId === "door";
-        removeInstantiated(it.uid);
-        removeItem(it.uid);
+        // ⭐ ลบของที่แขวนอยู่กับพื้ นผิวของ item นี้ไปด้วยทั้งชุด
+        deleteItemTree(it.uid);
         if (isDoor) rebuildBaseboards();
         resolveRestHeights();
         saveState();
       });
     },
-    [removeItem, saveState],
+    [saveState],
   );
 
   // ============================================================

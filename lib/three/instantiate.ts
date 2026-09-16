@@ -5,7 +5,7 @@ import {
 } from "./scene";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { getThemeStyle } from "@/lib/data/themes";
-import { wallItemWorldXZ } from "./wallPlacement";
+import { wallItemWorld } from "./wallPlacement";
 import { useRoomTwin } from "@/lib/state/store";
 
 export function instantiate(item: any) {
@@ -68,9 +68,10 @@ export function instantiateWallItem(item: any) {
 
   const holder = new THREE.Group();
   holder.add(built);
-  const { x, z } = wallItemWorldXZ(item);
-  holder.position.set(x, item.v, z);
-  holder.rotation.y = item.rotY;
+  const pose = wallItemWorld(item);
+  if (!pose) return;
+  holder.position.set(pose.x, pose.y, pose.z);
+  holder.rotation.y = pose.rotY;
   holder.userData.uid = item.uid;
   holder.userData.productId = item.productId;
 

@@ -1,7 +1,11 @@
 // lib/three/structurePlan.ts
 import type { PlacedItem } from "@/lib/state/types";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
-import { getWallGeom, wallPointXZ } from "./roomShell";
+import {
+  targetOfItem,
+  mountPlane,
+  mountPointXZ,
+} from "./wallPlacement";
 
 // ⭐ โครงสร้างที่ควรแสดงใน floor plan (ผังห้องแบบบล็อก)
 export const STRUCTURE_PLAN_PRODUCTS = new Set([
@@ -84,13 +88,14 @@ export function structurePlanItems(items: PlacedItem[]): StructurePlan[] {
     };
 
     if (item.wallMount) {
-      if (!item.wallId) return;
-      const g = getWallGeom(item.wallId);
-      if (!g) return;
-      const { x, z } = wallPointXZ(item.wallId, item.u ?? 0, 0);
+      // ⭐ ผนังห้อง หรือพื้ นผิวของไอเทมอื่น (เสา/ฉากกั้น/ประตู/หน้าต่าง)
+      const target = targetOfItem(item);
+      const plane = target ? mountPlane(target) : null;
+      if (!plane) return;
+      const { x, z } = mountPointXZ(plane, item.u ?? 0, 0);
       sp.cx = x;
       sp.cz = z;
-      sp.deg = (Math.atan2(g.dz, g.dx) * 180) / Math.PI;
+      sp.deg = (Math.atan2(plane.dz, plane.dx) * 180) / Math.PI;
     } else {
       if (typeof item.x !== "number" || typeof item.z !== "number") return;
       sp.cx = item.x;

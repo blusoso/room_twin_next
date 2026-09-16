@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
-import { removeInstantiated } from "@/lib/three/instantiate";
+import { deleteItemTree } from "@/lib/three/itemTree";
 import { rebuildBaseboards } from "@/lib/three/roomShell";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
 import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
@@ -292,7 +292,6 @@ function TreeItem({
 }) {
   const selectedUid = useRoomTwin((s) => s.selectedUid);
   const selectItem = useRoomTwin((s) => s.selectItem);
-  const removeItem = useRoomTwin((s) => s.removeItem);
   const { saveState } = useSaveState();
   const { startDrag } = useTreeItemDrag();
 
@@ -343,9 +342,8 @@ function TreeItem({
             e.stopPropagation();
             openConfirm(`ลบ "${displayName}" ออกจากห้อง?`, () => {
               const wasDoor = item.productId === "door";
-              // ⭐ ลบ object ใน 3D ก่อน แล้วค่อยลบ state (ไม่มี sync อัตโนมัติ)
-              removeInstantiated(item.uid);
-              removeItem(item.uid);
+              // ⭐ ลบ item + ของที่แขวนอยู่กับพื้ นผิวของมัน (3D + state)
+              deleteItemTree(item.uid);
               if (wasDoor) rebuildBaseboards();
               saveState();
             });

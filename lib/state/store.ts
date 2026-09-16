@@ -256,6 +256,22 @@ export const useRoomTwin = create<RoomTwinState>()(
             .map((i) => i.uid),
         );
 
+        // ⭐ ของที่แขวนอยู่กับพื้ นผิวของ item ที่อยู่ในโซน ต้องถูกลบไปด้วยทั้งชุด
+        let grew = true;
+        while (grew) {
+          grew = false;
+          s.placedItems.forEach((i) => {
+            if (
+              i.mountUid &&
+              uidsInZone.has(i.mountUid) &&
+              !uidsInZone.has(i.uid)
+            ) {
+              uidsInZone.add(i.uid);
+              grew = true;
+            }
+          });
+        }
+
         s.placedItems.forEach((it) => {
           if (!uidsInZone.has(it.uid)) return;
           if (it.productId === "door" || it.productId === "window") {

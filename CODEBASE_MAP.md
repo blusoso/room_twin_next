@@ -440,6 +440,7 @@ lib/three/
 ├── wallPlacement.ts
 ├── ceilingPlacement.ts
 ├── reclamp.ts
+├── itemTree.ts
 ├── zoneActions.ts
 ├── swapHighlight.ts
 └── index.ts
@@ -513,8 +514,10 @@ Examples:
 Floor item
 → x / z / restY
 
-Wall item
-→ wallId / u / v / wall orientation
+Wall item (ผิว = ผนังห้อง หรือไอเทมที่เป็น hostSurface)
+→ wallId  (พื้ นผิว = ผนัง)
+  หรือ mountUid + mountFace  (พื้ นผิว = เสา/ฉากกั้น/ประตู/หน้าต่าง)
+→ u / v / wall orientation   (v นับจาก baseY ของพื้ นผิว)
 
 Ceiling item
 → ceiling-related placement

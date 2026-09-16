@@ -2,6 +2,7 @@
 import { useRoomTwin } from "@/lib/state/store";
 import { isAutoZoneExcludedProduct } from "@/lib/data/products";
 import { removeInstantiated, reinstantiateItem } from "./instantiate";
+import { collectAttachmentUids } from "./itemTree";
 import { resolveRestHeights } from "./placement";
 import { rebuildBaseboards } from "./roomShell";
 import { assignItemToZone } from "./zoneHelpers";
@@ -13,9 +14,13 @@ export function removeZoneFull(zuid: string) {
   const store = useRoomTwin.getState();
   const zoneItems = store.placedItems.filter((i) => i.zoneUid === zuid);
 
-  // 1. ลบ Three.js objects ทุกตัวในโซน
+  // 1. ลบ Three.js objects ทุกตัวในโซน (+ ของที่แขวนอยู่กับพื้ นผิวของมัน)
+  const sceneUids = new Set<string>();
   zoneItems.forEach((it) => {
-    removeInstantiated(it.uid);
+    collectAttachmentUids(it.uid).forEach((uid) => sceneUids.add(uid));
+  });
+  sceneUids.forEach((uid) => {
+    removeInstantiated(uid);
   });
 
   // 2. อัปเดต state

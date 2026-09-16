@@ -778,8 +778,20 @@ export function updateWallVisibility() {
 
   placedItems.forEach((item) => {
     if (!item.wallMount) return;
-    const wd = getWall(item.wallId!);
-    const wo = wd ? (wd as any).mat.opacity : 1;
+    // ⭐ ของที่แขวนบนพื้ นผิวไอเทมอื่น (ประตู/หน้าต่าง/เสา/ฉากกั้น)
+    //    - host ติดผนัง (ประตู/หน้าต่าง) → จางตามผนังนั้น
+    //    - host วางพื้ น (เสา/ฉากกั้น) → ทึบตลอด
+    let wo = 1;
+    if (item.mountUid) {
+      const host = placedItems.find((h) => h.uid === item.mountUid);
+      const hostWall = host?.wallMount && host.wallId
+        ? getWall(host.wallId)
+        : null;
+      wo = hostWall ? (hostWall as any).mat.opacity : 1;
+    } else {
+      const wd = getWall(item.wallId!);
+      wo = wd ? (wd as any).mat.opacity : 1;
+    }
     // ⭐ sync ตรง ๆ (เดิม dynamic import ทุก frame → Promise/GC garbage + ล่าหนึ่ง frame)
     const h = objectsByUid.get(item.uid);
     if (h) h.visible = wo > 0.04;

@@ -3,7 +3,6 @@ import * as THREE from "three";
 import {
   GIZMO_SNAP_DEG,
   GIZMO_SNAP_THRESHOLD_DEG,
-  WALL_OUTWARD,
 } from "@/lib/data/constants";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
@@ -15,11 +14,14 @@ import {
   pointerNDC,
   renderer,
 } from "./scene";
-import { getWallGeom, wallPointXZ } from "./roomShell";
+import { getWallGeom } from "./roomShell";
 import {
   wallFootprint,
   resolveWallPlacement,
-  wallItemWorldXZ,
+  targetOfItem,
+  mountPlane,
+  mountPointXZ,
+  mountOutwardFor,
   raycastWallPlaneUV,
 } from "./wallPlacement";
 import {
@@ -29,6 +31,7 @@ import {
   bottomOffsetFor,
 } from "./placement";
 import { resolveCeilingPlacement } from "./ceilingPlacement";
+import { reclampAttachmentsOf } from "./reclamp";
 import { interactionState } from "./interactionState";
 import { rebuildBaseboards } from "./roomShell";
 
@@ -161,15 +164,26 @@ export function updateRotateGizmo() {
   const params = item.params;
 
   if (item.wallMount) {
-    // ===== Wall-mounted gizmo (vertical ring on wall plane) =====
+    // ===== Wall-mounted gizmo (vertical ring on mount surface) =====
+    const target = targetOfItem(item);
+    const plane = target ? mountPlane(target) : null;
+    if (!target || !plane) {
+      gizmoGroup.visible = false;
+      return;
+    }
+
     const rotZ = item.rotZ || 0;
     const r = gizmoRadiusFor(params, true, rotZ);
     gizmoRing.rotation.set(0, 0, 0);
     gizmoRing.scale.set(r, r, 1);
 
-    const p = wallPointXZ(item.wallId!, item.u!, WALL_OUTWARD + 0.006);
-    gizmoGroup.position.set(p.x, item.v!, p.z);
-    gizmoGroup.rotation.set(0, item.rotY || 0, 0);
+    const p = mountPointXZ(
+      plane,
+      item.u ?? 0,
+      mountOutwardFor(target, params.d) + 0.006,
+    );
+    gizmoGroup.position.set(p.x, plane.baseY + (item.v ?? 0), p.z);
+    gizmoGroup.rotation.set(0, plane.rotY, 0);
 
     const hx = -r * Math.sin(rotZ);
     const hy = r * Math.cos(rotZ);
@@ -303,10 +317,12 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
 
   if (gizmoDragState.wallMount) {
     // Wall-mounted rotation
-    const hit = raycastWallPlaneUV(item.wallId!, cx, cy);
+    const target = targetOfItem(item);
+    if (!target) return;
+    const hit = raycastWallPlaneUV(target, cx, cy);
     if (!hit) return;
-    const du = hit.u - item.u!;
-    const dv = hit.v - item.v!;
+    const du = hit.u - (item.u ?? 0);
+    const dv = hit.v - (item.v ?? 0);
     if (Math.hypot(du, dv) < 0.02) return;
 
     const raw = THREE.MathUtils.radToDeg(Math.atan2(-du, dv));
@@ -316,9 +332,9 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
     const { halfU, halfV } = wallFootprint(item.params, rawRot);
     const c = resolveWallPlacement(
       item.uid,
-      item.wallId!,
-      item.u!,
-      item.v!,
+      target,
+      item.u ?? 0,
+      item.v ?? 0,
       halfU,
       halfV,
       product.groundAnchor || false,
@@ -336,6 +352,8 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
         rebuildBaseboards();
       }
       reinstantiateItem(item.uid);
+      // ⭐ ของที่แขวนอยู่บนพื้ นผิวของ item นี้ ขยับ/หมุนตาม
+      reclampAttachmentsOf(item.uid);
     });
 
     showRotateBadge(cx, cy, s.deg, s.snapped);
@@ -374,6 +392,9 @@ export function updateGizmoRotateDrag(cx: number, cy: number) {
       z: c.z,
       rotY: rawRot,
     });
+
+    // ⭐ ของที่แขวนอยู่บนพื้ นผิวของ item นี้ (เสา/ฉากกั้น) ขยับ/หมุนตาม
+    reclampAttachmentsOf(item.uid);
 
     import("./scene").then(({ objectsByUid }) => {
       const obj = objectsByUid.get(item.uid);
@@ -432,14 +453,16 @@ export function rotateItemBy90(uid: string, dir: 1 | -1) {
 
   // ===== Wall-mount =====
   if (item.wallMount) {
+    const target = targetOfItem(item);
+    if (!target) return;
     const newRotZ =
       ((item.rotZ || 0) + (dir * Math.PI) / 2 + Math.PI * 8) % (Math.PI * 2);
     const { halfU, halfV } = wallFootprint(item.params, newRotZ);
     const c = resolveWallPlacement(
       uid,
-      item.wallId!,
-      item.u!,
-      item.v!,
+      target,
+      item.u ?? 0,
+      item.v ?? 0,
       halfU,
       halfV,
       product.groundAnchor || false,
@@ -451,6 +474,8 @@ export function rotateItemBy90(uid: string, dir: 1 | -1) {
     ]).then(([{ reinstantiateItem }, { rebuildBaseboards }]) => {
       reinstantiateItem(uid);
       if (product.id === "door") rebuildBaseboards();
+      // ⭐ ของที่แขวนอยู่บนพื้ นผิวของ item นี้ ขยับ/หมุนตาม
+      reclampAttachmentsOf(uid);
     });
     return;
   }
@@ -493,6 +518,9 @@ export function rotateItemBy90(uid: string, dir: 1 | -1) {
 
   applyTransformToDescendants(uid, ox, oz, c.x, c.z, (dir * Math.PI) / 2);
   updateItem(uid, { x: c.x, z: c.z, rotY: newRotY });
+
+  // ⭐ ของที่แขวนอยู่บนพื้ นผิวของ item นี้ (เสา/ฉากกั้น) ขยับ/หมุนตาม
+  reclampAttachmentsOf(uid);
 
   Promise.all([
     import("./scene"),

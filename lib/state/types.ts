@@ -4,6 +4,9 @@ import type { ProductDef } from "@/lib/data/products";
 export type Dims = { w: number; d: number; h: number };
 export type Params = Dims & { color: number; [key: string]: any };
 
+/** ⭐ ผิวด้านตั้งของไอเทมที่แขวนได้ (แกนใน local frame ของ host) */
+export type MountFace = "pz" | "nz" | "px" | "nx";
+
 export interface PlacedItem {
   uid: string;
   productId: string;
@@ -20,6 +23,12 @@ export interface PlacedItem {
   u?: number;
   v?: number;
   rotZ?: number;
+
+  // ⭐ แขวนกับพื้นผิวของไอเทมอื่น (เสา/ฉากกั้น/ประตู/หน้าต่าง)
+  //    mountUid = uid ของ host, mountFace = ผิวใน local frame ของ host
+  //    v = ความสูงจากฐาน (baseY) ของพื้นผิว (ผนังห้อง baseY = 0 → เหมือนเดิม)
+  mountUid?: string | null;
+  mountFace?: MountFace;
 
   ceilingMount?: boolean;
 

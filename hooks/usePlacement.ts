@@ -6,6 +6,7 @@ import {
   PRODUCT_BY_ID,
   defaultParamsFor,
   isAutoZoneExcludedProduct,
+  isAttachToSurfaceProduct,
 } from "@/lib/data/products";
 import { ZONE_BY_ID } from "@/lib/data/zones";
 import { pickUniqueZoneName } from "@/lib/data/zoneResolve";
@@ -20,6 +21,8 @@ import {
 import {
   resolveWallPlacement,
   wallFootprint,
+  mountPlane,
+  type MountTarget,
 } from "@/lib/three/wallPlacement";
 import { resolveCeilingPlacement } from "@/lib/three/ceilingPlacement";
 import {
@@ -62,12 +65,16 @@ export function usePlacement() {
 
       // Wall-mounted
       if (p.wallMount) {
-        const hit = raycastWallPlacement(cx, cy);
+        const hit = raycastWallPlacement(cx, cy, {
+          allowHost: isAttachToSurfaceProduct(pid),
+        });
         if (!hit) {
-          showToast(`วาง "${p.name}" ไม่สำเร็จ — ต้องแขวนบนผนังที่มองเห็น`);
+          showToast(
+            `วาง "${p.name}" ไม่สำเร็จ — ต้องแขวนบนผนัง/เสา/ฉากกั้น/ประตู/หน้าต่างที่มองเห็น`,
+          );
           return { uid: null, error: "no-wall" };
         }
-        const uid = addWallItem(pid, hit.wallId, hit.u, hit.v);
+        const uid = addWallItem(pid, hit.target, hit.u, hit.v);
         return { uid };
       }
 
@@ -106,12 +113,16 @@ export function usePlacement() {
 
       // Wall-mounted
       if (p.wallMount) {
-        const hit = raycastWallPlacement(cx, cy);
+        const hit = raycastWallPlacement(cx, cy, {
+          allowHost: isAttachToSurfaceProduct(pid),
+        });
         if (!hit) {
-          showToast(`วาง "${p.name}" ไม่สำเร็จ — ต้องแขวนบนผนังที่มองเห็น`);
+          showToast(
+            `วาง "${p.name}" ไม่สำเร็จ — ต้องแขวนบนผนัง/เสา/ฉากกั้น/ประตู/หน้าต่างที่มองเห็น`,
+          );
           return { uid: null, error: "no-wall" };
         }
-        const uid = addWallItem(pid, hit.wallId, hit.u, hit.v);
+        const uid = addWallItem(pid, hit.target, hit.u, hit.v);
         if (uid) applyThemeAndRebuild(uid, tid);
         return { uid };
       }
@@ -211,7 +222,7 @@ function addFloorItem(
 
 function addWallItem(
   pid: string,
-  wallId: string,
+  target: MountTarget,
   u: number,
   v: number,
 ): string | null {
@@ -223,7 +234,7 @@ function addWallItem(
   const { halfU, halfV } = wallFootprint(params, 0);
   const c = resolveWallPlacement(
     null,
-    wallId,
+    target,
     u,
     v,
     halfU,
@@ -231,18 +242,30 @@ function addWallItem(
     p.groundAnchor || false,
   );
 
+  const plane = mountPlane(target);
+  const rotY =
+    plane?.rotY ??
+    (target.kind === "wall" ? getWallRotY(target.wallId) : 0);
+
   const uid = "i" + Math.random().toString(36).slice(2, 10);
   const item: PlacedItem = {
     uid,
     productId: pid,
     params,
     wallMount: true,
-    wallId,
     u: c.u,
     v: c.v,
-    rotY: getWallRotY(wallId),
+    rotY,
     rotZ: 0,
   };
+
+  // ⭐ ผนังห้อง → wallId / ไอเทม → mountUid + mountFace
+  if (target.kind === "wall") {
+    item.wallId = target.wallId;
+  } else {
+    item.mountUid = target.hostUid;
+    item.mountFace = target.face;
+  }
 
   addItem(item);
   instantiate(item);

@@ -25,6 +25,10 @@ export interface ProductDef {
   ceilingMount?: boolean;
   groundAnchor?: boolean;
   structural?: boolean;
+  /** ⭐ เป็นพื้นผิวให้ของติดผนังอื่นแขวนได้ (เสา/ฉากกั้น/ประตู/หน้าต่าง) */
+  hostSurface?: boolean;
+  /** ⭐ แขวนกับพื้นผิวของไอเทมอื่นได้ (กรอบภาพ/แอร์/ม่าน) */
+  attachToSurface?: boolean;
   extraDefaults?: Record<string, any>;
 }
 

@@ -10,52 +10,83 @@ import {
 import {
   resolveWallPlacement,
   wallFootprint,
+  targetOfItem,
+  mountPlane,
+  mountPointXZ,
+  mountOutwardFor,
 } from "./wallPlacement";
 import { resolveCeilingPlacement } from "./ceilingPlacement";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
-import { WALL_OUTWARD } from "@/lib/data/constants";
-import { wallPointXZ } from "./roomShell";
+import type { PlacedItem } from "@/lib/state/types";
 
 /**
- * ⭐ Reclamp เฉพาะ wall items — fix บั๊กใช้ item.u เก่า
+ * ⭐ Reclamp ของติดผนัง 1 ชิ้น — fix บั๊กใช้ item.u เก่า
+ *    รองรับของที่แขวนกับพื้ นผิวไอเทมอื่น (host) ด้วย: คำนวณใหม่จาก host ปัจจุบัน
+ *    → host ขยับ/หมุน/ย้ายพื้ นที่ ของที่แขวนขยับตาม
  */
+function reclampWallItem(item: PlacedItem) {
+  if (!item.wallMount) return;
+  const product = PRODUCT_BY_ID.get(item.productId);
+  if (!product) return;
+
+  const target = targetOfItem(item);
+  if (!target) return;
+  const plane = mountPlane(target);
+  if (!plane) return;
+
+  const { halfU, halfV } = wallFootprint(item.params, item.rotZ || 0);
+
+  // ⭐ คำนวณตำแหน่งใหม่จากพื้ นผิวปัจจุบัน
+  const c = resolveWallPlacement(
+    item.uid,
+    target,
+    item.u ?? 0,
+    item.v ?? 0,
+    halfU,
+    halfV,
+    product.groundAnchor || false,
+  );
+
+  // ⭐ host หมุน → ผิวหมุนตาม rotY ของ item ต้องอัปเดตด้วย
+  const nextRotY = plane.rotY;
+  const rotYChanged = Math.abs(nextRotY - (item.rotY ?? 0)) > 1e-6;
+
+  // ⭐ อัปเดต state ถ้าตำแหน่งเปลี่ยน
+  if (
+    Math.abs(c.u - (item.u || 0)) > 1e-6 ||
+    Math.abs(c.v - (item.v || 0)) > 1e-6 ||
+    rotYChanged
+  ) {
+    useRoomTwin.getState().updateItem(item.uid, {
+      u: c.u,
+      v: c.v,
+      rotY: nextRotY,
+    });
+  }
+
+  // ⭐⭐⭐ อัปเดต object position ด้วยค่า c.u/c.v (ไม่ใช่ item.u/v เก่า)
+  const obj = objectsByUid.get(item.uid);
+  if (obj) {
+    const w = mountPointXZ(plane, c.u, mountOutwardFor(target, item.params.d));
+    obj.position.set(w.x, plane.baseY + c.v, w.z);
+    obj.rotation.y = nextRotY;
+  }
+}
+
+/** ⭐ Reclamp ของติดผนังทุกชิ้น */
 export function reclampWallItems() {
-  const store = useRoomTwin.getState();
+  useRoomTwin.getState().placedItems.forEach(reclampWallItem);
+}
 
-  store.placedItems.forEach((item) => {
-    if (!item.wallMount) return;
-    const product = PRODUCT_BY_ID.get(item.productId);
-    if (!product) return;
-
-    const { halfU, halfV } = wallFootprint(item.params, item.rotZ || 0);
-
-    // ⭐ คำนวณตำแหน่งใหม่จาก room ปัจจุบัน
-    const c = resolveWallPlacement(
-      item.uid,
-      item.wallId!,
-      item.u!,
-      item.v!,
-      halfU,
-      halfV,
-      product.groundAnchor || false,
-    );
-
-    // ⭐ อัปเดต state ถ้าตำแหน่งเปลี่ยน
-    if (
-      Math.abs(c.u - (item.u || 0)) > 1e-6 ||
-      Math.abs(c.v - (item.v || 0)) > 1e-6
-    ) {
-      store.updateItem(item.uid, { u: c.u, v: c.v });
-    }
-
-    // ⭐⭐⭐ อัปเดต object position ด้วยค่า c.u/c.v (ไม่ใช่ item.u/v เก่า)
-    const obj = objectsByUid.get(item.uid);
-    if (obj) {
-      const w = wallPointXZ(item.wallId!, c.u, WALL_OUTWARD);
-      obj.position.set(w.x, c.v, w.z);
-      obj.rotation.y = item.rotY || 0;
-    }
-  });
+/**
+ * ⭐ จัดของที่แขวนอยู่กับพื้ นผิวของ host (uid) ให้ตาม host ปัจจุบัน
+ *    เรียกหลัง host ถูกย้าย/หมุน/เปลี่ยนขนาด (รวม host ที่เป็นประตู/หน้าต่าง)
+ */
+export function reclampAttachmentsOf(hostUid: string) {
+  useRoomTwin
+    .getState()
+    .placedItems.filter((i) => i.mountUid === hostUid)
+    .forEach(reclampWallItem);
 }
 
 /**
