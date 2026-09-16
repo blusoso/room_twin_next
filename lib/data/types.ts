@@ -24,6 +24,7 @@ export interface ProductDef {
   wallMount?: boolean;
   ceilingMount?: boolean;
   groundAnchor?: boolean;
+  structural?: boolean;
   extraDefaults?: Record<string, any>;
 }
 

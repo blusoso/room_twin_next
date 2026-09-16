@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { findFloorYAt } from "./roomShell";
 import { surfaceColliders } from "./scene";
 import { useRoomTwin } from "@/lib/state/store";
+import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { GRID } from "@/lib/data/constants";
 
 export function footprintOf(dimsOrProduct: any, rotY: number) {
@@ -226,8 +227,14 @@ export function resolveRestHeights() {
   const { placedItems, updateItem } = useRoomTwin.getState();
   const resolved = new Map<string, number>();
   placedItems.forEach((i) => {
-    if (!i.wallMount && !i.ceilingMount && !i.parentUid)
+    if (i.wallMount || i.ceilingMount) return;
+    const product = PRODUCT_BY_ID.get(i.productId);
+    if (product?.structural) {
+      // ⭐ โครงสร้าง (เสา/ฉาก/บันได) ยึดกับพิกัดโครงสร้างห้อง — ไม่ตามระดับพื้น
+      resolved.set(i.uid, i.restY ?? 0);
+    } else if (!i.parentUid) {
       resolved.set(i.uid, findFloorYAt(i.x!, i.z!));
+    }
   });
 
   let ch = true;

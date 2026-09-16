@@ -332,6 +332,7 @@ export const PRODUCTS: ProductDef[] = [
     price: 4500,
     color: 0xe8dcc4,
     build: B.buildColumn,
+    structural: true,
     extraDefaults: {
       baseColor: 0xf7f3ea,
       accentColor: 0xb9a88f,
@@ -345,6 +346,7 @@ export const PRODUCTS: ProductDef[] = [
     price: 5990,
     color: 0xf0ece4,
     build: B.buildPartition,
+    structural: true,
     extraDefaults: {
       frameColor: 0xb9a88f,
     },
@@ -357,6 +359,7 @@ export const PRODUCTS: ProductDef[] = [
     price: 8900,
     color: 0xc9a776,
     build: B.buildStairs,
+    structural: true,
     extraDefaults: {
       treadColor: 0xd9c7a8,
     },
