@@ -2,84 +2,88 @@
 //
 // ⭐ เปิดลิงก์แชร์ /r/<id> → โหลดห้องจากเซิร์ฟเวอร์เข้า editor
 //
+//    ลำดับใหม่ (ขนานกัน ไม่ต่อคิว):
+//      1) RoomTwinClient เริ่ม prefetchSharedRoom() ไปแล้วตั้งแต่ก่อน editor โหลดเสร็จ
+//      2) ที่นี่รอ "ข้อมูลห้อง" + "storeReady" พร้อมกัน → applyCloudRoom()
+//      3) useRoomTwinInit จะไม่โหลดห้องของเจ้าของเครื่องระหว่างที่ยัง pending
+//
 //    - ห้องของตัวเอง : ตั้งเป็นไฟล์ปัจจุบัน (activeCloudRoomId) + บันทึกลง localStorage
 //    - ห้องของคนอื่น : เข้าโหมด "ห้องที่แชร์" (sharedRoomId) → ระงับ autosave
 //                     จนกว่าจะกด "บันทึกเป็นสำเนาของฉัน"
 "use client";
 import { useEffect } from "react";
 import { useRoomTwin } from "@/lib/state/store";
-import { getRoom } from "@/lib/cloud/api";
-import { setStoredActiveRoomId } from "@/lib/cloud/activeRoom";
-import { normalizeSerializedState, saveToStorage } from "@/lib/state/storage";
-import { restoreSerializedState } from "@/lib/state/restore";
-import { serializeSnapshotOf } from "@/lib/shared/roomShare";
-import { showToast } from "@/lib/utils/toast";
+import { applyCloudRoom, prefetchSharedRoom } from "@/lib/cloud/sharedRoomBoot";
+
+export interface BootStatus {
+  phase: "loading" | "ready" | "error";
+  message?: string;
+}
+
+/** รอให้ useRoomTwinInit ตั้ง storeReady (ถ้าพร้อมแล้วคืนทันที) */
+function waitForStoreReady(): Promise<void> {
+  if (useRoomTwin.getState().storeReady) return Promise.resolve();
+
+  return new Promise<void>((resolve) => {
+    const unsub = useRoomTwin.subscribe(
+      (s) => s.storeReady,
+      (ready) => {
+        if (!ready) return;
+        unsub();
+        resolve();
+      },
+    );
+  });
+}
 
 export default function SharedRoomLoader({
   shareId,
+  reloadToken = 0,
+  onStatus,
 }: {
   shareId?: string;
+  /** ⭐ เปลี่ยนค่า = สั่งโหลดใหม่ (ปุ่ม "ลองอีกครั้ง" บนการ์ด error) */
+  reloadToken?: number;
+  onStatus: (status: BootStatus) => void;
 }) {
   useEffect(() => {
     if (!shareId) return;
 
     let cancelled = false;
+    onStatus({ phase: "loading" });
 
     const run = async () => {
+      // ⭐ ไม่ await แบบต่อคิว: ข้อมูลห้องถูกดึงไปแล้วตั้งแต่ bootstrap
+      const [result] = await Promise.all([
+        prefetchSharedRoom(shareId),
+        waitForStoreReady(),
+      ]);
+      if (cancelled) return;
+
+      if (!result.ok) {
+        onStatus({ phase: "error", message: result.error });
+        return;
+      }
+
       try {
-        const room = await getRoom(shareId);
+        applyCloudRoom(result.room);
         if (cancelled) return;
-
-        const { state } = normalizeSerializedState(room.data);
-        const store = useRoomTwin.getState();
-
-        if (room.owned) {
-          // ⭐ เปิดไฟล์ของตัวเอง → ใช้เป็นห้องปัจจุบัน
-          store.setActiveCloudRoomId(room.id);
-          setStoredActiveRoomId(room.id);
-          restoreSerializedState(state);
-          saveToStorage(state);
-        } else {
-          // ⭐ ห้องของคนอื่น → โหมดดูห้องแชร์ (ห้ามทับ localStorage)
-          store.enterSharedRoom(room.id, room.name);
-          restoreSerializedState(state);
-        }
-
-        // เริ่ม history ใหม่ของห้องที่โหลดมา (ไม่ให้ undo ย้อนไปห้องเดิม)
-        store.resetHistory(serializeSnapshotOf(state));
+        onStatus({ phase: "ready" });
       } catch (err) {
-        if (cancelled) return;
-        const msg = err instanceof Error ? err.message : "เปิดห้องไม่สำเร็จ";
-        console.error("[SharedRoomLoader]", err);
-        showToast(
-          msg.includes("ไม่พบ") ? "ไม่พบห้องที่แชร์ (อาจถูกลบแล้ว)" : msg,
-        );
+        console.error("[SharedRoomLoader] apply room", err);
+        onStatus({
+          phase: "error",
+          message: err instanceof Error ? err.message : "เปิดห้องไม่สำเร็จ",
+        });
       }
     };
 
-    if (useRoomTwin.getState().storeReady) {
-      run();
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    // ⭐ รอให้ useRoomTwinInit โหลดห้องเดิมเสร็จก่อน แล้วค่อยทับด้วยห้องที่แชร์
-    let unsub: (() => void) | null = null;
-    unsub = useRoomTwin.subscribe(
-      (s) => s.storeReady,
-      (ready) => {
-        if (!ready) return;
-        unsub?.();
-        run();
-      },
-    );
+    run();
 
     return () => {
       cancelled = true;
-      unsub?.();
     };
-  }, [shareId]);
+  }, [shareId, reloadToken, onStatus]);
 
   return null;
 }

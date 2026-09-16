@@ -48,6 +48,8 @@
                                เพราะเปิดซ้อนจากใน modal ได้ (save/share, zone-edit, blocks) */
   --z-drag-ghost: 200;      /* drag ghost */
   --z-tree-ghost: 400;      /* tree drag ghost */
+  --z-boot-overlay: 90;     /* boot overlay (โหลดห้องที่แชร์) — สูงกว่า dialog 70
+                               แต่ต่ำกว่า drag ghost เพราะ ghost โผล่เฉพาะตอนลากของ */
 }
 
 * {
@@ -6574,6 +6576,379 @@ mark.hl {
   .share-banner {
     font-size: 11.5px;
     justify-content: flex-start;
+  }
+}
+
+/* ============================================================
+   Loading UI — จอโหลดตอนบูต / overlay ตอนเปิดลิงก์แชร์ / skeleton
+   ใช้ร่วมกัน: components/LoadingScreen.tsx, components/modals/RoomCard.tsx
+   ============================================================ */
+
+@keyframes rt-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes rt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rt-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+/* ⭐ แถบ/บล็อก skeleton แบบ shimmer */
+.rt-shimmer {
+  background-color: #e3d9c5;
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0) 80%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: rt-shimmer 1.4s linear infinite;
+}
+
+.rt-fade-in {
+  animation: rt-fade-in 0.28s ease both;
+}
+
+/* ===== จอโหลดเต็มหน้า (ตอนบูตแอป) ===== */
+
+.rt-boot {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-boot-overlay);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.rt-boot-skel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.rt-skel-head {
+  height: 58px;
+  flex-shrink: 0;
+}
+
+.rt-skel-row {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  min-height: 0;
+}
+
+.rt-skel-side {
+  width: 304px;
+  border-radius: var(--radius-card);
+}
+
+.rt-skel-view {
+  flex: 1;
+  border-radius: var(--radius-card);
+}
+
+.rt-boot-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: min(340px, 90vw);
+  padding: 22px 22px 20px;
+  text-align: center;
+  background: rgba(248, 244, 235, 0.94);
+  border: 1px solid var(--panel-line);
+  border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(42, 35, 48, 0.18);
+}
+
+.rt-brand-chip {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 26px;
+  background: linear-gradient(140deg, #f6e3c6, #e6c79b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 6px 16px rgba(143, 90, 33, 0.22);
+}
+
+.rt-brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.rt-brand strong {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rt-brand span {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+.rt-boot-msg {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rt-boot-sub {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+/* ===== progress bar (ใช้ทั้งจอโหลดและ overlay) ===== */
+
+.rt-bar {
+  width: 100%;
+  height: 4px;
+  margin-top: 9px;
+  border-radius: var(--radius-pill);
+  background: #e6dcc8;
+  overflow: hidden;
+}
+
+.rt-bar-fill {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--ochre), #d79a4f);
+  animation: rt-bar 1.5s ease-in-out infinite;
+}
+
+/* ===== overlay ทับแอป (โหลดห้องที่แชร์ / error) ===== */
+
+.rt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-boot-overlay);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(236, 228, 212, 0.72);
+  backdrop-filter: blur(6px);
+  opacity: 1;
+  transition: opacity 0.26s ease;
+}
+
+.rt-overlay.leaving {
+  opacity: 0;
+}
+
+.rt-overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(330px, 88vw);
+  padding: 20px;
+  text-align: center;
+  background: rgba(248, 244, 235, 0.97);
+  border: 1px solid var(--panel-line);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(42, 35, 48, 0.18);
+}
+
+.rt-overlay-title {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.rt-overlay-msg {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.rt-overlay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.rt-error-icon {
+  font-size: 28px;
+}
+
+.rt-btn {
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink);
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.rt-btn:hover {
+  background: #f4ede0;
+}
+
+.rt-btn.primary {
+  background: var(--ochre);
+  border-color: var(--ochre);
+  color: #fff;
+}
+
+.rt-btn.primary:hover {
+  background: var(--ochre-deep);
+}
+
+/* ===== spinner ===== */
+
+.rt-spin {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid #e6dcc8;
+  border-top-color: var(--ochre);
+  animation: rt-spin 0.9s linear infinite;
+}
+
+.rt-inline-spin {
+  display: inline-block;
+  vertical-align: -2px;
+  border-radius: 50%;
+  border: 2px solid rgba(42, 35, 48, 0.18);
+  border-top-color: var(--ochre);
+  animation: rt-spin 0.8s linear infinite;
+}
+
+/* ===== skeleton การ์ดห้องใน modal บันทึก / แชร์ ===== */
+
+.ss-skel-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  background: #fdfbf7;
+  overflow: hidden;
+}
+
+.ss-skel-thumb {
+  aspect-ratio: 8 / 5;
+  /* ⭐ ใช้ background-color เท่านั้น เพื่อไม่ให้ทับ background-image (shimmer) ของ .rt-shimmer */
+  background-color: #f1ebdd;
+}
+
+.ss-skel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+}
+
+.ss-skel-bar {
+  height: 10px;
+  border-radius: var(--radius-pill);
+}
+
+.ss-skel-bar.short {
+  width: 62%;
+}
+
+/* ⭐ แถว error ของรายการห้อง (โหลดไม่สำเร็จ) */
+.ss-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px solid rgba(166, 71, 63, 0.35);
+  background: rgba(166, 71, 63, 0.08);
+  border-radius: 10px;
+}
+
+.ss-error-text {
+  font-size: 12.5px;
+  color: var(--danger);
+}
+
+/* ⭐ skeleton บรรทัด meta ในการ์ด "ห้องที่กำลังแก้ไข" */
+.ss-hero-skel {
+  display: block;
+  width: 68%;
+  height: 11px;
+  border-radius: var(--radius-pill);
+}
+
+/* ⭐ การ์ดที่กำลังเปิดห้องอยู่ */
+.ss-card.opening {
+  border-color: var(--ochre);
+  opacity: 0.85;
+  cursor: progress;
+}
+
+/* ⭐ ลดการเคลื่อนไหว: เหลือ skeleton นิ่ง ๆ แต่ยังเห็นสถานะโหลดครบ */
+@media (prefers-reduced-motion: reduce) {
+  .rt-shimmer,
+  .rt-bar-fill,
+  .rt-spin,
+  .rt-inline-spin,
+  .rt-fade-in {
+    animation: none !important;
+  }
+
+  .rt-overlay {
+    transition: none;
+  }
+
+  .rt-bar-fill {
+    width: 100%;
+    background: var(--ochre);
   }
 }
 

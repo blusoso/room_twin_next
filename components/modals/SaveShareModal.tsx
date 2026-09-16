@@ -8,7 +8,7 @@
 //    3) กล่องลิงก์แชร์ + สวิตช์เทมเพลตสาธารณะ
 //    4) การ์ดห้องที่มีภาพ preview + "แก้ไขล่าสุด …"
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { useSaveState } from "@/hooks/useSaveState";
 import {
@@ -20,23 +20,22 @@ import {
   updateRoom,
 } from "@/lib/cloud/api";
 import { setStoredActiveRoomId } from "@/lib/cloud/activeRoom";
+import { applyCloudRoom } from "@/lib/cloud/sharedRoomBoot";
 import { saveSharedAsCopy } from "@/lib/cloud/saveCopy";
 import { saveToStorage } from "@/lib/state/storage";
-import { restoreSerializedState } from "@/lib/state/restore";
 import { captureRoomThumbnail } from "@/lib/three/screenshot";
 import { absoluteTimeTh, relativeTimeTh } from "@/lib/utils/format";
 import {
   DEFAULT_ROOM_NAME,
   MAX_ROOM_NAME,
   normalizeRoomName,
-  serializeSnapshotOf,
   shareUrlOf,
   type CloudRoomFull,
   type CloudRoomSummary,
 } from "@/lib/shared/roomShare";
 import { showToast } from "@/lib/utils/toast";
 import { openConfirm, useSaveShareStore } from "./useModalStores";
-import RoomCard, { RoomThumb } from "./RoomCard";
+import RoomCard, { RoomCardSkeleton, RoomThumb } from "./RoomCard";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -76,34 +75,83 @@ export default function SaveShareModal() {
 
   const [tab, setTab] = useState<Tab>("mine");
   const [name, setName] = useState(DEFAULT_ROOM_NAME);
-  const [myRooms, setMyRooms] = useState<CloudRoomSummary[]>([]);
-  const [templates, setTemplates] = useState<CloudRoomSummary[]>([]);
+  /**
+   * ⭐ รายการแยกต่อแท็บ — null = ยังไม่โหลด
+   *    โหลดเฉพาะแท็บที่ผู้ใช้กำลังดู (เดิมยิง listRooms + listTemplates พร้อมกันทุกครั้งที่เปิด)
+   */
+  const [lists, setLists] = useState<
+    Record<Tab, CloudRoomSummary[] | null>
+  >({ mine: null, templates: null });
+  const [loadingTab, setLoadingTab] = useState<Tab | null>(null);
+  const [listError, setListError] = useState<{
+    tab: Tab;
+    message: string;
+  } | null>(null);
+  /** การ์ดที่กำลังเปิดอยู่ (โชว์ spinner เฉพาะใบนั้น) */
+  const [openingId, setOpeningId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [currentPreview, setCurrentPreview] = useState<string | null>(null);
 
-  const refresh = useCallback(async (): Promise<
-    CloudRoomSummary[] | null
-  > => {
-    setBusy(true);
-    try {
-      const [mine, tpl] = await Promise.all([listRooms(), listTemplates()]);
-      setMyRooms(mine);
-      setTemplates(tpl);
-      return mine;
-    } catch (err) {
-      console.error("[SaveShareModal] refresh", err);
-      showToast(err instanceof Error ? err.message : "โหลดรายการไม่สำเร็จ");
-      return null;
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  // ⭐ ref คู่กับ state เพื่ออ่านค่าล่าสุดใน callback โดยไม่ทำให้ deps เปลี่ยน
+  const listsRef = useRef(lists);
+  useEffect(() => {
+    listsRef.current = lists;
+  }, [lists]);
+  const inFlightTabRef = useRef<Tab | null>(null);
+  const loadSeqRef = useRef(0);
+
+  /**
+   * ⭐ โหลดรายการของ "แท็บเดียว" — ใช้ cache ถ้าโหลดแล้ว (force = โหลดใหม่)
+   *    ผลลัพธ์ที่มาถึงช้ากว่าจะถูกทิ้ง (seq guard) จึงสลับแท็บเร็ว ๆ ได้ปลอดภัย
+   */
+  const loadTab = useCallback(
+    async (target: Tab, opts?: { force?: boolean }): Promise<void> => {
+      if (inFlightTabRef.current === target) return;
+      if (!opts?.force && listsRef.current[target] !== null) return;
+
+      const seq = ++loadSeqRef.current;
+      inFlightTabRef.current = target;
+      setLoadingTab(target);
+      setListError(null);
+
+      try {
+        const rooms =
+          target === "mine" ? await listRooms() : await listTemplates();
+        if (seq !== loadSeqRef.current) return;
+        setLists((prev) => ({ ...prev, [target]: rooms }));
+      } catch (err) {
+        if (seq !== loadSeqRef.current) return;
+        console.error("[SaveShareModal] load", target, err);
+        setListError({
+          tab: target,
+          message: err instanceof Error ? err.message : "โหลดรายการไม่สำเร็จ",
+        });
+      } finally {
+        if (seq === loadSeqRef.current) {
+          inFlightTabRef.current = null;
+          setLoadingTab(null);
+        }
+      }
+    },
+    [],
+  );
+
+  /** สลับแท็บ + โหลดครั้งแรกของแท็บนั้น */
+  const switchTab = useCallback(
+    (next: Tab) => {
+      setTab(next);
+      setListError(null);
+      if (listsRef.current[next] === null) loadTab(next);
+    },
+    [loadTab],
+  );
 
   // ⭐ ตอนเปิด modal: ถ่ายภาพมุมกล้องปัจจุบัน + ตั้งชื่อไฟล์ให้ตรงกับห้องที่ผูกอยู่
   useEffect(() => {
     if (!open) return;
 
     setTab("mine");
+    setListError(null);
     setCurrentPreview(captureRoomThumbnail());
 
     const sharedName = useRoomTwin.getState().sharedRoomName;
@@ -115,31 +163,21 @@ export default function SaveShareModal() {
 
     let alive = true;
     (async () => {
-      const mine = await refresh();
-      if (!alive || !mine) return;
+      await loadTab("mine");
+      if (!alive) return;
       const id = useRoomTwin.getState().activeCloudRoomId;
-      const act = mine.find((r) => r.id === id);
+      const act = (listsRef.current.mine ?? []).find((r) => r.id === id);
       if (act) setName(act.name);
     })();
 
     return () => {
       alive = false;
     };
-  }, [open, refresh]);
+  }, [open, loadTab]);
 
-  // ⭐ เอา snapshot ของห้องจากเซิร์ฟเวอร์ขึ้นเป็นห้องปัจจุบันของ editor
+  /** ⭐ เอา snapshot ของห้องจากเซิร์ฟเวอร์ขึ้นเป็นห้องปัจจุบันของ editor */
   const applyRoom = useCallback((full: CloudRoomFull) => {
-    const store = useRoomTwin.getState();
-    if (full.owned) {
-      store.setActiveCloudRoomId(full.id);
-      setStoredActiveRoomId(full.id);
-      restoreSerializedState(full.data);
-      saveToStorage(full.data);
-    } else {
-      store.enterSharedRoom(full.id, full.name);
-      restoreSerializedState(full.data);
-    }
-    store.resetHistory(serializeSnapshotOf(full.data));
+    applyCloudRoom(full);
   }, []);
 
   /** ⭐ ถ่ายภาพใหม่ตอนกดบันทึก เพื่อให้ preview ตรงกับสิ่งที่เพิ่งบันทึก */
@@ -157,7 +195,7 @@ export default function SaveShareModal() {
       setName(finalName);
       if (preview) setCurrentPreview(preview);
       showToast(`บันทึก "${room.name}" แล้ว`);
-      await refresh();
+      await loadTab("mine", { force: true });
     } catch (err) {
       showToast(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
     } finally {
@@ -179,7 +217,7 @@ export default function SaveShareModal() {
       saveToStorage(serialize());
       if (preview) setCurrentPreview(preview);
       showToast("บันทึกทับไฟล์เดิมแล้ว");
-      await refresh();
+      await loadTab("mine", { force: true });
     } catch (err) {
       showToast(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
     } finally {
@@ -203,7 +241,7 @@ export default function SaveShareModal() {
       });
       if (preview) setCurrentPreview(preview);
       showToast(`บันทึกสำเนา "${room.name}" แล้ว`);
-      await refresh();
+      await loadTab("mine", { force: true });
     } catch (err) {
       showToast(err instanceof Error ? err.message : "บันทึกสำเนาไม่สำเร็จ");
     } finally {
@@ -222,6 +260,7 @@ export default function SaveShareModal() {
       `เปิด "${room.name}" ทับห้องที่แก้อยู่? การแก้ไขที่ยังไม่บันทึกจะหายไป`,
       async () => {
         setBusy(true);
+        setOpeningId(room.id);
         try {
           const full = await getRoom(room.id);
           applyRoom(full);
@@ -235,6 +274,7 @@ export default function SaveShareModal() {
           showToast(err instanceof Error ? err.message : "เปิดห้องไม่สำเร็จ");
         } finally {
           setBusy(false);
+          setOpeningId(null);
         }
       },
     );
@@ -250,7 +290,7 @@ export default function SaveShareModal() {
           setStoredActiveRoomId(null);
         }
         showToast("ลบไฟล์แล้ว");
-        await refresh();
+        await loadTab("mine", { force: true });
       } catch (err) {
         showToast(err instanceof Error ? err.message : "ลบไม่สำเร็จ");
       } finally {
@@ -266,7 +306,11 @@ export default function SaveShareModal() {
       showToast(
         room.isTemplate ? "ยกเลิกเทมเพลตแล้ว" : "เผยแพร่เป็นเทมเพลตแล้ว",
       );
-      await refresh();
+      // ⭐ สมาชิกของทั้งสองแท็บเปลี่ยน → โหลดใหม่เท่าที่เคยโหลดไว้
+      await loadTab("mine", { force: true });
+      if (listsRef.current.templates !== null) {
+        await loadTab("templates", { force: true });
+      }
     } catch (err) {
       showToast(err instanceof Error ? err.message : "แก้ไขไม่สำเร็จ");
     } finally {
@@ -282,7 +326,7 @@ export default function SaveShareModal() {
     setBusy(true);
     try {
       await updateRoom(room.id, { name: finalName });
-      await refresh();
+      await loadTab("mine", { force: true });
     } catch (err) {
       showToast(err instanceof Error ? err.message : "เปลี่ยนชื่อไม่สำเร็จ");
     } finally {
@@ -295,11 +339,20 @@ export default function SaveShareModal() {
     showToast(ok ? "คัดลอกลิงก์แล้ว" : "คัดลอกไม่สำเร็จ");
   };
 
-  const activeRoom = myRooms.find((r) => r.id === activeCloudRoomId) ?? null;
+  const myRooms = lists.mine;
+  const templates = lists.templates;
+  const activeRoom =
+    (myRooms ?? []).find((r) => r.id === activeCloudRoomId) ?? null;
   const heroPreview = currentPreview ?? activeRoom?.preview ?? "";
   const heroName = sharedRoomId
     ? `👀 กำลังดูห้องที่แชร์: ${sharedRoomName ?? "ไม่มีชื่อ"}`
     : (activeRoom?.name ?? "ห้องนี้ยังไม่ถูกบันทึกบนเซิร์ฟเวอร์");
+
+  // ⭐ สถานะของแท็บที่กำลังแสดง (โหลดเฉพาะแท็บนี้)
+  const currentList = lists[tab];
+  const tabLoading = currentList === null || loadingTab === tab;
+  const tabError = listError?.tab === tab ? listError : null;
+  const mineLoading = lists.mine === null;
 
   return (
     <div
@@ -322,7 +375,7 @@ export default function SaveShareModal() {
           </button>
         </div>
 
-        <div className="ss-body">
+        <div className="ss-body" aria-busy={loadingTab !== null}>
           {/* ===== 1) ห้องที่กำลังแก้ไข ===== */}
           <section className="ss-hero">
             <RoomThumb src={heroPreview} />
@@ -330,16 +383,24 @@ export default function SaveShareModal() {
               <span className="ss-hero-title" title={heroName}>
                 {heroName}
               </span>
-              <span
-                className="ss-meta"
-                title={activeRoom ? absoluteTimeTh(activeRoom.updatedAt) : ""}
-              >
-                {activeRoom
-                  ? `🕒 แก้ไขล่าสุด ${relativeTimeTh(activeRoom.updatedAt)} · ${activeRoom.itemCount} ชิ้น`
-                  : sharedRoomId
-                    ? "แก้ไขได้ แต่ต้องบันทึกเป็นสำเนาของตัวเอง"
-                    : "กดบันทึกเพื่อเก็บขึ้นเซิร์ฟเวอร์"}
-              </span>
+              {mineLoading && !sharedRoomId ? (
+                // ⭐ ระหว่างโหลดรายการ "ห้องของฉัน" — skeleton แทนข้อความที่อาจกระพริบผิด
+                <span
+                  className="ss-hero-skel rt-shimmer"
+                  aria-hidden="true"
+                />
+              ) : (
+                <span
+                  className="ss-meta"
+                  title={activeRoom ? absoluteTimeTh(activeRoom.updatedAt) : ""}
+                >
+                  {activeRoom
+                    ? `🕒 แก้ไขล่าสุด ${relativeTimeTh(activeRoom.updatedAt)} · ${activeRoom.itemCount} ชิ้น`
+                    : sharedRoomId
+                      ? "แก้ไขได้ แต่ต้องบันทึกเป็นสำเนาของตัวเอง"
+                      : "กดบันทึกเพื่อเก็บขึ้นเซิร์ฟเวอร์"}
+                </span>
+              )}
 
               <input
                 className="ss-input"
@@ -440,40 +501,58 @@ export default function SaveShareModal() {
             </section>
           )}
 
-          {/* ===== 3) รายการห้อง ===== */}
+          {/* ===== 3) รายการห้อง (โหลดเฉพาะแท็บที่กำลังดู) ===== */}
           <div className="ss-tabs">
             <button
               type="button"
               className={`ss-tab${tab === "mine" ? " active" : ""}`}
-              onClick={() => setTab("mine")}
+              onClick={() => switchTab("mine")}
             >
-              ห้องของฉัน ({myRooms.length})
+              ห้องของฉัน ({myRooms ? myRooms.length : "…"})
             </button>
             <button
               type="button"
               className={`ss-tab${tab === "templates" ? " active" : ""}`}
-              onClick={() => setTab("templates")}
+              onClick={() => switchTab("templates")}
             >
-              เทมเพลตสาธารณะ ({templates.length})
+              เทมเพลตสาธารณะ ({templates ? templates.length : "…"})
             </button>
           </div>
 
-          {busy && <div className="ss-empty">กำลังโหลด…</div>}
-
-          {tab === "mine" ? (
-            myRooms.length === 0 ? (
+          {tabError ? (
+            <div className="ss-error">
+              <span className="ss-error-text">⚠️ {tabError.message}</span>
+              <button
+                type="button"
+                className="ss-btn"
+                onClick={() => loadTab(tab, { force: true })}
+              >
+                ลองอีกครั้ง
+              </button>
+            </div>
+          ) : tabLoading ? (
+            // ⭐ skeleton การ์ดห้อง 4 ใบ ระหว่างโหลดรายการ
+            <div className="ss-grid" aria-hidden="true">
+              <RoomCardSkeleton />
+              <RoomCardSkeleton />
+              <RoomCardSkeleton />
+              <RoomCardSkeleton />
+            </div>
+          ) : tab === "mine" ? (
+            (currentList ?? []).length === 0 ? (
               <div className="ss-empty">
                 ยังไม่มีห้องที่บันทึกไว้ — ตั้งชื่อด้านบนแล้วกด
                 &quot;บันทึกห้องนี้&quot;
               </div>
             ) : (
               <div className="ss-grid">
-                {myRooms.map((room) => (
+                {(currentList ?? []).map((room) => (
                   <RoomCard
                     key={room.id}
                     room={room}
                     owned
                     busy={busy}
+                    opening={openingId === room.id}
                     active={room.id === activeCloudRoomId}
                     onOpen={handleOpen}
                     onCopyLink={handleCopyLink}
@@ -484,17 +563,18 @@ export default function SaveShareModal() {
                 ))}
               </div>
             )
-          ) : templates.length === 0 ? (
+          ) : (currentList ?? []).length === 0 ? (
             <div className="ss-empty">
               ยังไม่มีเทมเพลตสาธารณะ — ติ๊ก ★ ให้ห้องของคุณเพื่อเผยแพร่
             </div>
           ) : (
             <div className="ss-grid">
-              {templates.map((room) => (
+              {(currentList ?? []).map((room) => (
                 <RoomCard
                   key={room.id}
                   room={room}
                   busy={busy}
+                  opening={openingId === room.id}
                   onOpen={handleOpen}
                   onCopyLink={handleCopyLink}
                 />

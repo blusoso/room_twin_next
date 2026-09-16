@@ -9,6 +9,7 @@ import {
   loadLightingPref,
 } from "@/lib/state/storage";
 import { getStoredActiveRoomId } from "@/lib/cloud/activeRoom";
+import { hasPendingSharedRoom } from "@/lib/cloud/sharedRoomBoot";
 import {
   ROOM_DEFAULT,
   WALL_COLORS,
@@ -456,7 +457,12 @@ export function useRoomTwinInit() {
 
     const state = loadFromStorage();
 
-    if (state) {
+    // ⭐ เปิดลิงก์แชร์ (/r/<id>): ห้ามโหลดห้องของเจ้าของเครื่องก่อน
+    //    ไม่งั้นจะประกอบฉากห้องเดิมทิ้งเปล่า ๆ แล้วถูกทับด้วยห้องที่แชร์
+    //    (SharedRoomLoader จะ apply ห้องที่แชร์เข้ามาแทน)
+    const pendingShare = hasPendingSharedRoom();
+
+    if (state && !pendingShare) {
       setRoom({
         w: state.room?.w ?? ROOM_DEFAULT.w,
         d: state.room?.d ?? ROOM_DEFAULT.d,
@@ -530,7 +536,10 @@ export function useRoomTwinInit() {
     resetHistory(snapshot);
 
     // ⭐ ฟีเจอร์บันทึก / แชร์ห้อง — ผูกไฟล์บนเซิร์ฟเวอร์ที่เคยเปิดไว้ + ปลดล็อกให้ loader ทำงาน
-    useRoomTwin.getState().setActiveCloudRoomId(getStoredActiveRoomId());
+    //    ⭐ เปิดลิงก์แชร์ → ยังไม่ผูกไฟล์ (applyCloudRoom จะตั้ง activeCloudRoomId ให้เอง)
+    if (!pendingShare) {
+      useRoomTwin.getState().setActiveCloudRoomId(getStoredActiveRoomId());
+    }
     useRoomTwin.getState().setStoreReady(true);
   }, []);
 }

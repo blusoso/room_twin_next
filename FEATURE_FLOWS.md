@@ -1060,16 +1060,21 @@ lib/server/db.ts      (node:sqlite built-in, data/roomtwin.db)
 ```text
 /r/<id>  (app/r/[id]/page.tsx, await params)
     ↓
-RoomTwinClient(shareId) → RoomTwinApp(shareId) → <SharedRoomLoader/>
+RoomTwinClient(shareId)
+    ├─ prefetchSharedRoom(id)  → GET /api/rooms/<id>   (เริ่มทันที ขนานกับโหลด chunk)
+    └─ dynamic import RoomTwinApp → <LoadingScreen/> (skeleton โครงแอป + progress)
     ↓
-รอ storeReady (useRoomTwinInit ตั้ง true หลัง resetHistory)
-    ↓
-GET /api/rooms/<id>  → normalizeSerializedState() → restoreSerializedState()
-    ↓
-owned = true   → setActiveCloudRoomId(id) + saveToStorage()  (เปิดเป็นห้องปัจจุบัน)
-owned = false  → enterSharedRoom(id, name)                   (โหมดดูห้องแชร์)
-    ↓
-resetHistory(serializeSnapshotOf(state))
+useRoomTwinInit: hasPendingSharedRoom() === true → "ไม่โหลดห้องของเจ้าของเครื่อง"
+                 (ใช้ค่า default, ไม่แตะ localStorage, ไม่ setActiveCloudRoomId)
+    ↓ setStoreReady(true)
+SharedRoomLoader: await Promise.all([ prefetchSharedRoom(id), storeReady ])
+    ↓ สำเร็จ → applyCloudRoom(room)  (lib/cloud/sharedRoomBoot.ts)
+    │    owned = true   → setActiveCloudRoomId(id) + setStoredActiveRoomId + restoreSerializedState + saveToStorage
+    │    owned = false  → enterSharedRoom(id, name) + restoreSerializedState
+    │    resetHistory(serializeSnapshotOf(state)) → onStatus("ready") → LoadingOverlay fade-out
+    └─ ล้มเหลว → onStatus("error") → การ์ด error [ลองอีกครั้ง] [ไปห้องของฉัน]
+                    ↓ ไปห้องของฉัน
+              returnToOwnRoom()  (lib/cloud/returnToMine.ts)
 ```
 
 กติกา:
@@ -1078,19 +1083,43 @@ resetHistory(serializeSnapshotOf(state))
 ⭐ ownerToken แบบไม่ระบุตัวตน — lib/cloud/ownerToken.ts (localStorage roomtwin_owner_token)
    ส่งเป็น header x-owner-token ทุก request
 
+⭐ boot ของลิงก์แชร์ (ห้ามโหลดห้องของตัวเองทิ้ง):
+   - RoomTwinClient เริ่ม prefetchSharedRoom() ก่อน editor chunk จะโหลดเสร็จ (idempotent ด้วย Map)
+   - useRoomTwinInit ข้ามการอ่าน localStorage เมื่อ hasPendingSharedRoom() = true
+   - useSaveState ไม่เขียน localStorage ระหว่าง pending (กัน default room + ประตู/หน้าต่าง seed ทับห้องของเจ้าของเครื่อง)
+   - หลัง applyCloudRoom สำเร็จ/ล้มเหลว pending จะเป็น false → saveState กลับมาทำงานตามปกติ
+   - applyCloudRoom() เป็นแหล่งเดียวของ "เอา snapshot จากเซิร์ฟเวอร์เข้า store"
+     (SharedRoomLoader + SaveShareModal เรียกตัวเดียวกัน + normalizeSerializedState ให้ทุกทาง)
+
 ⭐ ระหว่าง sharedRoomId != null (ดูห้องของคนอื่น):
    - useSaveState().saveState()  "ไม่เขียน localStorage" (ยัง pushHistory → undo/redo ใช้ได้)
    - ผู้ชมแก้ได้ แต่ของเดิมของตัวเองไม่ถูกทับ
    - ต้องกด "บันทึกเป็นสำเนาของฉัน" (components/ShareBanner.tsx) → POST /api/rooms
         → exitSharedRoom() + setActiveCloudRoomId(newId) + saveToStorage()
         → history.replaceState("/") เพื่อออกจาก URL /r/<id>
-   - "กลับไปห้องของฉัน" = window.location.assign("/") (init อ่าน localStorage เอง)
+   - "กลับไปห้องของฉัน" = returnToOwnRoom() (lib/cloud/returnToMine.ts)
+        → clearPendingSharedRoom + exitSharedRoom
+        → loadFromStorage() (หรือห้องเปล่ามาตรฐานถ้าไม่เคยมี) → restoreSerializedState + resetHistory
+        → setActiveCloudRoomId(getStoredActiveRoomId()) + history.replaceState("/")
+        ⭐ ไม่ reload ทั้งหน้า / ไม่โหลด bundle ใหม่ (เดิมใช้ window.location.assign)
 
 ⭐ restore เป็นแหล่งเดียว: lib/state/restore.ts (restoreSerializedState / restoreSnapshot)
-   RoomTwinApp.HistoryRestoreListener (undo/redo) และ SharedRoomLoader / SaveShareModal ใช้ตัวเดียวกัน
+   RoomTwinApp.HistoryRestoreListener (undo/redo), SharedRoomLoader และ SaveShareModal ใช้ตัวเดียวกัน
 
 ⭐ normalize/migrate เป็นแหล่งเดียว: normalizeSerializedState() ใน lib/state/storage.ts
-   ใช้ทั้งตอนอ่าน localStorage และตอนรับข้อมูลจาก API
+   ใช้ทั้งตอนอ่าน localStorage และตอนรับข้อมูลจาก API (ผ่าน applyCloudRoom)
+
+⭐ Loading UI (components/LoadingScreen.tsx + .rt-* ใน app/globals.css):
+   - LoadingScreen  = fallback ตอนโหลด chunk ของ editor (skeleton โครงแอป + แบรนด์ + progress)
+   - LoadingOverlay = overlay ทับแอปตอนรอข้อมูลห้องที่แชร์ + การ์ด error (retry / ไปห้องของฉัน)
+   - RoomCardSkeleton (.ss-skel-card) = skeleton การ์ดห้องใน modal
+   - ใช้ --z-boot-overlay (90) และเคารพ prefers-reduced-motion
+
+⭐ รายการห้องใน modal โหลด "ทีละแท็บ":
+   - เปิด modal → ยิงแค่ GET /api/rooms ; สลับไปแท็บเทมเพลตครั้งแรกจึงยิง GET /api/templates
+   - cache ต่อแท็บ (lists) + seq guard กันผลลัพธ์เก่ามาทับ ; loadingTab แยกจาก busy (busy = กำลัง mutate)
+   - หลังบันทึก/ลบ/เปลี่ยนชื่อ → โหลดใหม่เฉพาะแท็บ "ห้องของฉัน"
+   - toggle เทมเพลต → โหลดใหม่ทั้งสองแท็บเท่าที่เคยโหลดไว้
 
 ⭐ ไม่แตะ SerializedState / ไม่ bump STORAGE_KEY
    - state ใหม่ทั้งหมด (storeReady / cloudRooms / activeCloudRoomId / sharedRoomId) เป็น transient
@@ -1132,17 +1161,21 @@ lib/cloud/api.ts            ← client fetch helpers
 lib/cloud/ownerToken.ts
 lib/cloud/activeRoom.ts
 lib/cloud/saveCopy.ts       ← saveSharedAsCopy (ShareBanner + modal ใช้ร่วม)
+lib/cloud/sharedRoomBoot.ts ← prefetchSharedRoom / retrySharedRoom / hasPendingSharedRoom / applyCloudRoom
+lib/cloud/returnToMine.ts   ← returnToOwnRoom (กลับห้องตัวเองแบบ client-side ไม่ reload หน้า)
 lib/three/screenshot.ts     ← captureRoomThumbnail (ต้องมี preserveDrawingBuffer)
 lib/utils/format.ts         ← relativeTimeTh / absoluteTimeTh
 lib/state/restore.ts        ← restoreSerializedState (ใช้ร่วม undo/redo + cloud)
 lib/state/storage.ts        ← normalizeSerializedState / saveToStorage / loadFromStorage
-hooks/useSaveState.ts       ← guard: ห้ามเขียน localStorage ตอน sharedRoomId
-hooks/useRoomTwinInit.ts    ← setStoreReady / setActiveCloudRoomId
+hooks/useSaveState.ts       ← guard: ห้ามเขียน localStorage ตอน sharedRoomId หรือ pending share boot
+hooks/useRoomTwinInit.ts    ← setStoreReady / setActiveCloudRoomId / ข้าม localStorage เมื่อเปิดลิงก์แชร์
 components/SharedRoomLoader.tsx
 components/ShareBanner.tsx
+components/LoadingScreen.tsx    ← LoadingScreen / LoadingOverlay / InlineSpinner
 components/modals/SaveShareModal.tsx
-components/modals/RoomCard.tsx  ← การ์ดห้อง + RoomThumb
+components/modals/RoomCard.tsx  ← การ์ดห้อง + RoomThumb + RoomCardSkeleton
 components/modals/useModalStores.ts
 components/Header.tsx
-app/globals.css             ← .save-share-* / .ss-* (hero/card/menu/linkbox/tabs) / .share-banner / .sb-*
+app/RoomTwinClient.tsx      ← prefetchSharedRoom(shareId) + LoadingScreen เป็น fallback ของ dynamic()
+app/globals.css             ← .save-share-* / .ss-* / .share-banner / .sb-* / .rt-* (Loading UI)
 ```

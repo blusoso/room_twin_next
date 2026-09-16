@@ -5,6 +5,7 @@
 //    - ทั้งใบคลิกได้ = เปิดห้อง, เมนู ⋮ = คำสั่งของเจ้าของ
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { InlineSpinner } from "@/components/LoadingScreen";
 import { absoluteTimeTh, relativeTimeTh } from "@/lib/utils/format";
 import {
   MAX_ROOM_NAME,
@@ -32,6 +33,8 @@ export interface RoomCardProps {
   /** true = แสดงคำสั่งของเจ้าของ (เปลี่ยนชื่อ / เทมเพลต / ลบ) */
   owned?: boolean;
   busy?: boolean;
+  /** true = กำลังโหลดห้องใบนี้อยู่ (โชว์ spinner ที่ปุ่ม "เปิด") */
+  opening?: boolean;
   onOpen: (room: CloudRoomSummary) => void;
   onCopyLink: (room: CloudRoomSummary) => void;
   onRename?: (room: CloudRoomSummary, name: string) => void;
@@ -44,6 +47,7 @@ export default function RoomCard({
   active = false,
   owned = false,
   busy = false,
+  opening = false,
   onOpen,
   onCopyLink,
   onRename,
@@ -77,18 +81,19 @@ export default function RoomCard({
   return (
     <div
       ref={rootRef}
-      className={`ss-card${active ? " active" : ""}`}
+      className={`ss-card${active ? " active" : ""}${opening ? " opening" : ""}`}
       role="button"
       tabIndex={0}
+      aria-busy={opening}
       aria-label={`เปิดห้อง ${room.name}`}
       onClick={() => {
-        if (!renaming && !menuOpen) onOpen(room);
+        if (!renaming && !menuOpen && !opening) onOpen(room);
       }}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          if (!renaming && !menuOpen) onOpen(room);
+          if (!renaming && !menuOpen && !opening) onOpen(room);
         }
       }}
     >
@@ -134,13 +139,13 @@ export default function RoomCard({
           <button
             type="button"
             className="ss-mini"
-            disabled={busy}
+            disabled={busy || opening}
             onClick={(e) => {
               e.stopPropagation();
               onOpen(room);
             }}
           >
-            เปิด
+            {opening ? <InlineSpinner size={12} /> : "เปิด"}
           </button>
           <button
             type="button"
@@ -210,6 +215,22 @@ export default function RoomCard({
             </button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ⭐ การ์ดโครง (skeleton) ระหว่างโหลดรายการห้อง
+ *    รูปทรงเดียวกับ .ss-card → พอข้อมูลมาจริงภาพไม่กระโดด
+ */
+export function RoomCardSkeleton() {
+  return (
+    <div className="ss-skel-card" aria-hidden="true">
+      <div className="ss-skel-thumb rt-shimmer" />
+      <div className="ss-skel-body">
+        <div className="ss-skel-bar rt-shimmer" />
+        <div className="ss-skel-bar short rt-shimmer" />
       </div>
     </div>
   );

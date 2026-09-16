@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { useSaveState } from "@/hooks/useSaveState";
 import { saveSharedAsCopy } from "@/lib/cloud/saveCopy";
+import { returnToOwnRoom } from "@/lib/cloud/returnToMine";
 import { captureRoomThumbnail } from "@/lib/three/screenshot";
 import { showToast } from "@/lib/utils/toast";
 
@@ -42,8 +43,10 @@ export default function ShareBanner() {
   };
 
   const handleBackToMine = () => {
-    // โหลดใหม่จาก "/" → useRoomTwinInit จะอ่านห้องของเจ้าของเครื่องจาก localStorage
-    window.location.assign("/");
+    // ⭐ สลับกลับห้องของตัวเองแบบ client-side — โหลดจาก localStorage แล้ว restore
+    //    (ไม่ reload ทั้งหน้า ไม่โหลด bundle ใหม่ + เปลี่ยน URL กลับ "/" ให้)
+    returnToOwnRoom();
+    showToast("กลับไปห้องของฉันแล้ว");
   };
 
   return (

@@ -3,6 +3,7 @@
 import { useCallback, useRef } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { saveToStorage } from "@/lib/state/storage";
+import { hasPendingSharedRoom } from "@/lib/cloud/sharedRoomBoot";
 import { relayoutCeilingItemsForObstacles } from "@/lib/three/ceilingPlacement";
 import type { SerializedState } from "@/lib/state/types";
 
@@ -43,7 +44,12 @@ export function useSaveState() {
 
     // ⭐ โหมด "ดูห้องที่แชร์" — ห้ามทับ localStorage ของผู้ชม
     //    (แก้ไขได้ + undo/redo ได้ แต่ต้องกด "บันทึกเป็นสำเนาของฉัน" ก่อน)
-    if (!useRoomTwin.getState().sharedRoomId) {
+    //    ⭐ ระหว่าง boot ลิงก์แชร์ (hasPendingSharedRoom) ก็ห้ามเขียนเช่นกัน
+    //    ไม่งั้นห้อง default + ประตู/หน้าต่างที่ seed ไว้จะทับห้องของเจ้าของเครื่อง
+    if (
+      !useRoomTwin.getState().sharedRoomId &&
+      !hasPendingSharedRoom()
+    ) {
       saveToStorage(state);
     }
 

@@ -919,12 +919,15 @@ lib/cloud/api.ts                  ← client fetch helpers (แนบ x-owner-to
 lib/cloud/ownerToken.ts           ← anonymous owner token (localStorage)
 lib/cloud/activeRoom.ts           ← id ของไฟล์ที่ผูกกับห้องปัจจุบัน (localStorage)
 lib/cloud/saveCopy.ts             ← saveSharedAsCopy() (บันทึกสำเนาของห้องที่แชร์)
+lib/cloud/sharedRoomBoot.ts       ← prefetchSharedRoom / retrySharedRoom / hasPendingSharedRoom / applyCloudRoom
+lib/cloud/returnToMine.ts         ← returnToOwnRoom() (กลับห้องตัวเองแบบ client-side ไม่ reload หน้า)
 lib/three/screenshot.ts           ← captureRoomThumbnail() 480x300 JPEG (ต้องมี preserveDrawingBuffer)
 
-components/modals/SaveShareModal.tsx  ← modal บันทึก/เปิด/เปลี่ยนชื่อ/ลบ/เทมเพลต/ลิงก์แชร์
-components/modals/RoomCard.tsx        ← การ์ดห้อง (RoomThumb + "แก้ไขล่าสุด" + เมนู ⋮)
+components/LoadingScreen.tsx          ← LoadingScreen / LoadingOverlay / InlineSpinner (.rt-* ใน globals.css)
+components/modals/SaveShareModal.tsx  ← modal บันทึก/เปิด/เปลี่ยนชื่อ/ลบ/เทมเพลต/ลิงก์แชร์ (โหลดรายการทีละแท็บ)
+components/modals/RoomCard.tsx        ← การ์ดห้อง (RoomThumb + "แก้ไขล่าสุด" + เมนู ⋮) + RoomCardSkeleton
 components/ShareBanner.tsx            ← แบนเนอร์โหมดดูห้องที่แชร์
-components/SharedRoomLoader.tsx       ← โหลด /r/<id> เข้า editor
+components/SharedRoomLoader.tsx       ← โหลด /r/<id> เข้า editor + รายงานสถานะ boot ให้ overlay
 app/r/[id]/page.tsx                   ← หน้าเว็บของลิงก์แชร์
 lib/state/restore.ts                  ← restoreSerializedState() ใช้ร่วม undo/redo + cloud
 ```
@@ -935,6 +938,12 @@ lib/state/restore.ts                  ← restoreSerializedState() ใช้ร�
 - ownerToken = identity แบบไม่ระบุตัวตน (ไม่มี login) → ใช้ header x-owner-token
 - state ของ cloud ทั้งหมดเป็น transient ไม่เข้า serialize/history/localStorage ของ SerializedState
 - sharedRoomId != null → useSaveState ห้ามเขียน localStorage (ของผู้ชม)
+- boot ลิงก์แชร์: prefetchSharedRoom() เริ่มที่ app/RoomTwinClient.tsx (ขนานกับการโหลด chunk)
+  → hasPendingSharedRoom() = true ทำให้ useRoomTwinInit ข้าม localStorage และ useSaveState ห้ามเขียน
+  → applyCloudRoom() (lib/cloud/sharedRoomBoot.ts) เป็นแหล่งเดียวของการเอา snapshot จากเซิร์ฟเวอร์เข้า store
+  → LoadingOverlay (components/LoadingScreen.tsx) แสดงจน apply สำเร็จ แล้ว fade-out
+- กลับจากโหมดแชร์ = returnToOwnRoom() (client-side) ไม่ reload หน้า
+- รายการห้องใน SaveShareModal โหลดทีละแท็บ (lists/loadingTab/listError แยกจาก busy)
 - normalizeSerializedState() เป็นแหล่งเดียวของ migration ทั้ง localStorage และข้อมูลจาก API
 - ไม่ bump STORAGE_KEY (serialized shape ไม่เปลี่ยน)
 - DB อยู่ data/roomtwin.db (gitignore) override path ด้วย env ROOMTWIN_DB_PATH

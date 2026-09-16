@@ -1,6 +1,6 @@
 // components/RoomTwinApp.tsx
 "use client";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Header from "./Header";
 import { Sidebar } from "./sidebar";
 import { Viewport } from "./viewport";
@@ -11,19 +11,42 @@ import {
   ZoneAddModal,
   SaveShareModal,
 } from "./modals";
-import SharedRoomLoader from "./SharedRoomLoader";
+import SharedRoomLoader, { type BootStatus } from "./SharedRoomLoader";
 import ShareBanner from "./ShareBanner";
+import { LoadingOverlay } from "./LoadingScreen";
 import { useRoomTwinInit } from "@/hooks/useRoomTwinInit";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePlacingHighlight } from "@/hooks/usePlacingHighlight";
 import { useSaveState } from "@/hooks/useSaveState";
 import { useRoomTwin } from "@/lib/state/store";
 import { restoreSnapshot } from "@/lib/state/restore";
+import { retrySharedRoom } from "@/lib/cloud/sharedRoomBoot";
+import { returnToOwnRoom } from "@/lib/cloud/returnToMine";
+import { showToast } from "@/lib/utils/toast";
 
 export default function RoomTwinApp({ shareId }: { shareId?: string }) {
   useRoomTwinInit();
   useKeyboardShortcuts();
   usePlacingHighlight();
+
+  // ⭐ สถานะ boot ของลิงก์แชร์ — แสดง overlay ทับแอปจนกว่าข้อมูลห้องจะเข้ามา
+  const [boot, setBoot] = useState<BootStatus>(() =>
+    shareId ? { phase: "loading" } : { phase: "ready" },
+  );
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const handleRetry = useCallback(() => {
+    if (!shareId) return;
+    retrySharedRoom(shareId); // ล้าง cache → loader จะยิง request ใหม่
+    setBoot({ phase: "loading" });
+    setReloadToken((n) => n + 1);
+  }, [shareId]);
+
+  const handleBackHome = useCallback(() => {
+    returnToOwnRoom();
+    setBoot({ phase: "ready" });
+    showToast("กลับไปห้องของฉันแล้ว");
+  }, []);
 
   return (
     <>
@@ -44,7 +67,21 @@ export default function RoomTwinApp({ shareId }: { shareId?: string }) {
       <HistoryRestoreListener />
       <ClosePanelsListener />
       <SwapSlotListener />
-      <SharedRoomLoader shareId={shareId} />
+      <SharedRoomLoader
+        shareId={shareId}
+        reloadToken={reloadToken}
+        onStatus={setBoot}
+      />
+      {shareId ? (
+        <LoadingOverlay
+          show={boot.phase !== "ready"}
+          error={boot.phase === "error" ? boot.message : undefined}
+          message="กำลังเปิดห้องที่แชร์…"
+          sub="ดึงข้อมูลห้องจากเซิร์ฟเวอร์"
+          onRetry={handleRetry}
+          onBackHome={handleBackHome}
+        />
+      ) : null}
     </>
   );
 }
