@@ -107,6 +107,44 @@ function parseBlockWallId(id: string): {
   return { i: parseInt(m[1]), j: parseInt(m[2]), side: m[3] };
 }
 
+function wallSideIdOf(
+  id: string,
+): "N" | "S" | "E" | "W" | null {
+  // Rect room domain ids
+  if (id === "back") return "N";
+  if (id === "front") return "S";
+  if (id === "right") return "E";
+  if (id === "side") return "W";
+
+  // Block wall domain id:
+  // bw_{i}_{j}_{NSEW}
+  const parsed = parseBlockWallId(id);
+
+  if (parsed) {
+    return parsed.side as "N" | "S" | "E" | "W";
+  }
+
+  // Merged wall:
+  // merged__bw_0_0_N__bw_1_0_N...
+  if (id.startsWith("merged__")) {
+    const memberIds = id
+      .slice("merged__".length)
+      .split("__");
+
+    for (const memberId of memberIds) {
+      const parsedMember = parseBlockWallId(memberId);
+
+      if (parsedMember) {
+        return parsedMember.side as "N" | "S" | "E" | "W";
+      }
+    }
+  }
+
+  // IMPORTANT:
+  // Never infer identity from geometry.
+  return null;
+}
+
 export function computeMergedWalls() {
   mergedWallRegistry.clear();
   if (polyWalls.length === 0) return;
@@ -418,66 +456,264 @@ export function getPolyWalls(): PolyWall[] {
 // ============================================================
 
 export function applySurface() {
-  const { room, surface } = useRoomTwin.getState();
+  const { room, surface } =
+    useRoomTwin.getState();
+
   if (!floorMat) return;
 
-  if (floorMat.map && floorMat.map.dispose) floorMat.map.dispose();
-  floorMat.map = makeFloorTexture(surface.floor, room.w, room.d, 1);
-  floorMat.map.repeat.set(room.w / 1.4, room.d / 1.4);
+  // ============================================================
+  // Floor
+  // ============================================================
+  if (
+    floorMat.map &&
+    floorMat.map.dispose
+  ) {
+    floorMat.map.dispose();
+  }
+
+  floorMat.map =
+    makeFloorTexture(
+      surface.floor,
+      room.w,
+      room.d,
+      1,
+    );
+
+  floorMat.map.repeat.set(
+    room.w / 1.4,
+    room.d / 1.4,
+  );
+
   floorMat.needsUpdate = true;
 
-  // พื้น blocks (สแลบรวม) — สลับ texture ตามที่ user เลือก
+  // ============================================================
+  // Blocks floor
+  // ============================================================
   if (blockFloorMat) {
-    const old = blockFloorMat.map;
-    blockFloorMat.map = makeBlockFloorTexture();
-    blockFloorMat.needsUpdate = true;
-    if (old) old.dispose();
-  }
+    const old =
+      blockFloorMat.map;
 
-  const cw = (id: string) =>
-    surface.walls[id] !== undefined ? surface.walls[id] : surface.wallAll;
-  const wallDirOf = (
-    w: PolyWall,
-  ): "back" | "front" | "side" | "right" =>
-    w.nz < -0.9 ? "back" : w.nz > 0.9 ? "front" : w.nx > 0.9 ? "right" : "side";
+    blockFloorMat.map =
+      makeBlockFloorTexture();
 
-  if (surface.wallUniform) {
-    wallMat.color.setHex(surface.wallAll);
-    sideWallMat.color.setHex(surface.wallAll);
-    rightWallMat.color.setHex(surface.wallAll);
-    frontWallMat.color.setHex(surface.wallAll);
-    polyWalls.forEach((w) => w.mat.color.setHex(surface.wallAll));
-  } else {
-    wallMat.color.setHex(cw("back"));
-    sideWallMat.color.setHex(cw("side"));
-    rightWallMat.color.setHex(cw("right"));
-    frontWallMat.color.setHex(cw("front"));
-    // ⭐ blocks mode: map ทิศทางของ poly wall (N→back, S→front, E→right, W→side)
-    polyWalls.forEach((w) => w.mat.color.setHex(cw(wallDirOf(w))));
-  }
+    blockFloorMat.needsUpdate =
+      true;
 
-  ceilingMat.color.setHex(surface.ceiling);
-
-  // Partitions sync
-  const partitions = useRoomTwin.getState().placedItems.filter(
-    (i) => i.productId === "partition",
-  );
-  partitions.forEach((p) => {
-    if (p.params.color !== surface.wallAll) {
-      useRoomTwin.getState().updateItem(p.uid, {
-        params: { ...p.params, color: surface.wallAll },
-      });
+    if (old) {
+      old.dispose();
     }
-    const obj = objectsByUid.get(p.uid);
-    if (!obj) return;
-    obj.traverse((child: any) => {
-      if (child.isMesh && child.material) {
-        const m = child.material as THREE.MeshStandardMaterial;
-        if (m.color && m.map === undefined) {
-          m.color.setHex(surface.wallAll);
-        }
-      }
+  }
+
+  // ============================================================
+  // Surface storage remains:
+  //
+  // back
+  // front
+  // side
+  // right
+  //
+  // These are semantic room facades.
+  // ============================================================
+  const wallColorOf =
+    (facade: WallFacadeId): number => {
+      return surface.walls[
+        facade
+      ] !== undefined
+        ? surface.walls[facade]
+        : surface.wallAll;
+    };
+
+  const setMaterialColor =
+    (
+      mat: THREE.MeshStandardMaterial,
+      color: number,
+    ) => {
+      mat.color.setHex(color);
+      mat.needsUpdate = true;
+    };
+
+  // ============================================================
+  // Uniform
+  // ============================================================
+  if (surface.wallUniform) {
+    setMaterialColor(
+      wallMat,
+      surface.wallAll,
+    );
+
+    setMaterialColor(
+      sideWallMat,
+      surface.wallAll,
+    );
+
+    setMaterialColor(
+      rightWallMat,
+      surface.wallAll,
+    );
+
+    setMaterialColor(
+      frontWallMat,
+      surface.wallAll,
+    );
+
+    polyWalls.forEach((wall) => {
+      setMaterialColor(
+        wall.mat,
+        surface.wallAll,
+      );
     });
+  }
+
+  // ============================================================
+  // Per facade
+  // ============================================================
+  else {
+    // ----------------------------------------------------------
+    // Rectangular room
+    // ----------------------------------------------------------
+    setMaterialColor(
+      wallMat,
+      wallColorOf("back"),
+    );
+
+    setMaterialColor(
+      frontWallMat,
+      wallColorOf("front"),
+    );
+
+    setMaterialColor(
+      sideWallMat,
+      wallColorOf("side"),
+    );
+
+    setMaterialColor(
+      rightWallMat,
+      wallColorOf("right"),
+    );
+
+    // ----------------------------------------------------------
+    // Blocks room
+    //
+    // IMPORTANT:
+    //
+    // Do NOT do:
+    //
+    //   nx/nz -> N/S/E/W
+    //
+    // Instead:
+    //
+    //   bw id -> topology facade
+    //
+    // Example:
+    //
+    //   bw_0_0_N -> back
+    //   bw_1_0_N -> back
+    //   bw_2_0_W -> back   <-- still back!
+    //   bw_2_1_W -> back   <-- still back!
+    //
+    // if those segments belong to the same
+    // facade arc between the same outer corners.
+    // ----------------------------------------------------------
+    polyWalls.forEach((wall) => {
+      const facade =
+        wallFacadeOf(
+          wall.id,
+        );
+
+      if (!facade) {
+        // Unknown semantic wall.
+        //
+        // Do not guess from geometry.
+        // Safe fallback.
+        setMaterialColor(
+          wall.mat,
+          surface.wallAll,
+        );
+        return;
+      }
+
+      setMaterialColor(
+        wall.mat,
+        wallColorOf(
+          facade,
+        ),
+      );
+    });
+  }
+
+  // ============================================================
+  // Ceiling
+  // ============================================================
+  setMaterialColor(
+    ceilingMat,
+    surface.ceiling,
+  );
+
+  // ============================================================
+  // Partitions sync
+  // ============================================================
+  const partitions =
+    useRoomTwin
+      .getState()
+      .placedItems
+      .filter(
+        (item) =>
+          item.productId ===
+          "partition",
+      );
+
+  partitions.forEach((item) => {
+    if (
+      item.params.color !==
+      surface.wallAll
+    ) {
+      useRoomTwin
+        .getState()
+        .updateItem(
+          item.uid,
+          {
+            params: {
+              ...item.params,
+              color:
+                surface.wallAll,
+            },
+          },
+        );
+    }
+
+    const obj =
+      objectsByUid.get(
+        item.uid,
+      );
+
+    if (!obj) return;
+
+    obj.traverse(
+      (child: any) => {
+        if (
+          !child.isMesh ||
+          !child.material
+        ) {
+          return;
+        }
+
+        const mat =
+          child.material as
+            THREE.MeshStandardMaterial;
+
+        if (
+          mat.color &&
+          mat.map === undefined
+        ) {
+          mat.color.setHex(
+            surface.wallAll,
+          );
+
+          mat.needsUpdate =
+            true;
+        }
+      },
+    );
   });
 }
 
@@ -955,6 +1191,503 @@ function traceRegionLoops(region: Set<string>): number[][][] {
   return loops;
 }
 
+type WallFacadeId =
+  | "back"
+  | "front"
+  | "side"
+  | "right";
+
+/**
+ * Semantic facade ของ "ผนังด้านหนึ่งของห้อง"
+ *
+ * IMPORTANT:
+ * - ไม่ใช่ normal
+ * - ไม่ใช่ rotation
+ * - ไม่ใช่ mesh position
+ * - ไม่ใช่ THREE geometry orientation
+ *
+ * registry นี้สร้างจาก room.blocks ซึ่งเป็น domain data
+ *
+ * หลักการ:
+ *   1. trace outer footprint เป็น polygon
+ *   2. หา 4 convex corner หลักของ bounding box
+ *   3. เดิน boundary ระหว่าง corner หลักเหล่านั้น
+ *   4. concave/notch corner ไม่ทำให้เปลี่ยน facade
+ *
+ * ตัวอย่าง:
+ *
+ *   ┌──────────────┐
+ *   │              │
+ *   │              │
+ *   │       ┌──────┘
+ *   │       │
+ *   └───────┘
+ *
+ * ผนังที่ถอยเข้าไปยังอยู่ใน facade เดิม
+ * ไม่ถูกแบ่งเป็น N/W/E/S ตาม orientation ของแต่ละ mesh
+ */
+const wallFacadeRegistry =
+  new Map<string, WallFacadeId>();
+
+function canonicalGridEdgeKey(
+  edge: GridEdge,
+): string {
+  const a = `${edge.x0},${edge.z0}`;
+  const b = `${edge.x1},${edge.z1}`;
+
+  return a < b
+    ? `${a}<->${b}`
+    : `${b}<->${a}`;
+}
+
+function wallGridEdge(
+  wallId: string,
+): GridEdge | null {
+  const parsed =
+    parseBlockWallId(wallId);
+
+  if (!parsed) return null;
+
+  const { i, j, side } = parsed;
+
+  switch (side) {
+    case "N":
+      return {
+        x0: i,
+        z0: j,
+        x1: i + 1,
+        z1: j,
+      };
+
+    case "E":
+      return {
+        x0: i + 1,
+        z0: j,
+        x1: i + 1,
+        z1: j + 1,
+      };
+
+    case "S":
+      return {
+        x0: i + 1,
+        z0: j + 1,
+        x1: i,
+        z1: j + 1,
+      };
+
+    case "W":
+      return {
+        x0: i,
+        z0: j + 1,
+        x1: i,
+        z1: j,
+      };
+
+    default:
+      return null;
+  }
+}
+
+function gridTurn(
+  prev: number[],
+  cur: number[],
+  next: number[],
+): number {
+  const ax = cur[0] - prev[0];
+  const az = cur[1] - prev[1];
+
+  const bx = next[0] - cur[0];
+  const bz = next[1] - cur[1];
+
+  return ax * bz - az * bx;
+}
+
+function nearestUnusedConvexCorner(
+  points: number[][],
+  convexIndices: number[],
+  targetX: number,
+  targetZ: number,
+  used: Set<number>,
+): number | null {
+  let bestIndex: number | null = null;
+  let bestDistance = Infinity;
+
+  for (const index of convexIndices) {
+    if (used.has(index)) continue;
+
+    const p = points[index];
+
+    const distance =
+      Math.abs(p[0] - targetX) +
+      Math.abs(p[1] - targetZ);
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  }
+
+  return bestIndex;
+}
+
+/**
+ * สร้าง mapping:
+ *
+ *   bw_i_j_N
+ *   bw_i_j_S
+ *   bw_i_j_E
+ *   bw_i_j_W
+ *
+ * -> semantic facade:
+ *
+ *   back / front / side / right
+ *
+ * โดย facade ไม่ได้หมายถึง orientation ของ segment
+ *
+ * ตัวอย่าง notch:
+ *
+ *       ┌──────────┐
+ *       │          │
+ *   ┌───┘          │
+ *   │              │
+ *   └──────────────┘
+ *
+ * segment ตรง notch อาจเปลี่ยน orientation
+ * แต่ยังอยู่ใน facade เดิม เพราะอยู่ระหว่าง
+ * outer convex corners ชุดเดียวกัน
+ */
+function rebuildWallFacadeRegistry(
+  blocks: Set<string>,
+): void {
+  wallFacadeRegistry.clear();
+
+  if (blocks.size === 0) {
+    return;
+  }
+
+  const loops =
+    traceRegionLoops(blocks);
+
+  if (loops.length === 0) {
+    return;
+  }
+
+  // ------------------------------------------------------------
+  // ใช้ outer loop ที่มีพื้นที่มากที่สุด
+  // inner hole ไม่ถือเป็นหนึ่งใน 4 facade หลัก
+  // ------------------------------------------------------------
+  let outerLoop: number[][] | null = null;
+  let outerArea = -Infinity;
+
+  for (const loop of loops) {
+    if (loop.length < 4) continue;
+
+    let area = 0;
+
+    for (
+      let i = 0;
+      i < loop.length;
+      i++
+    ) {
+      const p = loop[i];
+      const q =
+        loop[(i + 1) % loop.length];
+
+      area +=
+        p[0] * q[1] -
+        q[0] * p[1];
+    }
+
+    const absArea = Math.abs(area);
+
+    if (absArea > outerArea) {
+      outerArea = absArea;
+      outerLoop = loop;
+    }
+  }
+
+  if (!outerLoop) {
+    return;
+  }
+
+  // ------------------------------------------------------------
+  // Bounding box ของ footprint
+  // ------------------------------------------------------------
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+
+  for (const [x, z] of outerLoop) {
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minZ = Math.min(minZ, z);
+    maxZ = Math.max(maxZ, z);
+  }
+
+  // ------------------------------------------------------------
+  // หา convex corners
+  //
+  // polygon ของ traceRegionLoops() เดินแบบ CCW
+  //
+  // convex = left turn
+  // concave = right turn
+  //
+  // concave corner คือ notch corner
+  // และ "ห้าม" ใช้เป็น boundary ใหม่ของ facade
+  // ------------------------------------------------------------
+  const convexIndices: number[] = [];
+
+  for (
+    let i = 0;
+    i < outerLoop.length;
+    i++
+  ) {
+    const prev =
+      outerLoop[
+        (i - 1 + outerLoop.length) %
+          outerLoop.length
+      ];
+
+    const cur =
+      outerLoop[i];
+
+    const next =
+      outerLoop[
+        (i + 1) %
+          outerLoop.length
+      ];
+
+    const turn =
+      gridTurn(
+        prev,
+        cur,
+        next,
+      );
+
+    if (turn > 0) {
+      convexIndices.push(i);
+    }
+  }
+
+  if (convexIndices.length < 4) {
+    return;
+  }
+
+  // ------------------------------------------------------------
+  // 4 "main corners" ของห้อง
+  //
+  // สำคัญ:
+  // เราไม่ได้เลือกทุก convex corner
+  // เพราะ notch ทำให้มี convex/concave corner เพิ่ม
+  //
+  // เลือก corner ที่ใกล้ 4 มุมของ room bounding box
+  // ------------------------------------------------------------
+  const cornerTargets: Array<{
+    x: number;
+    z: number;
+    facade: WallFacadeId;
+  }> = [
+    {
+      x: minX,
+      z: minZ,
+      facade: "back",
+    },
+    {
+      x: maxX,
+      z: minZ,
+      facade: "right",
+    },
+    {
+      x: maxX,
+      z: maxZ,
+      facade: "front",
+    },
+    {
+      x: minX,
+      z: maxZ,
+      facade: "side",
+    },
+  ];
+
+  const used =
+    new Set<number>();
+
+  const anchors: Array<{
+    index: number;
+    facade: WallFacadeId;
+  }> = [];
+
+  for (const target of cornerTargets) {
+    const index =
+      nearestUnusedConvexCorner(
+        outerLoop,
+        convexIndices,
+        target.x,
+        target.z,
+        used,
+      );
+
+    if (index == null) {
+      wallFacadeRegistry.clear();
+      return;
+    }
+
+    used.add(index);
+
+    anchors.push({
+      index,
+      facade: target.facade,
+    });
+  }
+
+  if (anchors.length !== 4) {
+    wallFacadeRegistry.clear();
+    return;
+  }
+
+  // ------------------------------------------------------------
+  // ตรวจว่า anchor ทั้ง 4 ไม่ซ้ำ
+  // ------------------------------------------------------------
+  const anchorIndices =
+    new Set(
+      anchors.map((a) => a.index),
+    );
+
+  if (
+    anchorIndices.size !== 4
+  ) {
+    wallFacadeRegistry.clear();
+    return;
+  }
+
+  // ------------------------------------------------------------
+  // สร้าง edge -> wall id lookup
+  // ------------------------------------------------------------
+  const edgeToWallId =
+    new Map<string, string>();
+
+  polyWalls.forEach((wall) => {
+    const edge =
+      wallGridEdge(wall.id);
+
+    if (!edge) return;
+
+    edgeToWallId.set(
+      canonicalGridEdgeKey(edge),
+      wall.id,
+    );
+  });
+
+  if (edgeToWallId.size === 0) {
+    return;
+  }
+
+  // ------------------------------------------------------------
+  // เรียง anchors ตามลำดับที่ปรากฏบน boundary loop
+  // ------------------------------------------------------------
+  const orderedAnchors =
+    [...anchors].sort(
+      (a, b) =>
+        a.index - b.index,
+    );
+
+  // ------------------------------------------------------------
+  // เดิน arc ระหว่าง main corners
+  //
+  // concave/notch corner จะถูกเดินผ่านเฉย ๆ
+  // และยังคง facade เดิม
+  // ------------------------------------------------------------
+  for (
+    let k = 0;
+    k < orderedAnchors.length;
+    k++
+  ) {
+    const current =
+      orderedAnchors[k];
+
+    const next =
+      orderedAnchors[
+        (k + 1) %
+          orderedAnchors.length
+      ];
+
+    const facade =
+      current.facade;
+
+    let index =
+      current.index;
+
+    while (index !== next.index) {
+      const nextIndex =
+        (index + 1) %
+        outerLoop.length;
+
+      const edge: GridEdge = {
+        x0: outerLoop[index][0],
+        z0: outerLoop[index][1],
+        x1: outerLoop[nextIndex][0],
+        z1: outerLoop[nextIndex][1],
+      };
+
+      const wallId =
+        edgeToWallId.get(
+          canonicalGridEdgeKey(edge),
+        );
+
+      if (wallId) {
+        wallFacadeRegistry.set(
+          wallId,
+          facade,
+        );
+      }
+
+      index = nextIndex;
+    }
+  }
+}
+
+/**
+ * Resolve semantic facade ของ wall
+ *
+ * Rect:
+ *   back  -> back
+ *   front -> front
+ *   side  -> side
+ *   right -> right
+ *
+ * Blocks:
+ *   ใช้ topology-based registry
+ *
+ * IMPORTANT:
+ * ไม่มี geometry fallback
+ */
+function wallFacadeOf(
+  wallId: string,
+): WallFacadeId | null {
+  if (wallId === "back") {
+    return "back";
+  }
+
+  if (wallId === "front") {
+    return "front";
+  }
+
+  if (wallId === "side") {
+    return "side";
+  }
+
+  if (wallId === "right") {
+    return "right";
+  }
+
+  return (
+    wallFacadeRegistry.get(
+      wallId,
+    ) ?? null
+  );
+}
+
 // loops (index coords) → THREE.Shape ในพื้นที่โลก (x, -z)
 function shapeFromLoops(loops: number[][][], cellSize: number): THREE.Shape | null {
   const polys: { pts: THREE.Vector2[]; area: number }[] = [];
@@ -1036,113 +1769,397 @@ function addMergedFloorSlab(
 }
 
 export function buildBlocksShell() {
-  const { room } = useRoomTwin.getState();
+  const { room } =
+    useRoomTwin.getState();
+
   if (!room.blocks) return;
 
-  // Clear
-  polyWalls.forEach((w) => {
-    roomGroup.remove(w.mesh);
-    if (w.mesh.geometry) w.mesh.geometry.dispose();
-    if (w.mat) w.mat.dispose();
-    meshWallId.delete(w.mesh);
+  // ============================================================
+  // Clear old block walls
+  // ============================================================
+  polyWalls.forEach((wall) => {
+    roomGroup.remove(
+      wall.mesh,
+    );
+
+    if (wall.mesh.geometry) {
+      wall.mesh.geometry.dispose();
+    }
+
+    if (wall.mat) {
+      wall.mat.dispose();
+    }
+
+    meshWallId.delete(
+      wall.mesh,
+    );
   });
+
   polyWalls = [];
   mergedWallRegistry.clear();
+  wallFacadeRegistry.clear();
 
+  // ============================================================
+  // Hide rectangular walls
+  // ============================================================
   backWall.visible = false;
   sideWall.visible = false;
   rightWall.visible = false;
   frontWall.visible = false;
+
   ceilingMesh.visible = true;
   ceilingCollider.visible = true;
 
+  // ============================================================
+  // Clear floor / ceiling
+  // ============================================================
   clearGroup(floorGroup);
   clearGroup(ceilingGroup);
-  clearGroup(ceilingColliderGroup);
+  clearGroup(
+    ceilingColliderGroup,
+  );
 
-  setBlocksOrigin(room.blocks);
+  // ============================================================
+  // Stable block origin
+  // ============================================================
+  setBlocksOrigin(
+    room.blocks,
+  );
 
-  const cs = room.cellSize;
-  const cellGeo = new THREE.PlaneGeometry(cs, cs);
-  const levels = room.cellLevels || {};
+  const cs =
+    room.cellSize;
 
-  // Group เซลล์ตามระดับ → flood fill → region
-  const byLevel = new Map<number, Set<string>>();
-  room.blocks.forEach((k) => {
-    const lv = cellLevelOf(levels, k);
-    if (!byLevel.has(lv)) byLevel.set(lv, new Set());
-    byLevel.get(lv)!.add(k);
-  });
+  const cellGeo =
+    new THREE.PlaneGeometry(
+      cs,
+      cs,
+    );
 
-  const regionsByLevel = new Map<number, Set<string>[]>();
-  byLevel.forEach((cells, lv) => regionsByLevel.set(lv, floodFillRegions(cells)));
+  const levels =
+    room.cellLevels || {};
 
-  // ===== 1. พื้น = สแลบแผ่นเดียวต่อ region (ระดับ 0 = สแลบบาง) =====
-  regionsByLevel.forEach((regions, lv) => {
-    regions.forEach((region) => {
-      if (lv === 0) {
-        addMergedFloorSlab(region, cs, 0, BASE_SLAB);
-      } else {
-        const bottom = regionBottom(region, room.blocks!, levels);
-        addMergedFloorSlab(region, cs, bottom, lv);
+  // ============================================================
+  // Group cells by level
+  // ============================================================
+  const byLevel =
+    new Map<
+      number,
+      Set<string>
+    >();
+
+  room.blocks.forEach(
+    (key) => {
+      const level =
+        cellLevelOf(
+          levels,
+          key,
+        );
+
+      if (
+        !byLevel.has(
+          level,
+        )
+      ) {
+        byLevel.set(
+          level,
+          new Set(),
+        );
       }
-    });
-  });
 
-  // ===== 1.5 riser เฉพาะส่วนที่ bottom ของสแลบสูงกว่าเพื่อนบ้าน (mixed terrace) =====
-  regionsByLevel.forEach((regions, lv) => {
-    if (lv <= 0) return;
-    regions.forEach((region) => {
-      const B = regionBottom(region, room.blocks!, levels);
-      if (B <= 0.0005) return;
-      region.forEach((cell) => {
-        const [i, j] = cell.split(",").map(Number);
-        for (const [di, dj, side] of SIDE_DIRS) {
-          const nk = `${i + di},${j + dj}`;
-          if (region.has(nk)) continue;
-          let baseY: number;
-          if (room.blocks!.has(nk)) {
-            const nlv = cellLevelOf(levels, nk);
-            baseY = nlv === 0 ? BASE_SLAB : nlv;
+      byLevel
+        .get(level)!
+        .add(key);
+    },
+  );
+
+  // ============================================================
+  // Flood fill same-level regions
+  // ============================================================
+  const regionsByLevel =
+    new Map<
+      number,
+      Set<string>[]
+    >();
+
+  byLevel.forEach(
+    (cells, level) => {
+      regionsByLevel.set(
+        level,
+        floodFillRegions(
+          cells,
+        ),
+      );
+    },
+  );
+
+  // ============================================================
+  // 1. Floor slabs
+  // ============================================================
+  regionsByLevel.forEach(
+    (regions, level) => {
+      regions.forEach(
+        (region) => {
+          if (level === 0) {
+            addMergedFloorSlab(
+              region,
+              cs,
+              0,
+              BASE_SLAB,
+            );
           } else {
-            baseY = 0; // ขอบห้องนอกรูป
+            const bottom =
+              regionBottom(
+                region,
+                room.blocks!,
+                levels,
+              );
+
+            addMergedFloorSlab(
+              region,
+              cs,
+              bottom,
+              level,
+            );
           }
-          if (B - baseY > 0.0005) addBlockWall(i, j, side, baseY, B, true);
-        }
-      });
-    });
-  });
+        },
+      );
+    },
+  );
 
-  // ===== 2. Walls (outer เท่านั้น — riser ระหว่างระดับเกิดจากหน้าข้างสแลบ) =====
-  room.blocks.forEach((k) => {
-    const [i, j] = k.split(",").map(Number);
-    const myLevel = cellLevelOf(levels, k);
-    for (const [di, dj, side] of SIDE_DIRS) {
-      if (!room.blocks!.has(`${i + di},${j + dj}`)) {
-        addBlockWall(i, j, side, myLevel, room.h, false);
+  // ============================================================
+  // 1.5 Riser walls
+  // ============================================================
+  regionsByLevel.forEach(
+    (regions, level) => {
+      if (level <= 0) {
+        return;
       }
-    }
-  });
 
-  // ===== 3. Ceiling per cell =====
-  room.blocks.forEach((k) => {
-    const [i, j] = k.split(",").map(Number);
-    const cx = (i - _blocksOriginI) * cs;
-    const cz = (j - _blocksOriginJ) * cs;
+      regions.forEach(
+        (region) => {
+          const bottom =
+            regionBottom(
+              region,
+              room.blocks!,
+              levels,
+            );
 
-    const cm = new THREE.Mesh(cellGeo, ceilingMat);
-    cm.rotation.x = Math.PI / 2;
-    cm.position.set(cx, room.h, cz);
-    cm.userData.isCeiling = true;
-    ceilingGroup.add(cm);
+          if (
+            bottom <=
+            0.0005
+          ) {
+            return;
+          }
 
-    const cc = new THREE.Mesh(cellGeo, ceilingColliderMat);
-    cc.rotation.x = Math.PI / 2;
-    cc.position.set(cx, room.h - 0.002, cz);
-    ceilingColliderGroup.add(cc);
-  });
+          region.forEach(
+            (cell) => {
+              const [i, j] =
+                cell
+                  .split(",")
+                  .map(
+                    Number,
+                  );
 
+              for (
+                const [
+                  di,
+                  dj,
+                  side,
+                ] of SIDE_DIRS
+              ) {
+                const neighbor =
+                  `${i + di},${
+                    j + dj
+                  }`;
+
+                if (
+                  region.has(
+                    neighbor,
+                  )
+                ) {
+                  continue;
+                }
+
+                let baseY: number;
+
+                if (
+                  room.blocks!.has(
+                    neighbor,
+                  )
+                ) {
+                  const neighborLevel =
+                    cellLevelOf(
+                      levels,
+                      neighbor,
+                    );
+
+                  baseY =
+                    neighborLevel === 0
+                      ? BASE_SLAB
+                      : neighborLevel;
+                } else {
+                  baseY = 0;
+                }
+
+                if (
+                  bottom -
+                    baseY >
+                  0.0005
+                ) {
+                  addBlockWall(
+                    i,
+                    j,
+                    side,
+                    baseY,
+                    bottom,
+                    true,
+                  );
+                }
+              }
+            },
+          );
+        },
+      );
+    },
+  );
+
+  // ============================================================
+  // 2. Outer walls
+  //
+  // Keep N/S/E/W here!
+  //
+  // This is geometric construction identity,
+  // NOT color identity.
+  // ============================================================
+  room.blocks.forEach(
+    (key) => {
+      const [i, j] =
+        key
+          .split(",")
+          .map(Number);
+
+      const level =
+        cellLevelOf(
+          levels,
+          key,
+        );
+
+      for (
+        const [
+          di,
+          dj,
+          side,
+        ] of SIDE_DIRS
+      ) {
+        const neighbor =
+          `${i + di},${
+            j + dj
+          }`;
+
+        if (
+          !room.blocks!.has(
+            neighbor,
+          )
+        ) {
+          addBlockWall(
+            i,
+            j,
+            side,
+            level,
+            room.h,
+            false,
+          );
+        }
+      }
+    },
+  );
+
+  // ============================================================
+  // 3. Ceiling
+  // ============================================================
+  room.blocks.forEach(
+    (key) => {
+      const [i, j] =
+        key
+          .split(",")
+          .map(Number);
+
+      const cx =
+        (i -
+          _blocksOriginI) *
+        cs;
+
+      const cz =
+        (j -
+          _blocksOriginJ) *
+        cs;
+
+      const ceiling =
+        new THREE.Mesh(
+          cellGeo,
+          ceilingMat,
+        );
+
+      ceiling.rotation.x =
+        Math.PI / 2;
+
+      ceiling.position.set(
+        cx,
+        room.h,
+        cz,
+      );
+
+      ceiling.userData.isCeiling =
+        true;
+
+      ceilingGroup.add(
+        ceiling,
+      );
+
+      const collider =
+        new THREE.Mesh(
+          cellGeo,
+          ceilingColliderMat,
+        );
+
+      collider.rotation.x =
+        Math.PI / 2;
+
+      collider.position.set(
+        cx,
+        room.h - 0.002,
+        cz,
+      );
+
+      ceilingColliderGroup.add(
+        collider,
+      );
+    },
+  );
+
+  // ============================================================
+  // IMPORTANT:
+  //
+  // Build semantic wall-facade mapping AFTER polyWalls exist.
+  //
+  // This is the key difference from the previous implementation.
+  // ============================================================
+  rebuildWallFacadeRegistry(
+    room.blocks,
+  );
+
+  // ============================================================
+  // Geometry merging remains N/S/E/W based.
+  //
+  // This is OK:
+  //
+  // geometry direction != color identity
+  // ============================================================
   computeMergedWalls();
+
+  // ============================================================
+  // Apply colors using facade registry.
+  // ============================================================
   applySurface();
 }
 

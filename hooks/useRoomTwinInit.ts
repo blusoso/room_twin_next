@@ -44,28 +44,79 @@ export interface OpeningSnapshot {
   rotZ: number;
 }
 
-function getSideFromWallId(wallId: string): "N" | "S" | "E" | "W" | null {
-  if (wallId === "back") return "N";
-  if (wallId === "front") return "S";
-  if (wallId === "side") return "W";
-  if (wallId === "right") return "E";
-
-  const m = wallId.match(/^bw_(-?\d+)_(-?\d+)_([NSEW])$/);
-  if (m) {
-    const dir = m[3];
-    if (dir === "N") return "N";
-    if (dir === "S") return "S";
-    if (dir === "E") return "E";
-    if (dir === "W") return "W";
+function getSideFromWallId(
+  wallId: string,
+): "N" | "S" | "E" | "W" | null {
+  // ============================================================
+  // Rectangular room
+  // ============================================================
+  if (wallId === "back") {
+    return "N";
   }
 
-  const g = getWallGeom(wallId);
-  if (g) {
-    if (g.nz > 0.9) return "S";
-    if (g.nz < -0.9) return "N";
-    if (g.nx > 0.9) return "E";
-    if (g.nx < -0.9) return "W";
+  if (wallId === "front") {
+    return "S";
   }
+
+  if (wallId === "right") {
+    return "E";
+  }
+
+  if (wallId === "side") {
+    return "W";
+  }
+
+  // ============================================================
+  // Block wall
+  //
+  // bw_{i}_{j}_{side}
+  // ============================================================
+  const match = wallId.match(
+    /^bw_(-?\d+)_(-?\d+)_([NSEW])$/,
+  );
+
+  if (match) {
+    return match[3] as
+      | "N"
+      | "S"
+      | "E"
+      | "W";
+  }
+
+  // ============================================================
+  // Merged wall
+  //
+  // merged__bw_0_0_N__bw_1_0_N...
+  // ============================================================
+  if (wallId.startsWith("merged__")) {
+    const memberIds = wallId
+      .slice("merged__".length)
+      .split("__");
+
+    for (const memberId of memberIds) {
+      const memberMatch =
+        memberId.match(
+          /^bw_(-?\d+)_(-?\d+)_([NSEW])$/,
+        );
+
+      if (!memberMatch) {
+        continue;
+      }
+
+      return memberMatch[3] as
+        | "N"
+        | "S"
+        | "E"
+        | "W";
+    }
+  }
+
+  // ============================================================
+  // IMPORTANT:
+  // Do not fall back to getWallGeom().
+  //
+  // Opening identity must also be semantic.
+  // ============================================================
   return null;
 }
 
@@ -114,46 +165,117 @@ export function captureOpeningsRelative(): OpeningSnapshot[] {
   return snapshots;
 }
 
-function findBestWallForSide(side: "N" | "S" | "E" | "W"): {
+function findBestWallForSide(
+  side: "N" | "S" | "E" | "W",
+): {
   id: string;
   len: number;
   rotY: number;
 } | null {
-  const { room } = useRoomTwin.getState();
+  const { room } =
+    useRoomTwin.getState();
 
+  // ============================================================
+  // Rectangular room
+  // ============================================================
   if (room.shape === "rect") {
     const wallId =
-      side === "N" ? "back"
-      : side === "S" ? "front"
-      : side === "W" ? "side"
-      : "right";
+      side === "N"
+        ? "back"
+        : side === "S"
+          ? "front"
+          : side === "W"
+            ? "side"
+            : "right";
+
     const g = getWallGeom(wallId);
+
     if (!g) return null;
-    return { id: wallId, len: g.len, rotY: g.rotY };
+
+    return {
+      id: wallId,
+      len: g.len,
+      rotY: g.rotY,
+    };
   }
 
-  const merged = getMergedWalls();
-  if (!merged || merged.length === 0) return null;
+  // ============================================================
+  // Blocks
+  //
+  // Select walls by their member domain ids.
+  // Never use nx/nz to classify side.
+  // ============================================================
+  const merged =
+    getMergedWalls();
 
-  const candidates = merged.filter((w) => {
-    if (side === "N" && w.nz < -0.9) return true;
-    if (side === "S" && w.nz > 0.9) return true;
-    if (side === "E" && w.nx > 0.9) return true;
-    if (side === "W" && w.nx < -0.9) return true;
-    return false;
-  });
+  if (
+    merged.length === 0
+  ) {
+    return null;
+  }
 
-  if (candidates.length === 0) return null;
+  const candidates =
+    merged.filter((wall) => {
+      if (
+        !wall.memberIds ||
+        wall.memberIds.length === 0
+      ) {
+        return false;
+      }
 
-  candidates.sort((a, b) => {
-    if (Math.abs(b.len - a.len) > 0.01) return b.len - a.len;
-    return a.id.localeCompare(b.id);
-  });
+      return wall.memberIds.some(
+        (memberId) => {
+          const match =
+            memberId.match(
+              /^bw_(-?\d+)_(-?\d+)_([NSEW])$/,
+            );
+
+          if (!match) {
+            return false;
+          }
+
+          return (
+            match[3] === side
+          );
+        },
+      );
+    });
+
+  if (
+    candidates.length === 0
+  ) {
+    return null;
+  }
+
+  // Same semantic side can have multiple
+  // disconnected runs in a concave shape.
+  //
+  // For the current 4-side model, retain
+  // the existing rule of selecting the
+  // longest semantic run.
+  candidates.sort(
+    (a, b) => {
+      if (
+        Math.abs(
+          b.len - a.len,
+        ) > 0.01
+      ) {
+        return b.len - a.len;
+      }
+
+      return a.id.localeCompare(
+        b.id,
+      );
+    },
+  );
+
+  const best =
+    candidates[0];
 
   return {
-    id: candidates[0].id,
-    len: candidates[0].len,
-    rotY: candidates[0].rotY,
+    id: best.id,
+    len: best.len,
+    rotY: best.rotY,
   };
 }
 
