@@ -5,6 +5,8 @@ import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { getProductIcon } from "@/lib/data/icons";
 import { getProductThumbnail } from "@/lib/three/thumbnails";
+import { removeInstantiated } from "@/lib/three/instantiate";
+import { rebuildBaseboards } from "@/lib/three/roomShell";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
 import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { flyCameraTo } from "@/lib/three/cameraFlight";
@@ -341,7 +343,11 @@ function TreeItem({
           onClick={(e) => {
             e.stopPropagation();
             openConfirm(`ลบ "${displayName}" ออกจากห้อง?`, () => {
+              const wasDoor = item.productId === "door";
+              // ⭐ ลบ object ใน 3D ก่อน แล้วค่อยลบ state (ไม่มี sync อัตโนมัติ)
+              removeInstantiated(item.uid);
               removeItem(item.uid);
+              if (wasDoor) rebuildBaseboards();
               saveState();
             });
           }}
