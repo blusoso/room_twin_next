@@ -6,7 +6,7 @@ import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { hexOf, priceStr } from "@/lib/utils/format";
 import { applySurface } from "@/lib/three/roomShell";
 import { useSaveState } from "@/hooks/useSaveState";
-import { openConfirm } from "@/components/modals";
+import { openConfirm, openSaveShareDialog } from "@/components/modals";
 import { objectsByUid, roomGroup } from "@/lib/three/scene";
 
 export default function Header() {
@@ -17,6 +17,7 @@ export default function Header() {
   const cartExcluded = useRoomTwin((s) => s.cartExcluded);
   const history = useRoomTwin((s) => s.history);
   const historyIndex = useRoomTwin((s) => s.historyIndex);
+  const activeCloudRoomId = useRoomTwin((s) => s.activeCloudRoomId);
 
   const { saveState } = useSaveState();
 
@@ -218,6 +219,20 @@ export default function Header() {
         onClick={handleToggleRoomSize}
       >
         📐 <span className="rsp-btn-label">ขนาดห้อง</span>
+      </button>
+
+      <button
+        type="button"
+        className="reset-btn"
+        id="saveShareBtn"
+        title={
+          activeCloudRoomId
+            ? "บันทึกทับไฟล์เดิม หรือแชร์ลิงก์ให้เพื่อน"
+            : "บันทึกขึ้นเซิร์ฟเวอร์ หรือแชร์ลิงก์ให้เพื่อน"
+        }
+        onClick={openSaveShareDialog}
+      >
+        💾 <span className="rsp-btn-label">บันทึก / แชร์</span>
       </button>
 
       <button

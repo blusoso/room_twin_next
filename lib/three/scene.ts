@@ -43,7 +43,11 @@ export function initScene(holder: HTMLElement) {
   camera.far = 200;
   camera.updateProjectionMatrix();
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  // ⭐ preserveDrawingBuffer = true → อ่านภาพจาก canvas ไปทำ thumbnail ได้ตลอดเวลา
+  renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    preserveDrawingBuffer: true,
+  });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(holder.clientWidth, holder.clientHeight);
   renderer.shadowMap.enabled = true;

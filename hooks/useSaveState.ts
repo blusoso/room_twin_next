@@ -40,7 +40,12 @@ export function useSaveState() {
     relayoutCeilingItemsForObstacles();
 
     const state = serialize();
-    saveToStorage(state);
+
+    // ⭐ โหมด "ดูห้องที่แชร์" — ห้ามทับ localStorage ของผู้ชม
+    //    (แก้ไขได้ + undo/redo ได้ แต่ต้องกด "บันทึกเป็นสำเนาของฉัน" ก่อน)
+    if (!useRoomTwin.getState().sharedRoomId) {
+      saveToStorage(state);
+    }
 
     const snapshot = JSON.stringify(state);
     useRoomTwin.getState().pushHistory(snapshot);

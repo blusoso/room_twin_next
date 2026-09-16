@@ -975,3 +975,124 @@ hooks/useCatalogSearchShortcut.ts
 hooks/useKeyboardShortcuts.ts
 app/globals.css             ← .catalog-search / .catalog-filter-panel / .chip / mark.hl
 ```
+
+---
+
+# 23. Save / Share Room (backend SQLite + ลิงก์แชร์)
+
+Flow:
+
+```text
+Header 💾 บันทึก / แชร์  (#saveShareBtn)
+    ↓
+openSaveShareDialog()  (components/modals/useModalStores.ts)
+    ↓
+SaveShareModal  (components/modals/SaveShareModal.tsx)
+    ├─ การ์ด "ห้องที่กำลังแก้ไข" + ภาพ preview สดจากกล้อง 3D
+    │     captureRoomThumbnail()  (lib/three/screenshot.ts)
+    ├─ บันทึกไฟล์ใหม่  → POST /api/rooms                  → createRoom()
+    ├─ บันทึกทับ       → PUT  /api/rooms/[id]             → updateRoom()
+    ├─ เปิด / ตั้งเทมเพลต / ลบ → GET|PUT|DELETE /api/rooms
+    ├─ รายการเทมเพลต   → GET  /api/templates             → listTemplateRooms()
+    └─ ลิงก์แชร์ในกล่อง → shareUrlOf(id) = <origin>/r/<id>
+    ↓
+components/modals/RoomCard.tsx  ← การ์ดห้อง (thumbnail + "แก้ไขล่าสุด …" + เมนู ⋮)
+    ↓
+app/api/**/route.ts  (runtime = "nodejs", dynamic = "force-dynamic")
+    ↓
+lib/server/rooms.ts   (validate + repository)
+    ↓
+lib/server/db.ts      (node:sqlite built-in, data/roomtwin.db)
+```
+
+การเปิดลิงก์แชร์:
+
+```text
+/r/<id>  (app/r/[id]/page.tsx, await params)
+    ↓
+RoomTwinClient(shareId) → RoomTwinApp(shareId) → <SharedRoomLoader/>
+    ↓
+รอ storeReady (useRoomTwinInit ตั้ง true หลัง resetHistory)
+    ↓
+GET /api/rooms/<id>  → normalizeSerializedState() → restoreSerializedState()
+    ↓
+owned = true   → setActiveCloudRoomId(id) + saveToStorage()  (เปิดเป็นห้องปัจจุบัน)
+owned = false  → enterSharedRoom(id, name)                   (โหมดดูห้องแชร์)
+    ↓
+resetHistory(serializeSnapshotOf(state))
+```
+
+กติกา:
+
+```text
+⭐ ownerToken แบบไม่ระบุตัวตน — lib/cloud/ownerToken.ts (localStorage roomtwin_owner_token)
+   ส่งเป็น header x-owner-token ทุก request
+
+⭐ ระหว่าง sharedRoomId != null (ดูห้องของคนอื่น):
+   - useSaveState().saveState()  "ไม่เขียน localStorage" (ยัง pushHistory → undo/redo ใช้ได้)
+   - ผู้ชมแก้ได้ แต่ของเดิมของตัวเองไม่ถูกทับ
+   - ต้องกด "บันทึกเป็นสำเนาของฉัน" (components/ShareBanner.tsx) → POST /api/rooms
+        → exitSharedRoom() + setActiveCloudRoomId(newId) + saveToStorage()
+        → history.replaceState("/") เพื่อออกจาก URL /r/<id>
+   - "กลับไปห้องของฉัน" = window.location.assign("/") (init อ่าน localStorage เอง)
+
+⭐ restore เป็นแหล่งเดียว: lib/state/restore.ts (restoreSerializedState / restoreSnapshot)
+   RoomTwinApp.HistoryRestoreListener (undo/redo) และ SharedRoomLoader / SaveShareModal ใช้ตัวเดียวกัน
+
+⭐ normalize/migrate เป็นแหล่งเดียว: normalizeSerializedState() ใน lib/state/storage.ts
+   ใช้ทั้งตอนอ่าน localStorage และตอนรับข้อมูลจาก API
+
+⭐ ไม่แตะ SerializedState / ไม่ bump STORAGE_KEY
+   - state ใหม่ทั้งหมด (storeReady / cloudRooms / activeCloudRoomId / sharedRoomId) เป็น transient
+   - activeCloudRoomId และ ownerToken เก็บใน localStorage คนละ key (ไม่ใช่ SerializedState)
+   - DB อยู่ที่ data/roomtwin.db (override ด้วย env ROOMTWIN_DB_PATH) — ถูก gitignore
+
+⭐ เพดาน: items ≤ 500 ชิ้น, JSON ≤ 512 KB, ชื่อ ≤ 60 ตัวอักษร (lib/shared/roomShare.ts + validateRoomInput)
+
+⭐ preview (thumbnail) ของแต่ละห้อง:
+   - captureRoomThumbnail() ใน lib/three/screenshot.ts ถ่ายจาก canvas ของ Three.js
+     → ต้องมี preserveDrawingBuffer = true (ตั้งใน lib/three/scene.ts initScene)
+     → ครอปกลางจอเป็น 480x300 (8:5) JPEG คุณภาพ 0.62 (ประมาณ 15–35 KB)
+     → คืน null เมื่อถ่ายไม่ได้ (ผู้เรียกใช้ placeholder แทน และบันทึกโดยไม่มีภาพได้)
+   - เก็บเป็น data URL ในคอลัมน์ rooms.preview (TEXT NOT NULL DEFAULT '')
+     → migrate() ใน lib/server/db.ts จะ ALTER TABLE ให้ DB เก่าอัตโนมัติ
+   - isStorablePreview() ต้องเป็น data:image/ และ ≤ MAX_PREVIEW_BYTES (160 KB)
+     → ค่าที่ใช้ไม่ได้ "ไม่ทำให้ request ล้ม" เพียงถอยไปใช้ค่าเดิม (หรือ "")
+   - ส่งไปกับ CloudRoomSummary ทุกครั้ง (list/get) → ไม่มี endpoint รูปแยก
+     ยอมรับ tradeoff: รายการ 20 ห้อง ≈ 600 KB (ยังไม่ต้องทำ image endpoint)
+
+⭐ เวลา "แก้ไขล่าสุด": relativeTimeTh() / absoluteTimeTh() ใน lib/utils/format.ts
+   ใช้ updated_at จากเซิร์ฟเวอร์ คำนวณฝั่ง client
+
+⭐ บันทึกสำเนาของห้องที่แชร์: lib/cloud/saveCopy.ts → saveSharedAsCopy()
+   ใช้ร่วมกันทั้ง components/ShareBanner.tsx และ SaveShareModal
+```
+
+Inspect:
+
+```text
+app/api/rooms/route.ts
+app/api/rooms/[id]/route.ts
+app/api/templates/route.ts
+app/r/[id]/page.tsx
+lib/server/db.ts            ← node:sqlite singleton (types/node-sqlite.d.ts)
+lib/server/rooms.ts         ← validation + repository
+lib/shared/roomShare.ts     ← types / keys / limits / shareUrlOf / serializeSnapshotOf
+lib/cloud/api.ts            ← client fetch helpers
+lib/cloud/ownerToken.ts
+lib/cloud/activeRoom.ts
+lib/cloud/saveCopy.ts       ← saveSharedAsCopy (ShareBanner + modal ใช้ร่วม)
+lib/three/screenshot.ts     ← captureRoomThumbnail (ต้องมี preserveDrawingBuffer)
+lib/utils/format.ts         ← relativeTimeTh / absoluteTimeTh
+lib/state/restore.ts        ← restoreSerializedState (ใช้ร่วม undo/redo + cloud)
+lib/state/storage.ts        ← normalizeSerializedState / saveToStorage / loadFromStorage
+hooks/useSaveState.ts       ← guard: ห้ามเขียน localStorage ตอน sharedRoomId
+hooks/useRoomTwinInit.ts    ← setStoreReady / setActiveCloudRoomId
+components/SharedRoomLoader.tsx
+components/ShareBanner.tsx
+components/modals/SaveShareModal.tsx
+components/modals/RoomCard.tsx  ← การ์ดห้อง + RoomThumb
+components/modals/useModalStores.ts
+components/Header.tsx
+app/globals.css             ← .save-share-* / .ss-* (hero/card/menu/linkbox/tabs) / .share-banner / .sb-*
+```

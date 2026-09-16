@@ -23,6 +23,6 @@ const RoomTwinApp = dynamic(() => import("@/components/RoomTwinApp"), {
   ),
 });
 
-export default function RoomTwinClient() {
-  return <RoomTwinApp />;
+export default function RoomTwinClient({ shareId }: { shareId?: string }) {
+  return <RoomTwinApp shareId={shareId} />;
 }

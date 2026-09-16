@@ -7,6 +7,7 @@ import {
   loadShowAllWallsPref,
   loadMeasurePref,
 } from "@/lib/state/storage";
+import { getStoredActiveRoomId } from "@/lib/cloud/activeRoom";
 import {
   ROOM_DEFAULT,
   WALL_COLORS,
@@ -518,6 +519,10 @@ export function useRoomTwinInit() {
       },
     });
     resetHistory(snapshot);
+
+    // ⭐ ฟีเจอร์บันทึก / แชร์ห้อง — ผูกไฟล์บนเซิร์ฟเวอร์ที่เคยเปิดไว้ + ปลดล็อกให้ loader ทำงาน
+    useRoomTwin.getState().setActiveCloudRoomId(getStoredActiveRoomId());
+    useRoomTwin.getState().setStoreReady(true);
   }, []);
 }
 

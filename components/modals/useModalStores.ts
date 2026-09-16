@@ -96,6 +96,33 @@ export function openZoneAddDialog() {
   useZoneAddStore.getState().openZoneAdd();
 }
 
+// ============================================================
+// Save / Share Room Modal Store (💾 บันทึก / แชร์ห้อง)
+// ============================================================
+
+interface SaveShareState {
+  open: boolean;
+  openSaveShare: () => void;
+  closeSaveShare: () => void;
+}
+
+export const useSaveShareStore = create<SaveShareState>((set) => ({
+  open: false,
+  openSaveShare: () => set({ open: true }),
+  closeSaveShare: () => set({ open: false }),
+}));
+
+/**
+ * Helper นอก React — ใช้ได้จาก Header ฯลฯ
+ */
+export function openSaveShareDialog() {
+  useSaveShareStore.getState().openSaveShare();
+}
+
+export function closeSaveShareDialog() {
+  useSaveShareStore.getState().closeSaveShare();
+}
+
 export function closeZoneAddDialog() {
   useZoneAddStore.getState().closeZoneAdd();
 }

@@ -20,6 +20,7 @@ import type {
   SurfaceState,
   ZoneMeta,
 } from "./types";
+import type { CloudRoomSummary } from "@/lib/shared/roomShare";
 
 const MAX_HISTORY = 60;
 
@@ -137,6 +138,30 @@ export interface RoomTwinState {
   // ⭐ สถานะเปิด/ปิด Blocks Editor (transient — ไม่เข้า serialize/history)
   blocksEditorOpen: boolean;
   setBlocksEditorOpen: (open: boolean) => void;
+
+  // ============================================================
+  // ⭐ บันทึก / แชร์ห้อง (cloud) — transient ล้วน
+  //    ไม่เข้า serialize/history/localStorage และไม่กระทบ undo/redo
+  // ============================================================
+
+  /** true เมื่อ useRoomTwinInit โหลดห้องเดิมเสร็จ (ใช้ gate ตอนเปิดลิงก์แชร์) */
+  storeReady: boolean;
+  setStoreReady: (v: boolean) => void;
+
+  cloudRooms: CloudRoomSummary[];
+  cloudLoading: boolean;
+  setCloudRooms: (rooms: CloudRoomSummary[]) => void;
+  setCloudLoading: (v: boolean) => void;
+
+  /** id ของไฟล์บนเซิร์ฟเวอร์ที่ผูกกับห้องปัจจุบัน (ไว้กด "บันทึกทับ") */
+  activeCloudRoomId: string | null;
+  setActiveCloudRoomId: (id: string | null) => void;
+
+  /** กำลังดูห้องที่คนอื่นแชร์มา → ระงับการเขียน localStorage จนกว่าจะบันทึกเป็นสำเนา */
+  sharedRoomId: string | null;
+  sharedRoomName: string | null;
+  enterSharedRoom: (id: string, name: string) => void;
+  exitSharedRoom: () => void;
 
   resetAll: () => void;
 }
@@ -570,6 +595,31 @@ export const useRoomTwin = create<RoomTwinState>()(
 
     blocksEditorOpen: false,
     setBlocksEditorOpen: (open) => set({ blocksEditorOpen: open }),
+
+    // ============================================================
+    // บันทึก / แชร์ห้อง (cloud) — transient
+    // ============================================================
+    storeReady: false,
+    setStoreReady: (v) => set({ storeReady: v }),
+
+    cloudRooms: [],
+    cloudLoading: false,
+    setCloudRooms: (rooms) => set({ cloudRooms: rooms }),
+    setCloudLoading: (v) => set({ cloudLoading: v }),
+
+    activeCloudRoomId: null,
+    setActiveCloudRoomId: (id) => set({ activeCloudRoomId: id }),
+
+    sharedRoomId: null,
+    sharedRoomName: null,
+    enterSharedRoom: (id, name) =>
+      set({
+        sharedRoomId: id,
+        sharedRoomName: name,
+        activeCloudRoomId: null,
+      }),
+    exitSharedRoom: () =>
+      set({ sharedRoomId: null, sharedRoomName: null }),
 
     // ============================================================
     // Reset

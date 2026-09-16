@@ -81,6 +81,43 @@ function sanitizeMountLinks(state: SerializedState): boolean {
   return changed;
 }
 
+/**
+ * ⭐ Normalize/migrate SerializedState ให้เป็นรูปปัจจุบัน
+ *
+ *    ใช้ร่วมกัน 2 ทาง:
+ *      - loadFromStorage() : อ่านจาก localStorage
+ *      - ข้อมูลจาก API     : ห้องที่โหลดจากเซิร์ฟเวอร์ / ลิงก์แชร์
+ *    เพื่อไม่ให้ migration แตกเป็นสองชุด
+ *
+ * @returns state ที่ normalize แล้ว + changed = true ถ้ามีการแก้ข้อมูลจริง (ต้องเขียนกลับ)
+ */
+export function normalizeSerializedState(parsed: SerializedState): {
+  state: SerializedState;
+  changed: boolean;
+} {
+  let changed = false;
+
+  // ⭐ Migration
+  if (parsed.room) {
+    if (!Array.isArray(parsed.room.blocks) && parsed.room.blocks) {
+      // fine
+    }
+    if (!parsed.room.cellLevels) {
+      (parsed.room as any).cellLevels = {};
+    }
+    // Remove old floors field
+    delete (parsed.room as any).floors;
+  }
+
+  // ⭐ Migration: โครงสร้าง/ม่าน & แอร์ ห้ามอยู่ในโซน
+  if (stripExcludedZoneMembership(parsed)) changed = true;
+
+  // ⭐ Migration: link การแขวนกับพื้นผิวไอเทมอื่น (mountUid/mountFace)
+  if (sanitizeMountLinks(parsed)) changed = true;
+
+  return { state: parsed, changed };
+}
+
 export function loadFromStorage(): SerializedState | null {
   if (typeof window === "undefined") return null;
   try {
@@ -101,36 +138,22 @@ export function loadFromStorage(): SerializedState | null {
     const parsed = JSON.parse(raw) as SerializedState;
     if (!parsed || typeof parsed !== "object") return null;
 
-    // ⭐ Migration
-    if (parsed.room) {
-      if (!Array.isArray(parsed.room.blocks) && parsed.room.blocks) {
-        // fine
-      }
-      if (!parsed.room.cellLevels) {
-        (parsed.room as any).cellLevels = {};
-      }
-      // Remove old floors field
-      delete (parsed.room as any).floors;
-    }
-
-    // ⭐ Migration: โครงสร้าง/ม่าน & แอร์ ห้ามอยู่ในโซน
-    if (stripExcludedZoneMembership(parsed)) migrated = true;
-
-    // ⭐ Migration: link การแขวนกับพื้นผิวไอเทมอื่น (mountUid/mountFace)
-    if (sanitizeMountLinks(parsed)) migrated = true;
+    const normalized = normalizeSerializedState(parsed);
+    const state = normalized.state;
+    if (normalized.changed) migrated = true;
 
     if (migrated) {
       // เขียนกลับ key ใหม่ก่อน — สำเร็จแล้วค่อยทิ้ง key เดิม
       // ถ้าเขียนไม่ได้ (quota/blocked) ยังคืน state ที่ normalize แล้วและคง key เดิมไว้ (migrate ซ้ำได้)
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         LEGACY_STORAGE_KEYS.forEach((k) => localStorage.removeItem(k));
       } catch (e) {
         /* ignore — ปล่อยให้ migrate รอบหน้า */
       }
     }
 
-    return parsed;
+    return state;
   } catch (e) {
     return null;
   }

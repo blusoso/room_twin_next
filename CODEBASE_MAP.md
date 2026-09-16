@@ -863,3 +863,47 @@ undo/redo remains correct when applicable
 ```
 
 Do not stop after the directly visible UI behavior works.
+
+---
+
+# 27. Save / Share Room (backend + share link)
+
+```text
+app/api/rooms/route.ts            ← GET (รายการของเจ้าของ) / POST (บันทึกใหม่)
+app/api/rooms/[id]/route.ts       ← GET (สาธารณะ) / PUT / DELETE (เจ้าของเท่านั้น)
+app/api/templates/route.ts        ← GET เทมเพลตสาธารณะ
+
+lib/server/db.ts                  ← SQLite ผ่าน node:sqlite (built-in) — data/roomtwin.db
+lib/server/rooms.ts               ← validateRoomInput() + repository
+types/node-sqlite.d.ts            ← type shim ของ node:sqlite (ลบได้เมื่อ @types/node >= 22)
+
+lib/shared/roomShare.ts           ← types/keys/limits/shareUrlOf/serializeSnapshotOf/isStorablePreview (client+server)
+lib/cloud/api.ts                  ← client fetch helpers (แนบ x-owner-token)
+lib/cloud/ownerToken.ts           ← anonymous owner token (localStorage)
+lib/cloud/activeRoom.ts           ← id ของไฟล์ที่ผูกกับห้องปัจจุบัน (localStorage)
+lib/cloud/saveCopy.ts             ← saveSharedAsCopy() (บันทึกสำเนาของห้องที่แชร์)
+lib/three/screenshot.ts           ← captureRoomThumbnail() 480x300 JPEG (ต้องมี preserveDrawingBuffer)
+
+components/modals/SaveShareModal.tsx  ← modal บันทึก/เปิด/เปลี่ยนชื่อ/ลบ/เทมเพลต/ลิงก์แชร์
+components/modals/RoomCard.tsx        ← การ์ดห้อง (RoomThumb + "แก้ไขล่าสุด" + เมนู ⋮)
+components/ShareBanner.tsx            ← แบนเนอร์โหมดดูห้องที่แชร์
+components/SharedRoomLoader.tsx       ← โหลด /r/<id> เข้า editor
+app/r/[id]/page.tsx                   ← หน้าเว็บของลิงก์แชร์
+lib/state/restore.ts                  ← restoreSerializedState() ใช้ร่วม undo/redo + cloud
+```
+
+กติกา:
+
+```text
+- ownerToken = identity แบบไม่ระบุตัวตน (ไม่มี login) → ใช้ header x-owner-token
+- state ของ cloud ทั้งหมดเป็น transient ไม่เข้า serialize/history/localStorage ของ SerializedState
+- sharedRoomId != null → useSaveState ห้ามเขียน localStorage (ของผู้ชม)
+- normalizeSerializedState() เป็นแหล่งเดียวของ migration ทั้ง localStorage และข้อมูลจาก API
+- ไม่ bump STORAGE_KEY (serialized shape ไม่เปลี่ยน)
+- DB อยู่ data/roomtwin.db (gitignore) override path ด้วย env ROOMTWIN_DB_PATH
+- rooms.preview = data URL ของ thumbnail (TEXT DEFAULT '')
+    migrate() ใน lib/server/db.ts ALTER TABLE ให้ DB เก่าอัตโนมัติ
+    ค่า preview ที่ใช้ไม่ได้ไม่ทำให้ request ล้ม (ถอยไปใช้ค่าเดิม / "")
+    ส่งมากับทุก summary (list/get) — ยังไม่มี image endpoint แยก (tradeoff ที่ยอมรับ)
+```
+

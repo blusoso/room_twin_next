@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 lib/three/floorGizmo.ts
+
+# local SQLite database (save/share rooms)
+/data/

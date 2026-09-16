@@ -5,24 +5,22 @@ import Header from "./Header";
 import { Sidebar } from "./sidebar";
 import { Viewport } from "./viewport";
 import { CartDrawer } from "./cart";
-import { ConfirmModal, ZoneEditModal, ZoneAddModal } from "./modals";
+import {
+  ConfirmModal,
+  ZoneEditModal,
+  ZoneAddModal,
+  SaveShareModal,
+} from "./modals";
+import SharedRoomLoader from "./SharedRoomLoader";
+import ShareBanner from "./ShareBanner";
 import { useRoomTwinInit } from "@/hooks/useRoomTwinInit";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePlacingHighlight } from "@/hooks/usePlacingHighlight";
 import { useSaveState } from "@/hooks/useSaveState";
 import { useRoomTwin } from "@/lib/state/store";
-import { reinstantiateItem, removeInstantiated } from "@/lib/three/instantiate";
-import { instantiate } from "@/lib/three/instantiate";
-import { resolveRestHeights } from "@/lib/three/placement";
-import {
-  rebuildBaseboards,
-  applySurface,
-  rebuildRoomShell,
-} from "@/lib/three/roomShell";
-import { relayoutCeilingItemsForObstacles } from "@/lib/three/ceilingPlacement";
-import { WALL_COLORS, CELL_SIZE } from "@/lib/data/constants";
+import { restoreSnapshot } from "@/lib/state/restore";
 
-export default function RoomTwinApp() {
+export default function RoomTwinApp({ shareId }: { shareId?: string }) {
   useRoomTwinInit();
   useKeyboardShortcuts();
   usePlacingHighlight();
@@ -30,6 +28,7 @@ export default function RoomTwinApp() {
   return (
     <>
       <Header />
+      <ShareBanner />
       <div className="layout">
         <Sidebar />
         <Viewport />
@@ -38,12 +37,14 @@ export default function RoomTwinApp() {
       <ConfirmModal />
       <ZoneEditModal />
       <ZoneAddModal />
+      <SaveShareModal />
       <div className="rotate-badge" id="rotateBadge">
         0°
       </div>
       <HistoryRestoreListener />
       <ClosePanelsListener />
       <SwapSlotListener />
+      <SharedRoomLoader shareId={shareId} />
     </>
   );
 }
@@ -66,75 +67,6 @@ function HistoryRestoreListener() {
   }, []);
 
   return null;
-}
-
-function restoreSnapshot(snapshotJson: string) {
-  try {
-    const state = JSON.parse(snapshotJson);
-    const store = useRoomTwin.getState();
-
-    // 1. ลบ Three.js objects ทั้งหมด
-    store.placedItems.forEach((item) => {
-      removeInstantiated(item.uid);
-    });
-
-    // 2. Restore state
-    store.closeItemPanel();
-    store.deselectZone();
-    store.setCustomizeTarget(null);
-    store.setSwapTarget(null);
-    store.setPendingZoneChooser(null);
-
-    // Room
-    store.setRoom({
-      w: state.room?.w ?? 4.2,
-      d: state.room?.d ?? 3.6,
-      h: state.room?.h ?? 2.6,
-      shape: state.room?.shape || "rect",
-      cellSize: state.room?.cellSize || CELL_SIZE,
-      blocks: state.room?.blocks ? new Set(state.room.blocks) : null,
-      // ⭐ New: cellLevels
-      cellLevels: state.room?.cellLevels || {},
-    });
-
-    // Surface
-    store.setSurface({
-      floor: state.surface?.floor ?? "wood",
-      wallUniform: state.surface?.wallUniform !== false,
-      wallAll: state.surface?.wallAll ?? WALL_COLORS[0],
-      walls: state.surface?.walls || {},
-      ceiling: state.surface?.ceiling ?? 0xf7f3ea,
-    });
-
-    // Wall index
-    if (typeof state.wall === "number") {
-      store.setCurrentWallIdx(state.wall);
-    }
-
-    // Zone meta
-    store.zoneMeta = new Map(
-      Array.isArray(state.zoneMeta) ? state.zoneMeta : [],
-    );
-
-    // Items
-    const items = Array.isArray(state.items) ? state.items : [];
-    store.replaceItems(items);
-
-    // 3. Rebuild scene
-    rebuildRoomShell();
-    applySurface();
-
-    // 4. Re-instantiate items
-    items.forEach((item: any) => {
-      instantiate(item);
-    });
-
-    resolveRestHeights();
-    relayoutCeilingItemsForObstacles();
-    rebuildBaseboards();
-  } catch (err) {
-    console.error("Failed to restore snapshot:", err);
-  }
 }
 
 // ============================================================
