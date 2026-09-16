@@ -30,6 +30,7 @@ export function useSaveState() {
         shape: s.room.shape,
         blocks: s.room.blocks ? [...s.room.blocks] : null,
         cellSize: s.room.cellSize,
+        cellLevels: s.room.cellLevels,
       },
     };
   }, []);

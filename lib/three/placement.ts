@@ -1,5 +1,6 @@
 // lib/three/placement.ts
 import * as THREE from "three";
+import { findFloorYAt } from "./roomShell";
 import { surfaceColliders } from "./scene";
 import { useRoomTwin } from "@/lib/state/store";
 import { GRID } from "@/lib/data/constants";
@@ -225,7 +226,8 @@ export function resolveRestHeights() {
   const { placedItems, updateItem } = useRoomTwin.getState();
   const resolved = new Map<string, number>();
   placedItems.forEach((i) => {
-    if (!i.wallMount && !i.ceilingMount && !i.parentUid) resolved.set(i.uid, 0);
+    if (!i.wallMount && !i.ceilingMount && !i.parentUid)
+      resolved.set(i.uid, findFloorYAt(i.x!, i.z!));
   });
 
   let ch = true;

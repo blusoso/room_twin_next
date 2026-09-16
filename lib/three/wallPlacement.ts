@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { WALL_MARGIN, WALL_V_MIN, WALL_OUTWARD } from "@/lib/data/constants";
 import { useRoomTwin } from "@/lib/state/store";
-import { getWallGeom, wallSpan } from "./roomShell";
+import { getWallGeom, wallSpan, findFloorYAt } from "./roomShell";
 import { raycaster, pointerNDC, renderer, camera, meshWallId } from "./scene";
 
 export function wallFootprint(dimsLike: any, rotZ: number | undefined) {
@@ -22,8 +22,11 @@ export function clampWallPosition(
   const mnU = -span / 2 + WALL_MARGIN + hu;
   const mxU = span / 2 - WALL_MARGIN - hu;
   let v2: number;
-  if (ground) v2 = hv;
-  else {
+  if (ground) {
+    // ⭐ ground-anchor (ประตู/หน้าต่าง) — resting บนสแลบ (รังสียิงสะท้อน -> top ของพื้น/บล็อกยก)
+    const wp = wallPointXZ(id, u, WALL_OUTWARD);
+    v2 = findFloorYAt(wp.x, wp.z) + hv;
+  } else {
     const vMax = room.h - 0.15;
     const mnV = WALL_V_MIN + hv;
     const mxV = vMax - hv;

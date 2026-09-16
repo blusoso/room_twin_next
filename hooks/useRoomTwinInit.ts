@@ -212,6 +212,90 @@ export function restoreOpeningsRelative(snapshots: OpeningSnapshot[]): void {
 }
 
 // ============================================================
+// ⭐ capture/remap สำหรับ wall items ทั้งหมด (ไม่จำกัดเฉพาะประตู/หน้าต่าง)
+//    ใช้แทนการ purge ใน BlocksEditor.handleApply — ของติดผนังไม่หายตอนแก้โครงสร้าง
+// ============================================================
+
+export function captureWallItems(): OpeningSnapshot[] {
+  const store = useRoomTwin.getState();
+  const snapshots: OpeningSnapshot[] = [];
+
+  store.placedItems.forEach((item) => {
+    if (!item.wallMount) return;
+    if (!item.wallId) return;
+    const side = getSideFromWallId(item.wallId);
+    if (!side) return;
+
+    snapshots.push({
+      uid: item.uid,
+      productId: item.productId,
+      params: JSON.parse(JSON.stringify(item.params)),
+      themeOverride: item.themeOverride,
+      displayName: item.displayName,
+      side,
+      relativeU: computeRelativeU(item),
+      v: item.v || 0,
+      rotZ: item.rotZ || 0,
+    });
+  });
+  return snapshots;
+}
+
+export function remapOrphanedWallItems(snapshots: OpeningSnapshot[]): void {
+  const store = useRoomTwin.getState();
+
+  snapshots.forEach((snap) => {
+    const item = store.placedItems.find((i) => i.uid === snap.uid);
+    if (!item) return;
+
+    // ⭐ กำแพงเดิมยังอยู่ → ปล่อยไว้ตำแหน่งเดิม (ระดับพื้น/โครงสร้างไม่แตะต้อง)
+    if (item.wallId && getWallGeom(item.wallId)) {
+      const obj = objectsByUid.get(item.uid);
+      if (obj) {
+        const p = wallPointXZ(item.wallId, item.u || 0, WALL_OUTWARD);
+        obj.position.set(p.x, item.v || 0, p.z);
+        obj.rotation.y = item.rotY || 0;
+      }
+      return;
+    }
+
+    // กำแพงหายจริง → remap ไปด้านเดียวกันที่ยาวที่สุด
+    const wall = findBestWallForSide(snap.side);
+    if (!wall) return;
+    const product = PRODUCT_BY_ID.get(item.productId);
+    if (!product) return;
+
+    const newU = snap.relativeU * wall.len - wall.len / 2;
+    const { halfU, halfV } = wallFootprint(item.params, snap.rotZ || 0);
+    const c = resolveWallPlacement(
+      item.uid,
+      wall.id,
+      newU,
+      snap.v,
+      halfU,
+      halfV,
+      product.groundAnchor || false,
+    );
+
+    store.updateItem(item.uid, {
+      wallId: wall.id,
+      u: c.u,
+      v: c.v,
+      rotY: wall.rotY,
+    });
+
+    const obj = objectsByUid.get(item.uid);
+    if (obj) {
+      const p = wallPointXZ(wall.id, c.u, WALL_OUTWARD);
+      obj.position.set(p.x, c.v, p.z);
+      obj.rotation.y = wall.rotY;
+    }
+  });
+
+  rebuildBaseboards();
+}
+
+// ============================================================
 // useRoomTwinInit
 // ============================================================
 

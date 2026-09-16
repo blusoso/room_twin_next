@@ -27,7 +27,7 @@ import {
   wallItemWorldXZ,
 } from "@/lib/three/wallPlacement";
 import { resolveCeilingPlacement } from "@/lib/three/ceilingPlacement";
-import { getWallRotY, rebuildBaseboards } from "@/lib/three/roomShell";
+import { getWallRotY, rebuildBaseboards, findFloorYAt } from "@/lib/three/roomShell";
 import {
   hitTestGizmoHandle,
   beginGizmoRotate,
@@ -395,7 +395,7 @@ export function usePointerInteraction() {
         const ox = item.x!;
         const oz = item.z!;
         applyTransformToDescendants(item.uid, ox, oz, c.x, c.z, 0);
-        const restY = computeRestY(hostUid);
+        const restY = hostUid ? computeRestY(hostUid) : findFloorYAt(c.x, c.z);
         updateItem(item.uid, {
           x: c.x,
           z: c.z,

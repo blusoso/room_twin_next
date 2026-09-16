@@ -12,7 +12,7 @@ import {
   meshWallId,
   objectsByUid,
 } from "./scene";
-import { makeFloorTexture } from "./surfaceTextures";
+import { makeFloorTexture, makeFloorCanvas } from "./surfaceTextures";
 import {
   WALL_COLORS,
   WALL_LABEL_FULL,
@@ -165,20 +165,20 @@ function registerMergedWall(
   let rotY: number;
 
   if (side === "N") {
-    cx = ((first.i + last.i) / 2) * cs;
-    cz = (first.j - 0.5) * cs;
+    cx = ((first.i + last.i) / 2 - _blocksOriginI) * cs;
+    cz = (first.j - 0.5 - _blocksOriginJ) * cs;
     dx = 1; dz = 0; nx = 0; nz = -1; rotY = 0;
   } else if (side === "S") {
-    cx = ((first.i + last.i) / 2) * cs;
-    cz = (first.j + 0.5) * cs;
+    cx = ((first.i + last.i) / 2 - _blocksOriginI) * cs;
+    cz = (first.j + 0.5 - _blocksOriginJ) * cs;
     dx = 1; dz = 0; nx = 0; nz = 1; rotY = Math.PI;
   } else if (side === "E") {
-    cx = (first.i + 0.5) * cs;
-    cz = ((first.j + last.j) / 2) * cs;
+    cx = (first.i + 0.5 - _blocksOriginI) * cs;
+    cz = ((first.j + last.j) / 2 - _blocksOriginJ) * cs;
     dx = 0; dz = 1; nx = 1; nz = 0; rotY = -Math.PI / 2;
   } else {
-    cx = (first.i - 0.5) * cs;
-    cz = ((first.j + last.j) / 2) * cs;
+    cx = (first.i - 0.5 - _blocksOriginI) * cs;
+    cz = ((first.j + last.j) / 2 - _blocksOriginJ) * cs;
     dx = 0; dz = 1; nx = -1; nz = 0; rotY = Math.PI / 2;
   }
 
@@ -424,6 +424,14 @@ export function applySurface() {
   floorMat.map = makeFloorTexture(surface.floor, room.w, room.d, 1);
   floorMat.map.repeat.set(room.w / 1.4, room.d / 1.4);
   floorMat.needsUpdate = true;
+
+  // พื้น blocks (สแลบรวม) — สลับ texture ตามที่ user เลือก
+  if (blockFloorMat) {
+    const old = blockFloorMat.map;
+    blockFloorMat.map = makeBlockFloorTexture();
+    blockFloorMat.needsUpdate = true;
+    if (old) old.dispose();
+  }
 
   const cw = (id: string) =>
     surface.walls[id] !== undefined ? surface.walls[id] : surface.wallAll;
@@ -765,15 +773,259 @@ export function clearGroup(g: THREE.Group) {
 }
 
 // ============================================================
-// ⭐ buildBlocksShell — ใหม่ (voxel with levels)
+// ⭐ buildBlocksShell — voxel with levels (พื้นรวมเป็นสแลบเดียว)
 // ============================================================
 
-const LEVEL_COLOR_LOW = new THREE.Color(0xe0d4bc);
-const LEVEL_COLOR_HIGH = new THREE.Color(0xa8895a);
+const FLOOR_TILE = 1.4; // ลายพื้น 1 แผ่น ≈ 1.4 ม. (ตรงกับ applySurface)
+const BASE_SLAB = 0.02; // ความหนาสแลบพื้นระดับ 0
 
-function levelColor(y: number): THREE.Color {
-  const t = Math.max(0, Math.min(1, y / 1.5));
-  return LEVEL_COLOR_LOW.clone().lerp(LEVEL_COLOR_HIGH, t);
+// ⭐ ศูนย์กลางบล็อก (bbox center ในหน่วย index) — ยึด origin (0,0) เหมือน rect mode
+//    ทำให้แก้โครงสร้าง/ระดับพื้นไม่ทำให้ห้องทั้งหลังเลื่อน
+let _blocksOriginI = 0;
+let _blocksOriginJ = 0;
+
+function setBlocksOrigin(blocks: Set<string>): void {
+  let minI = Infinity, maxI = -Infinity, minJ = Infinity, maxJ = -Infinity;
+  blocks.forEach((k) => {
+    const [i, j] = k.split(",").map(Number);
+    if (i < minI) minI = i;
+    if (i > maxI) maxI = i;
+    if (j < minJ) minJ = j;
+    if (j > maxJ) maxJ = j;
+  });
+  _blocksOriginI = (minI + maxI) / 2;
+  _blocksOriginJ = (minJ + maxJ) / 2;
+}
+
+export let blockFloorMat: THREE.MeshStandardMaterial | null = null;
+
+function makeBlockFloorTexture(): THREE.CanvasTexture {
+  const { surface } = useRoomTwin.getState();
+  const tex = new THREE.CanvasTexture(makeFloorCanvas(surface.floor, 512));
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, 1);
+  return tex;
+}
+
+function ensureBlockFloorMat(): THREE.MeshStandardMaterial {
+  if (!blockFloorMat) {
+    blockFloorMat = new THREE.MeshStandardMaterial({
+      map: makeBlockFloorTexture(),
+      roughness: 0.85,
+    });
+  }
+  return blockFloorMat;
+}
+
+function cellLevelOf(levels: Record<string, number>, key: string): number {
+  return levels[key] ?? 0;
+}
+
+// 4-connectivity flood fill: เซลล์ระดับเดียวกันที่ต่อเนื่องกัน → 1 region
+function floodFillRegions(cells: Set<string>): Set<string>[] {
+  const visited = new Set<string>();
+  const regions: Set<string>[] = [];
+  for (const start of cells) {
+    if (visited.has(start)) continue;
+    const region = new Set<string>();
+    const stack = [start];
+    while (stack.length) {
+      const k = stack.pop()!;
+      if (region.has(k)) continue;
+      region.add(k);
+      visited.add(k);
+      const [i, j] = k.split(",").map(Number);
+      for (const [di, dj] of NEIGHBOR_OFFSETS) {
+        const nk = `${i + di},${j + dj}`;
+        if (cells.has(nk) && !region.has(nk)) stack.push(nk);
+      }
+    }
+    regions.push(region);
+  }
+  return regions;
+}
+
+export const NEIGHBOR_OFFSETS: ReadonlyArray<readonly [number, number]> = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
+// bottom ของสแลบ region ระดับ L (>0):
+//   - มีเพื่อนบ้านต่ำกว่า → MAX(BASE_SLAB, ระดับต่ำสุดที่สูงสุด)
+//   - ไม่มีเพื่อนบ้านต่ำกว่าเลย (ทั้งห้องยก) → 0 (หน้าข้างเต็มความสูงจากพื้น)
+function regionBottom(
+  region: Set<string>,
+  blocks: Set<string>,
+  levels: Record<string, number>,
+): number {
+  let hasLower = false;
+  let maxLower = 0;
+  for (const k of region) {
+    const [i, j] = k.split(",").map(Number);
+    for (const [di, dj] of NEIGHBOR_OFFSETS) {
+      const nk = `${i + di},${j + dj}`;
+      if (!blocks.has(nk) || region.has(nk)) continue;
+      const lv = cellLevelOf(levels, nk);
+      if (lv < cellLevelOf(levels, k)) {
+        hasLower = true;
+        if (lv > maxLower) maxLower = lv;
+      }
+    }
+  }
+  if (!hasLower) return 0;
+  return Math.max(BASE_SLAB, maxLower);
+}
+
+type GridEdge = { x0: number; z0: number; x1: number; z1: number };
+
+function cellBoundaryEdges(cell: string, region: Set<string>): GridEdge[] {
+  const [i, j] = cell.split(",").map(Number);
+  const has = (a: number, b: number) => region.has(`${a},${b}`);
+  const out: GridEdge[] = [];
+  // เดินตามขอบเซลล์แบบทวนเข็ม (interior ของ region อยู่ซ้ายตลอด)
+  if (!has(i, j - 1)) out.push({ x0: i, z0: j, x1: i + 1, z1: j });
+  if (!has(i + 1, j)) out.push({ x0: i + 1, z0: j, x1: i + 1, z1: j + 1 });
+  if (!has(i, j + 1)) out.push({ x0: i + 1, z0: j + 1, x1: i, z1: j + 1 });
+  if (!has(i - 1, j)) out.push({ x0: i, z0: j + 1, x1: i, z1: j });
+  return out;
+}
+
+const edgeKey = (e: GridEdge) => `${e.x0},${e.z0}->${e.x1},${e.z1}`;
+
+// trace ขอบเขต region (index coords) → loops (outer + holes) ไม่มีขอบภายใน
+function traceRegionLoops(region: Set<string>): number[][][] {
+  const remaining = new Map<string, GridEdge>();
+  const byStart = new Map<string, GridEdge[]>();
+  for (const cell of region) {
+    for (const e of cellBoundaryEdges(cell, region)) {
+      const k = edgeKey(e);
+      if (remaining.has(k)) continue;
+      remaining.set(k, e);
+      const sk = `${e.x0},${e.z0}`;
+      if (!byStart.has(sk)) byStart.set(sk, []);
+      byStart.get(sk)!.push(e);
+    }
+  }
+
+  const loops: number[][][] = [];
+  let guard = 0;
+  while (remaining.size > 0 && guard++ < 1e6) {
+    const first = remaining.values().next().value as GridEdge;
+    const loop: number[][] = [];
+    let cur: GridEdge = first;
+    let curKey = edgeKey(cur);
+    while (remaining.has(curKey)) {
+      remaining.delete(curKey);
+      loop.push([cur.x0, cur.z0]);
+      const cands = (byStart.get(`${cur.x1},${cur.z1}`) || []).filter((e) =>
+        remaining.has(edgeKey(e)),
+      );
+      if (cands.length === 0) break;
+      let next = cands[0];
+      if (cands.length > 1) {
+        // fallback: เลือกทางที่เลี้ยวซ้ายสุด (ปกติมีตัวเลือกเดียว)
+        let best = -Infinity;
+        const px = cur.x1 - cur.x0;
+        const pz = cur.z1 - cur.z0;
+        for (const c of cands) {
+          const dx = c.x1 - c.x0;
+          const dz = c.z1 - c.z0;
+          const ang = Math.atan2(px * dz - pz * dx, px * dx + pz * dz);
+          if (ang > best) {
+            best = ang;
+            next = c;
+          }
+        }
+      }
+      cur = next;
+      curKey = edgeKey(cur);
+      if (loop.find((p) => p[0] === cur.x0 && p[1] === cur.z0)) break;
+    }
+    loops.push(loop);
+  }
+  return loops;
+}
+
+// loops (index coords) → THREE.Shape ในพื้นที่โลก (x, -z)
+function shapeFromLoops(loops: number[][][], cellSize: number): THREE.Shape | null {
+  const polys: { pts: THREE.Vector2[]; area: number }[] = [];
+  for (const loop of loops) {
+    const pts: THREE.Vector2[] = [];
+    for (const [ix, iz] of loop)
+      pts.push(
+        new THREE.Vector2(
+          (ix - 0.5 - _blocksOriginI) * cellSize,
+          -(iz - 0.5 - _blocksOriginJ) * cellSize,
+        ),
+      );
+    if (pts.length < 3) continue;
+    if (pts[0].distanceTo(pts[pts.length - 1]) < 1e-6) pts.pop();
+    if (pts.length < 3) continue;
+    let area = 0;
+    for (let k = 0; k < pts.length; k++) {
+      const p = pts[k];
+      const q = pts[(k + 1) % pts.length];
+      area += p.x * q.y - q.x * p.y;
+    }
+    polys.push({ pts, area: area / 2 });
+  }
+  if (polys.length === 0) return null;
+  polys.sort((a, b) => Math.abs(b.area) - Math.abs(a.area));
+  const outer = polys[0];
+  const shape = new THREE.Shape();
+  shape.moveTo(outer.pts[0].x, outer.pts[0].y);
+  for (let k = 1; k < outer.pts.length; k++)
+    shape.lineTo(outer.pts[k].x, outer.pts[k].y);
+  shape.closePath();
+  for (const hole of polys.slice(1)) {
+    const path = new THREE.Path();
+    path.moveTo(hole.pts[0].x, hole.pts[0].y);
+    for (let k = 1; k < hole.pts.length; k++)
+      path.lineTo(hole.pts[k].x, hole.pts[k].y);
+    path.closePath();
+    shape.holes.push(path);
+  }
+  return shape;
+}
+
+// สแลบแผ่นเดียวทั้ง region ตั้งแต่ bottom ถึง top — ไม่มีหน้า coplanar ซ้อนกัน
+function addMergedFloorSlab(
+  region: Set<string>,
+  cellSize: number,
+  bottom: number,
+  top: number,
+) {
+  const height = top - bottom;
+  if (height <= 0.0005) return;
+  const shape = shapeFromLoops(traceRegionLoops(region), cellSize);
+  if (!shape) return;
+
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: height,
+    bevelEnabled: false,
+    curveSegments: 1,
+  });
+  geo.rotateX(-Math.PI / 2);
+
+  // UV = พิกัดจริงในโลก (เมตร) หาร FLOOR_TILE → ลายพื้นต่อเนื่อง anchor ที่ origin
+  const uv = geo.attributes.uv as THREE.BufferAttribute | undefined;
+  if (uv) {
+    const s = 1 / FLOOR_TILE;
+    for (let k = 0; k < uv.count; k++) {
+      uv.setXY(k, uv.getX(k) * s, uv.getY(k) * s);
+    }
+  }
+
+  const m = new THREE.Mesh(geo, ensureBlockFloorMat());
+  m.position.set(0, bottom, 0);
+  m.receiveShadow = true;
+  m.castShadow = true;
+  m.userData.isFloor = true;
+  m.userData.floorY = top;
+  m.name = "FLOOR";
+  floorGroup.add(m);
 }
 
 export function buildBlocksShell() {
@@ -801,48 +1053,76 @@ export function buildBlocksShell() {
   clearGroup(ceilingGroup);
   clearGroup(ceilingColliderGroup);
 
+  setBlocksOrigin(room.blocks);
+
   const cs = room.cellSize;
   const cellGeo = new THREE.PlaneGeometry(cs, cs);
+  const levels = room.cellLevels || {};
 
-  // ⭐ Get level for each cell
-  const getLevel = (i: number, j: number): number => {
-    return room.cellLevels[`${i},${j}`] ?? 0;
-  };
+  // Group เซลล์ตามระดับ → flood fill → region
+  const byLevel = new Map<number, Set<string>>();
+  room.blocks.forEach((k) => {
+    const lv = cellLevelOf(levels, k);
+    if (!byLevel.has(lv)) byLevel.set(lv, new Set());
+    byLevel.get(lv)!.add(k);
+  });
 
-  // ===== 1. Render floor + solid block per cell =====
+  const regionsByLevel = new Map<number, Set<string>[]>();
+  byLevel.forEach((cells, lv) => regionsByLevel.set(lv, floodFillRegions(cells)));
+
+  // ===== 1. พื้น = สแลบแผ่นเดียวต่อ region (ระดับ 0 = สแลบบาง) =====
+  regionsByLevel.forEach((regions, lv) => {
+    regions.forEach((region) => {
+      if (lv === 0) {
+        addMergedFloorSlab(region, cs, 0, BASE_SLAB);
+      } else {
+        const bottom = regionBottom(region, room.blocks!, levels);
+        addMergedFloorSlab(region, cs, bottom, lv);
+      }
+    });
+  });
+
+  // ===== 1.5 riser เฉพาะส่วนที่ bottom ของสแลบสูงกว่าเพื่อนบ้าน (mixed terrace) =====
+  regionsByLevel.forEach((regions, lv) => {
+    if (lv <= 0) return;
+    regions.forEach((region) => {
+      const B = regionBottom(region, room.blocks!, levels);
+      if (B <= 0.0005) return;
+      region.forEach((cell) => {
+        const [i, j] = cell.split(",").map(Number);
+        for (const [di, dj, side] of SIDE_DIRS) {
+          const nk = `${i + di},${j + dj}`;
+          if (region.has(nk)) continue;
+          let baseY: number;
+          if (room.blocks!.has(nk)) {
+            const nlv = cellLevelOf(levels, nk);
+            baseY = nlv === 0 ? BASE_SLAB : nlv;
+          } else {
+            baseY = 0; // ขอบห้องนอกรูป
+          }
+          if (B - baseY > 0.0005) addBlockWall(i, j, side, baseY, B, true);
+        }
+      });
+    });
+  });
+
+  // ===== 2. Walls (outer เท่านั้น — riser ระหว่างระดับเกิดจากหน้าข้างสแลบ) =====
   room.blocks.forEach((k) => {
     const [i, j] = k.split(",").map(Number);
-    const cx = i * cs;
-    const cz = j * cs;
-    const levelY = getLevel(i, j);
+    const myLevel = cellLevelOf(levels, k);
+    for (const [di, dj, side] of SIDE_DIRS) {
+      if (!room.blocks!.has(`${i + di},${j + dj}`)) {
+        addBlockWall(i, j, side, myLevel, room.h, false);
+      }
+    }
+  });
 
-    const color = levelColor(levelY);
-    const mat = new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.85,
-    });
+  // ===== 3. Ceiling per cell =====
+  room.blocks.forEach((k) => {
+    const [i, j] = k.split(",").map(Number);
+    const cx = (i - _blocksOriginI) * cs;
+    const cz = (j - _blocksOriginJ) * cs;
 
-    // ⭐ Solid block from 0 to levelY (or thin slab at 0)
-    const topY = levelY;
-    const bottomY = Math.min(0, levelY);
-    const height = Math.max(0.02, topY - bottomY);
-    const centerY = bottomY + height / 2;
-
-    const blockMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(cs, height, cs),
-      mat,
-    );
-    blockMesh.position.set(cx, centerY, cz);
-    blockMesh.receiveShadow = true;
-    blockMesh.castShadow = true;
-    blockMesh.userData.isFloor = true;
-    blockMesh.userData.cellI = i;
-    blockMesh.userData.cellJ = j;
-    blockMesh.userData.floorY = levelY;
-    blockMesh.name = "FLOOR";
-    floorGroup.add(blockMesh);
-
-    // Ceiling
     const cm = new THREE.Mesh(cellGeo, ceilingMat);
     cm.rotation.x = Math.PI / 2;
     cm.position.set(cx, room.h, cz);
@@ -855,40 +1135,15 @@ export function buildBlocksShell() {
     ceilingColliderGroup.add(cc);
   });
 
-  // ===== 2. Walls =====
-  const neighbors = [
-    { side: "N", di: 0, dj: -1 },
-    { side: "S", di: 0, dj: 1 },
-    { side: "E", di: 1, dj: 0 },
-    { side: "W", di: -1, dj: 0 },
-  ];
-
-  room.blocks.forEach((k) => {
-    const [i, j] = k.split(",").map(Number);
-    const myLevel = getLevel(i, j);
-
-    neighbors.forEach(({ side, di, dj }) => {
-      const nk = `${i + di},${j + dj}`;
-      const hasNeighbor = room.blocks!.has(nk);
-
-      if (!hasNeighbor) {
-        // ⭐ Outer wall — from myLevel to room.h
-        addBlockWall(i, j, side, myLevel, room.h, false);
-      } else {
-        const nLevel = getLevel(i + di, j + dj);
-        const diff = nLevel - myLevel;
-        if (Math.abs(diff) > 0.001) {
-          // ⭐ Riser — draw from min to max at boundary
-          const bottom = Math.min(myLevel, nLevel);
-          const top = Math.max(myLevel, nLevel);
-          addBlockWall(i, j, side, bottom, top, true);
-        }
-      }
-    });
-  });
-
   computeMergedWalls();
 }
+
+const SIDE_DIRS: Array<[number, number, string]> = [
+  [0, -1, "N"],
+  [0, 1, "S"],
+  [1, 0, "E"],
+  [-1, 0, "W"],
+];
 
 /**
  * ⭐ addBlockWall — supports both outer walls and risers
@@ -919,7 +1174,10 @@ export function addBlockWall(
 
   let cx: number, cz: number, rotY: number;
   let nx: number, nz: number, dx: number, dz: number;
-  const c = { x: i * cs, z: j * cs };
+  const c = {
+    x: (i - _blocksOriginI) * cs,
+    z: (j - _blocksOriginJ) * cs,
+  };
 
   if (side === "N") {
     cx = c.x; cz = c.z - cs / 2; rotY = 0;

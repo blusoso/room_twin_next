@@ -3,8 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { useSaveState } from "@/hooks/useSaveState";
-import { objectsByUid, roomGroup } from "@/lib/three/scene";
 import { rebuildRoomShell } from "@/lib/three/roomShell";
+import {
+  captureWallItems,
+  remapOrphanedWallItems,
+} from "@/hooks/useRoomTwinInit";
 import { LEVEL_PRESETS, LEVEL_STEP } from "@/lib/data/constants";
 
 const CELL_PX_BASE = 22;
@@ -200,27 +203,8 @@ export default function BlocksEditor() {
     if (draft.size === 0) return;
     const store = useRoomTwin.getState();
 
-    // ลบ wall items
-    store.placedItems.forEach((item) => {
-      if (item.wallMount) {
-        const obj = objectsByUid.get(item.uid);
-        if (obj) {
-          roomGroup.remove(obj);
-          obj.traverse((child: any) => {
-            child.geometry?.dispose?.();
-            if (child.material) {
-              if (Array.isArray(child.material)) {
-                child.material.forEach((m: any) => m?.dispose?.());
-              } else {
-                child.material.dispose?.();
-              }
-            }
-          });
-        }
-        objectsByUid.delete(item.uid);
-      }
-    });
-    store.replaceItems(store.placedItems.filter((i) => !i.wallMount));
+    // ⭐ capture wall items ก่อนปรับโครงสร้าง — ไม่อนุญาตให้ประตู/หน้าต่างหาย
+    const wallSnapshots = captureWallItems();
 
     const bb = computeBBox(draft, room.cellSize);
     if (!bb) return;
@@ -233,12 +217,10 @@ export default function BlocksEditor() {
       d: bb.d,
     });
 
-    // Force immediate rebuild
-    setTimeout(() => {
-      rebuildRoomShell();
-      setOpen(false);
-      saveState();
-    }, 0);
+    rebuildRoomShell();
+    remapOrphanedWallItems(wallSnapshots);
+    setOpen(false);
+    saveState();
   };
 
   const handleClear = () => {
