@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useRoomTwin } from "@/lib/state/store";
 import { getWallStatusText } from "@/lib/three/roomShell";
+import { saveShowAllWallsPref } from "@/lib/state/storage";
 import { objectsByUid, camera, renderer } from "@/lib/three/scene";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 
@@ -13,6 +14,8 @@ export default function Overlays() {
   const cancelPlacing = useRoomTwin((s) => s.cancelPlacing);
   const showLockBadges = useRoomTwin((s) => s.showLockBadges);
   const toggleLockBadges = useRoomTwin((s) => s.toggleLockBadges);
+  const showAllWalls = useRoomTwin((s) => s.showAllWalls);
+  const toggleAllWalls = useRoomTwin((s) => s.toggleAllWalls);
 
   const [wallStatus, setWallStatus] = useState("");
   const [toast, setToast] = useState<{ msg: string; show: boolean }>({
@@ -38,6 +41,13 @@ export default function Overlays() {
   }, []);
 
   const showHint = !!placingProductId || !!placingZoneId;
+
+  // ⭐ สลับโหมด "ผนังรอบด้าน" + persist view preference
+  const handleToggleAllWalls = () => {
+    const next = !showAllWalls;
+    toggleAllWalls();
+    saveShowAllWallsPref(next);
+  };
 
   let hintText = "";
   if (placingZoneId) hintText = "แตะจุดบนพื้นเพื่อวางโซนนี้";
@@ -81,6 +91,21 @@ export default function Overlays() {
       <div className="wall-status" id="wallStatus">
         {wallStatus}
       </div>
+
+      <button
+        type="button"
+        className={`wall-all-toggle${showAllWalls ? " active" : ""}`}
+        id="wallAllToggle"
+        title={
+          showAllWalls
+            ? "ปิด: กลับไปซ่อนผนังที่บังกล้องอัตโนมัติ"
+            : "เปิด: แสดงผนังทุกด้านพร้อมกัน (ปิดการซ่อนผนังที่บังกล้อง)"
+        }
+        aria-pressed={showAllWalls}
+        onClick={handleToggleAllWalls}
+      >
+        🧱 ผนังรอบด้าน
+      </button>
 
       {showLockBadges && <LockBadges />}
 

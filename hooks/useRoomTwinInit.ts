@@ -2,7 +2,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useRoomTwin } from "@/lib/state/store";
-import { loadFromStorage } from "@/lib/state/storage";
+import { loadFromStorage, loadShowAllWallsPref } from "@/lib/state/storage";
 import {
   ROOM_DEFAULT,
   WALL_COLORS,
@@ -491,6 +491,9 @@ export function useRoomTwinInit() {
         ceiling: 0xf7f3ea,
       });
     }
+
+    // ⭐ โหลด view preference "ผนังรอบด้าน" (ไม่เข้า snapshot/history)
+    useRoomTwin.getState().setShowAllWalls(loadShowAllWallsPref());
 
     const s = useRoomTwin.getState();
     const snapshot = JSON.stringify({

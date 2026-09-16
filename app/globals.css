@@ -930,6 +930,38 @@ aside {
   white-space: nowrap;
 }
 
+/* ⭐ ปุ่มสลับโหมด "ผนังรอบด้าน" — อยู่ใต้แถบสถานะผนัง */
+.wall-all-toggle {
+  position: absolute;
+  top: 52px;
+  left: 16px;
+  background: rgba(42, 35, 48, 0.72);
+  color: #f8f4eb;
+  border: none;
+  font-size: 11.5px;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  z-index: var(--z-viewport-ui);
+  touch-action: manipulation;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.wall-all-toggle:hover {
+  background: rgba(42, 35, 48, 0.88);
+}
+
+.wall-all-toggle.active {
+  background: var(--ochre);
+  color: #fff;
+}
+
+.wall-all-toggle.active:hover {
+  background: var(--ochre-deep);
+}
+
 .corner-views {
   position: absolute;
   bottom: 18px;
@@ -4608,6 +4640,12 @@ aside {
     width: 40px;
     height: 40px;
     font-size: 18px;
+  }
+  .wall-all-toggle {
+    top: 44px;
+    left: 10px;
+    font-size: 10.5px;
+    padding: 5px 10px;
   }
   .corner-views {
     bottom: 70px;

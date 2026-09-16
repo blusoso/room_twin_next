@@ -101,6 +101,12 @@ export interface RoomTwinState {
   showLockBadges: boolean;
   toggleLockBadges: () => void;
 
+  // ⭐ โหมด "ผนังรอบด้าน" — แสดงผนังทุกด้านพร้อมกัน (ปิดการซ่อนผนังอัตโนมัติ)
+  //    เป็น view preference ชั่วคราว (ไม่เข้า serialize/history) แต่ persist แยก key
+  showAllWalls: boolean;
+  setShowAllWalls: (v: boolean) => void;
+  toggleAllWalls: () => void;
+
   // ⭐ สถานะเปิด/ปิด Blocks Editor (transient — ไม่เข้า serialize/history)
   blocksEditorOpen: boolean;
   setBlocksEditorOpen: (open: boolean) => void;
@@ -475,6 +481,11 @@ export const useRoomTwin = create<RoomTwinState>()(
     showLockBadges: true,
     toggleLockBadges: () =>
       set((s) => ({ showLockBadges: !s.showLockBadges })),
+
+    showAllWalls: false,
+    setShowAllWalls: (v) => set({ showAllWalls: v }),
+    toggleAllWalls: () =>
+      set((s) => ({ showAllWalls: !s.showAllWalls })),
 
     blocksEditorOpen: false,
     setBlocksEditorOpen: (open) => set({ blocksEditorOpen: open }),

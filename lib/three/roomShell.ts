@@ -730,31 +730,46 @@ function smoothstep(e0: number, e1: number, x: number) {
 export let lastWallStatusText = "";
 
 export function updateWallVisibility() {
-  const { room, placedItems } = useRoomTwin.getState();
+  const { room, placedItems, showAllWalls } = useRoomTwin.getState();
   if (!controls || !camera) return;
 
   _camDir.subVectors(camera.position, controls.target).normalize();
   const topFactor = smoothstep(0.6, 0.88, Math.abs(_camDir.y));
   const labels: string[] = [];
 
-  Object.entries(WALLS).forEach(([id, w]) => {
-    if (!w.mesh.visible) return;
-    const facing = _camDir.dot(w.outward);
-    let op = 1 - smoothstep(-0.15, 0.15, facing);
-    op *= 1 - topFactor;
-    w.mat.opacity = op;
-    w.mat.depthWrite = op > 0.5;
-    if (op > 0.55) labels.push(WALL_LABEL_FULL[id].replace("ผนัง", ""));
-  });
+  if (showAllWalls) {
+    // ⭐ โหมด "ผนังรอบด้าน" — ผนังทุกด้านทึบพร้อมกัน
+    //    ปิดการซ่อนผนังที่บังกล้อง + ไม่จางตามมุมสูง (topFactor)
+    Object.entries(WALLS).forEach(([, w]) => {
+      if (!w.mesh.visible) return;
+      w.mat.opacity = 1;
+      w.mat.depthWrite = true;
+    });
 
-  polyWalls.forEach((w) => {
-    const facing = _camDir.dot(w.outward);
-    let op = 1 - smoothstep(-0.15, 0.15, facing);
-    op *= 1 - topFactor;
-    w.mat.opacity = op;
-    w.mat.depthWrite = op > 0.5;
-    if (op > 0.55) labels.push("ผนัง");
-  });
+    polyWalls.forEach((w) => {
+      w.mat.opacity = 1;
+      w.mat.depthWrite = true;
+    });
+  } else {
+    Object.entries(WALLS).forEach(([id, w]) => {
+      if (!w.mesh.visible) return;
+      const facing = _camDir.dot(w.outward);
+      let op = 1 - smoothstep(-0.15, 0.15, facing);
+      op *= 1 - topFactor;
+      w.mat.opacity = op;
+      w.mat.depthWrite = op > 0.5;
+      if (op > 0.55) labels.push(WALL_LABEL_FULL[id].replace("ผนัง", ""));
+    });
+
+    polyWalls.forEach((w) => {
+      const facing = _camDir.dot(w.outward);
+      let op = 1 - smoothstep(-0.15, 0.15, facing);
+      op *= 1 - topFactor;
+      w.mat.opacity = op;
+      w.mat.depthWrite = op > 0.5;
+      if (op > 0.55) labels.push("ผนัง");
+    });
+  }
 
   const camAbove = smoothstep(room.h, room.h + 0.6, camera.position.y);
   const co = (1 - topFactor) * (1 - camAbove);
@@ -776,11 +791,18 @@ export function updateWallVisibility() {
       });
   });
 
-  const text =
-    topFactor > 0.6
-      ? "มุมมองด้านบน (ผังพื้น)"
-      : "มองเห็นผนัง: " +
-        (labels.length ? [...new Set(labels)].join(" + ") : "มุมสูง");
+  let text: string;
+
+  if (showAllWalls) {
+    text = "แสดงผนังทุกด้าน (ปิดการซ่อนผนังอัตโนมัติ)";
+  } else if (topFactor > 0.6) {
+    text = "มุมมองด้านบน (ผังพื้น)";
+  } else {
+    text =
+      "มองเห็นผนัง: " +
+      (labels.length ? [...new Set(labels)].join(" + ") : "มุมสูง");
+  }
+
   lastWallStatusText = text;
 }
 

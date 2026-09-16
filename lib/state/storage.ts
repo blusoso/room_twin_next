@@ -1,5 +1,5 @@
 // lib/state/storage.ts
-import { LEGACY_STORAGE_KEYS, STORAGE_KEY } from "@/lib/data/constants";
+import { LEGACY_STORAGE_KEYS, STORAGE_KEY, SHOW_ALL_WALLS_KEY } from "@/lib/data/constants";
 import { isAutoZoneExcludedProduct } from "@/lib/data/products";
 import type { SerializedState } from "./types";
 
@@ -97,6 +97,30 @@ export function clearStorage(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
     LEGACY_STORAGE_KEYS.forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+// ============================================================
+// ⭐ View preference: โหมดแสดงผนังรอบด้าน
+//    เก็บแยกจาก SerializedState — ไม่กระทบ undo/redo และไม่ต้อง bump STORAGE_KEY
+// ============================================================
+
+export function loadShowAllWallsPref(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(SHOW_ALL_WALLS_KEY) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+export function saveShowAllWallsPref(v: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (v) localStorage.setItem(SHOW_ALL_WALLS_KEY, "1");
+    else localStorage.removeItem(SHOW_ALL_WALLS_KEY);
   } catch (e) {
     /* ignore */
   }
