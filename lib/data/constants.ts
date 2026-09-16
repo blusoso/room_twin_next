@@ -14,7 +14,13 @@ export const CELL_SIZE = 0.5;
 export const GRID = 0.1;
 export const STORAGE_KEY = "roomtwin_state_v11";
 
-export const WALL_COLORS = [0xf2e9dc, 0xdce6dd, 0xe7d6cc, 0xd7dee6];
+// ⭐ แหล่งเดียวของสีผนัง — ใช้ร่วมกันทั้ง header/panel/per-wall/คัสตอม
+export const WALL_COLOR_PALETTE = [
+  0xf2e9dc, 0xdce6dd, 0xe7d6cc, 0xd7dee6, 0xf5efe3, 0xc8d4c0,
+  0xe8d0c0, 0xc0cedc, 0xd4c4ac, 0xbfc9b4, 0xe6d0c6, 0xa8b4c0,
+];
+
+export const WALL_COLORS = WALL_COLOR_PALETTE.slice(0, 4);
 
 export const ROOM_DEFAULT = {
   w: 4.2,
@@ -109,11 +115,6 @@ export const FLOOR_PALETTES: Record<
     fine: "rgba(70,80,65,0.10)",
   },
 };
-
-export const WALL_CHIP_COLORS = [
-  0xf2e9dc, 0xdce6dd, 0xe7d6cc, 0xd7dee6, 0xf5efe3, 0xc8d4c0,
-  0xe8d0c0, 0xc0cedc, 0xd4c4ac, 0xbfc9b4, 0xe6d0c6, 0xa8b4c0,
-];
 
 export const GIZMO_SNAP_DEG = 15;
 export const GIZMO_SNAP_THRESHOLD_DEG = 4;

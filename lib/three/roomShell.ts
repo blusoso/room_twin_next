@@ -436,7 +436,12 @@ export function applySurface() {
 
   const cw = (id: string) =>
     surface.walls[id] !== undefined ? surface.walls[id] : surface.wallAll;
-  if (surface.wallUniform || room.shape !== "rect") {
+  const wallDirOf = (
+    w: PolyWall,
+  ): "back" | "front" | "side" | "right" =>
+    w.nz < -0.9 ? "back" : w.nz > 0.9 ? "front" : w.nx > 0.9 ? "right" : "side";
+
+  if (surface.wallUniform) {
     wallMat.color.setHex(surface.wallAll);
     sideWallMat.color.setHex(surface.wallAll);
     rightWallMat.color.setHex(surface.wallAll);
@@ -447,6 +452,8 @@ export function applySurface() {
     sideWallMat.color.setHex(cw("side"));
     rightWallMat.color.setHex(cw("right"));
     frontWallMat.color.setHex(cw("front"));
+    // ⭐ blocks mode: map ทิศทางของ poly wall (N→back, S→front, E→right, W→side)
+    polyWalls.forEach((w) => w.mat.color.setHex(cw(wallDirOf(w))));
   }
 
   ceilingMat.color.setHex(surface.ceiling);
@@ -1136,6 +1143,7 @@ export function buildBlocksShell() {
   });
 
   computeMergedWalls();
+  applySurface();
 }
 
 const SIDE_DIRS: Array<[number, number, string]> = [

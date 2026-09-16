@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import {
   FLOOR_STYLES,
-  WALL_CHIP_COLORS,
+  WALL_COLOR_PALETTE,
   WALL_LABEL_FULL,
   ROOM_LIMITS,
   ROOM_DEFAULT,
@@ -581,7 +581,7 @@ function SurfacesTab() {
         {surface.wallUniform ? (
           <>
             <div className="wall-color-grid">
-              {WALL_CHIP_COLORS.map((c) => (
+              {WALL_COLOR_PALETTE.map((c) => (
                 <div
                   key={c}
                   className={`wall-color-chip${
@@ -611,27 +611,59 @@ function SurfacesTab() {
           </>
         ) : (
           <div className="wall-per-wall-list">
-            {(["back", "front", "side", "right"] as const).map((id) => (
-              <div key={id} className="wall-per-wall-row">
-                <span className="wp-label">{WALL_LABEL_FULL[id]}</span>
-                <input
-                  type="color"
-                  value={hexOf(
-                    surface.walls[id] !== undefined
-                      ? surface.walls[id]
-                      : surface.wallAll,
-                  )}
-                  onChange={(e) => {
-                    commit({
-                      walls: {
-                        ...surface.walls,
-                        [id]: numOf(e.target.value),
-                      },
-                    });
-                  }}
-                />
-              </div>
-            ))}
+            {([
+              "back",
+              "front",
+              "side",
+              "right",
+            ] as const).map((id) => {
+              const cur =
+                surface.walls[id] !== undefined
+                  ? surface.walls[id]
+                  : surface.wallAll;
+              return (
+                <div key={id} className="wall-per-wall-row">
+                  <span className="wp-label">{WALL_LABEL_FULL[id]}</span>
+                  <div className="wall-per-wall-chips">
+                    {WALL_COLOR_PALETTE.map((c) => (
+                      <div
+                        key={c}
+                        className={`wall-color-chip wall-color-chip-sm${
+                          cur === c ? " active" : ""
+                        }`}
+                        style={{ background: hexOf(c) }}
+                        onClick={() =>
+                          commit({
+                            walls: { ...surface.walls, [id]: c },
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                  <div className="cz-row wall-per-wall-custom">
+                    <span className="cz-row-label">เลือกเอง</span>
+                    <div className="cz-row-control">
+                      <input
+                        type="color"
+                        className="cz-color-input"
+                        value={hexOf(cur)}
+                        onChange={(e) =>
+                          commit({
+                            walls: {
+                              ...surface.walls,
+                              [id]: numOf(e.target.value),
+                            },
+                          })
+                        }
+                      />
+                      <span className="cz-color-hex">
+                        {hexOf(cur).toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

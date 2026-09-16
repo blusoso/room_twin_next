@@ -2159,29 +2159,46 @@ aside {
 
 .wall-per-wall-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 9px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
   border-radius: 9px;
   background: #fbf8f2;
   border: 1px solid var(--panel-line);
 }
 
 .wall-per-wall-row .wp-label {
-  flex: 1;
   font-size: 12px;
   font-weight: 600;
   color: var(--ink);
 }
 
-.wall-per-wall-row input[type="color"] {
-  width: 30px;
-  height: 26px;
-  border: 1px solid var(--panel-line);
-  border-radius: 6px;
-  padding: 2px;
-  background: #fff;
-  cursor: pointer;
+.wall-per-wall-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.wall-color-chip-sm {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.wall-per-wall-custom {
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.wall-per-wall-custom .cz-row-label {
+  min-width: 52px;
+  font-size: 11px;
+}
+
+.wall-per-wall-custom .cz-color-input {
+  width: 28px;
+  height: 24px;
 }
 
 /* Openings */
