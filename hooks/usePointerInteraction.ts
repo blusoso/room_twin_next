@@ -239,7 +239,7 @@ export function usePointerInteraction() {
 
           zd.started = true;
           controls.enabled = false;
-          setZoneDragging(true);
+          setZoneDragging(true, zd.zoneUid);
           setHoveredZone(null);
           try {
             el.setPointerCapture(zd.pointerId);

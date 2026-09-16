@@ -1474,6 +1474,23 @@ mark.hl {
   box-shadow: 0 2px 8px rgba(42, 35, 48, 0.22);
 }
 
+.ruler-badge {
+  position: absolute;
+  /* ⭐ เยื้องขึ้นจากจุดกลางพื้นที่ ~18px เพื่อไม่ทับจุด marker */
+  transform: translate(-50%, calc(-50% - 18px));
+  background: var(--sage-deep);
+  color: #fff;
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(42, 35, 48, 0.22);
+}
+
 .ruler-marker {
   position: absolute;
   width: 9px;
@@ -5211,6 +5228,10 @@ mark.hl {
   .guide-label {
     font-size: 10px;
     padding: 2px 7px;
+  }
+  .ruler-badge {
+    font-size: 10px;
+    padding: 2px 8px;
   }
   .corner-views {
     bottom: 70px;

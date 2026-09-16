@@ -16,7 +16,7 @@ export function getZoneMetaLocal(zuid: string) {
   return { name: d.name, icon: d.icon, color: d.color };
 }
 
-export function getZoneBounds(zuid: string) {
+export function getZoneBounds(zuid: string, pad = 0.15) {
   const { placedItems } = useRoomTwin.getState();
   const items = placedItems.filter(
     (i) => i.zoneUid === zuid && !i.wallMount && !i.ceilingMount,
@@ -36,7 +36,7 @@ export function getZoneBounds(zuid: string) {
     maxZ = Math.max(maxZ, it.z! + fp.d / 2);
   });
 
-  const pad = 0.15;
+  // ⭐ pad = 0 ใช้ตอน "วัดระยะ" (ไม้บรรทัด) — padding 0.15 ม. จะทำให้ตัวเลขระยะคลาดเคลื่อน
   return {
     minX: minX - pad,
     maxX: maxX + pad,

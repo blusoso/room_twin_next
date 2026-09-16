@@ -30,6 +30,7 @@ const EMPTY_MODEL: RulerModel = {
   ticks: [],
   labels: [],
   guides: [],
+  badges: [],
   marker: null,
 };
 
@@ -51,6 +52,7 @@ export default function RulerOverlay() {
     const guideEls = new Map<string, SVGLineElement>();
     const labelEls = new Map<string, HTMLDivElement>();
     const guideLabelEls = new Map<string, HTMLDivElement>();
+    const badgeEls = new Map<string, HTMLDivElement>();
     let markerEl: HTMLDivElement | null = null;
 
     // cache พิกัดที่เขียนล่าสุด (กันเขียน DOM ซ้ำทุก frame)
@@ -307,6 +309,25 @@ export default function RulerOverlay() {
         guideLabelEls.delete(id);
       });
 
+      // ===== ป้ายลอยกลางพื้นที่ (ขนาดโซนตอนลากย้ายโซน) =====
+      const seenBadge = new Set<string>();
+      for (const bd of model.badges) {
+        const p = project(bd.pos, tmpA);
+        if (!p) continue;
+
+        seenBadge.add(bd.id);
+        const el = ensureDiv(badgeEls, bd.id, "ruler-badge");
+        if (el.textContent !== bd.text) el.textContent = bd.text;
+        el.style.display = "";
+        el.style.left = p.x + offX + "px";
+        el.style.top = p.y + offY + "px";
+      }
+      badgeEls.forEach((el, id) => {
+        if (seenBadge.has(id)) return;
+        el.remove();
+        badgeEls.delete(id);
+      });
+
       // ===== จุด marker กลาง footprint ของ object ที่ลาก =====
       if (model.marker) {
         const mp = project(model.marker, tmpA);
@@ -338,12 +359,14 @@ export default function RulerOverlay() {
       guideEls.forEach((el) => el.remove());
       labelEls.forEach((el) => el.remove());
       guideLabelEls.forEach((el) => el.remove());
+      badgeEls.forEach((el) => el.remove());
       markerEl?.remove();
       baseEls.clear();
       tickEls.clear();
       guideEls.clear();
       labelEls.clear();
       guideLabelEls.clear();
+      badgeEls.clear();
       lastPos.clear();
       shownTick.clear();
       markerEl = null;

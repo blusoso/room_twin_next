@@ -3,12 +3,14 @@
 //
 //    - ไม้บรรทัดวางบนพื้นห้องตามขอบ 2 ด้าน (หลัง + ซ้าย) + ไม้บรรทัดความสูงที่มุม
 //    - ตอน "ลาก object" จะตีเส้นไกด์ 2 เส้น ไปยังผนังที่ใกล้ที่สุดต่อแกน พร้อมระยะเป็น ซม.
+//    - ตอน "ลากย้ายโซน" จะตีเส้นไกด์จากกรอบโซน (bbox) พร้อมป้ายขนาดโซนเป็น ม.
 //
 //    เป็น view-only ล้วน ๆ — ไม่แตะ state ที่ persist (ไม่เข้า serialize/history)
 import * as THREE from "three";
 import { floorGroup, isInitialized } from "./scene";
 import { findFloorYAt } from "./roomShell";
 import { footprintOf } from "./placement";
+import { getZoneBounds } from "./zoneBounds";
 import { interactionState } from "./interactionState";
 import { useRoomTwin } from "@/lib/state/store";
 import { cmStr } from "@/lib/utils/format";
@@ -74,12 +76,20 @@ export interface RulerRect {
   floorY: number;
 }
 
+/** ป้ายข้อความลอยกลางพื้นที่ (ใช้โชว์ขนาดโซนตอนลากย้ายโซน) */
+export interface RulerBadge {
+  id: string;
+  pos: THREE.Vector3;
+  text: string;
+}
+
 export interface RulerModel {
   rect: RulerRect | null;
   baselines: RulerSegment[];
   ticks: RulerSegment[];
   labels: RulerLabel[];
   guides: GuideLine[];
+  badges: RulerBadge[];
   marker: THREE.Vector3 | null;
 }
 
@@ -156,6 +166,7 @@ const EMPTY: RulerModel = {
   ticks: [],
   labels: [],
   guides: [],
+  badges: [],
   marker: null,
 };
 
@@ -285,97 +296,133 @@ export function computeRuler(): RulerModel {
     }
   }
 
-  // ===== เส้นไกด์ตอนลาก object =====
+  // ===== เส้นไกด์ตอนลาก object / ลากโซน =====
   const guides: GuideLine[] = [];
+  const badges: RulerBadge[] = [];
   let marker: THREE.Vector3 | null = null;
 
-  const uid = interactionState.itemDragging
-    ? interactionState.draggingUid
+  /** ⭐ ป้ายระยะวางกึ่งกลางเส้นไกด์ (บนระนาบพื้น) — ไม่ทับตัวเลขบนไม้บรรทัด */
+  const addGuide = (
+    id: string,
+    ax: number,
+    az: number,
+    bx: number,
+    bz: number,
+    label: string,
+  ) => {
+    guides.push({
+      id,
+      a: new THREE.Vector3(ax, y, az),
+      b: new THREE.Vector3(bx, y, bz),
+      label,
+      labelPos: new THREE.Vector3((ax + bx) / 2, y, (az + bz) / 2),
+    });
+  };
+
+  /**
+   * ⭐ ไกด์ 2 เส้น (แกนละเส้น) จากขอบพื้นที่ที่วัด → ผนังที่ใกล้ที่สุดต่อแกน
+   *    area = footprint ของ item หรือ bbox ของโซน
+   *    throughX/throughZ = แนวที่เส้นไกด์ตีผ่าน (กลางพื้นที่ที่วัด)
+   */
+  const addWallGuides = (
+    prefix: string,
+    eMinX: number,
+    eMaxX: number,
+    eMinZ: number,
+    eMaxZ: number,
+    throughX: number,
+    throughZ: number,
+  ) => {
+    // แกน X: เลือกผนังซ้าย/ขวา ที่ใกล้กว่า
+    const gapLeft = eMinX - minX;
+    const gapRight = maxX - eMaxX;
+    if (gapLeft <= gapRight) {
+      addGuide(
+        `${prefix}-x`,
+        eMinX,
+        throughZ,
+        eMinX,
+        backZ,
+        `ซ้าย ${cmStr(Math.max(0, gapLeft))}`,
+      );
+    } else {
+      addGuide(
+        `${prefix}-x`,
+        eMaxX,
+        throughZ,
+        eMaxX,
+        backZ,
+        `ขวา ${cmStr(Math.max(0, gapRight))}`,
+      );
+    }
+
+    // แกน Z: เลือกผนังหลัง/หน้า ที่ใกล้กว่า
+    const gapBack = eMinZ - minZ;
+    const gapFront = maxZ - eMaxZ;
+    if (gapBack <= gapFront) {
+      addGuide(
+        `${prefix}-z`,
+        throughX,
+        eMinZ,
+        leftX,
+        eMinZ,
+        `หลัง ${cmStr(Math.max(0, gapBack))}`,
+      );
+    } else {
+      addGuide(
+        `${prefix}-z`,
+        throughX,
+        eMaxZ,
+        leftX,
+        eMaxZ,
+        `หน้า ${cmStr(Math.max(0, gapFront))}`,
+      );
+    }
+  };
+
+  /** ขนาดเป็นเมตร ทศนิยมไม่เกิน 2 ตำแหน่ง */
+  const m2 = (v: number) => Math.round(v * 100) / 100 + " ม.";
+
+  const zoneUid = interactionState.zoneDragging
+    ? interactionState.draggingZoneUid
     : null;
 
-  if (uid) {
-    const item = useRoomTwin
-      .getState()
-      .placedItems.find((i) => i.uid === uid);
+  if (zoneUid) {
+    // ===== ลากย้ายโซน → วัดกรอบโซน (bbox) ทั้งชุด =====
+    // ⭐ pad = 0 เพื่อให้ตัวเลขระยะ/ขนาดตรงกับกรอบ dashed ที่วาดอยู่จริง
+    const b = getZoneBounds(zoneUid, 0);
 
-    if (item && item.x !== undefined && item.z !== undefined) {
-      const fp = footprintOf(item.params, item.rotY || 0);
-      const eMinX = item.x - fp.w / 2;
-      const eMaxX = item.x + fp.w / 2;
-      const eMinZ = item.z - fp.d / 2;
-      const eMaxZ = item.z + fp.d / 2;
+    if (b) {
+      addWallGuides("zone-guide", b.minX, b.maxX, b.minZ, b.maxZ, b.cx, b.cz);
+      marker = new THREE.Vector3(b.cx, y, b.cz);
+      badges.push({
+        id: "zone-size",
+        pos: new THREE.Vector3(b.cx, y, b.cz),
+        text: `${m2(b.maxX - b.minX)} × ${m2(b.maxZ - b.minZ)}`,
+      });
+    }
+  } else {
+    const uid = interactionState.itemDragging
+      ? interactionState.draggingUid
+      : null;
 
-      /** ⭐ ป้ายระยะวางกึ่งกลางเส้นไกด์ (บนระนาบพื้น) — ไม่ทับตัวเลขบนไม้บรรทัด */
-      const addGuide = (
-        id: string,
-        ax: number,
-        az: number,
-        bx: number,
-        bz: number,
-        label: string,
-      ) => {
-        guides.push({
-          id,
-          a: new THREE.Vector3(ax, y, az),
-          b: new THREE.Vector3(bx, y, bz),
-          label,
-          labelPos: new THREE.Vector3(
-            (ax + bx) / 2,
-            y,
-            (az + bz) / 2,
-          ),
-        });
-      };
+    if (uid) {
+      const item = useRoomTwin
+        .getState()
+        .placedItems.find((i) => i.uid === uid);
 
-      // แกน X: เลือกผนังซ้าย/ขวา ที่ใกล้กว่า
-      const gapLeft = eMinX - minX;
-      const gapRight = maxX - eMaxX;
-      if (gapLeft <= gapRight) {
-        addGuide(
-          "guide-x",
-          eMinX,
-          item.z,
-          eMinX,
-          backZ,
-          `ซ้าย ${cmStr(Math.max(0, gapLeft))}`,
-        );
-      } else {
-        addGuide(
-          "guide-x",
-          eMaxX,
-          item.z,
-          eMaxX,
-          backZ,
-          `ขวา ${cmStr(Math.max(0, gapRight))}`,
-        );
+      if (item && item.x !== undefined && item.z !== undefined) {
+        const fp = footprintOf(item.params, item.rotY || 0);
+        const eMinX = item.x - fp.w / 2;
+        const eMaxX = item.x + fp.w / 2;
+        const eMinZ = item.z - fp.d / 2;
+        const eMaxZ = item.z + fp.d / 2;
+
+        addWallGuides("guide", eMinX, eMaxX, eMinZ, eMaxZ, item.x, item.z);
+        marker = new THREE.Vector3(item.x, y, item.z);
       }
-
-      // แกน Z: เลือกผนังหลัง/หน้า ที่ใกล้กว่า
-      const gapBack = eMinZ - minZ;
-      const gapFront = maxZ - eMaxZ;
-      if (gapBack <= gapFront) {
-        addGuide(
-          "guide-z",
-          item.x,
-          eMinZ,
-          leftX,
-          eMinZ,
-          `หลัง ${cmStr(Math.max(0, gapBack))}`,
-        );
-      } else {
-        addGuide(
-          "guide-z",
-          item.x,
-          eMaxZ,
-          leftX,
-          eMaxZ,
-          `หน้า ${cmStr(Math.max(0, gapFront))}`,
-        );
-      }
-
-      marker = new THREE.Vector3(item.x, y, item.z);
     }
   }
 
-  return { rect, baselines, ticks, labels, guides, marker };
+  return { rect, baselines, ticks, labels, guides, badges, marker };
 }
