@@ -1095,32 +1095,6 @@ export const NEIGHBOR_OFFSETS: ReadonlyArray<readonly [number, number]> = [
   [0, -1],
 ];
 
-// bottom ของสแลบ region ระดับ L (>0):
-//   - มีเพื่อนบ้านต่ำกว่า → MAX(BASE_SLAB, ระดับต่ำสุดที่สูงสุด)
-//   - ไม่มีเพื่อนบ้านต่ำกว่าเลย (ทั้งห้องยก) → 0 (หน้าข้างเต็มความสูงจากพื้น)
-function regionBottom(
-  region: Set<string>,
-  blocks: Set<string>,
-  levels: Record<string, number>,
-): number {
-  let hasLower = false;
-  let maxLower = 0;
-  for (const k of region) {
-    const [i, j] = k.split(",").map(Number);
-    for (const [di, dj] of NEIGHBOR_OFFSETS) {
-      const nk = `${i + di},${j + dj}`;
-      if (!blocks.has(nk) || region.has(nk)) continue;
-      const lv = cellLevelOf(levels, nk);
-      if (lv < cellLevelOf(levels, k)) {
-        hasLower = true;
-        if (lv > maxLower) maxLower = lv;
-      }
-    }
-  }
-  if (!hasLower) return 0;
-  return Math.max(BASE_SLAB, maxLower);
-}
-
 type GridEdge = { x0: number; z0: number; x1: number; z1: number };
 
 function cellBoundaryEdges(cell: string, region: Set<string>): GridEdge[] {
@@ -1894,129 +1868,23 @@ export function buildBlocksShell() {
 
   // ============================================================
   // 1. Floor slabs
+  //
+  // ⭐ สแลบระดับ > 0 ยึดทึบจากพื้น 0 ถึงระดับ level เสมอ
+  //    (เดิมเริ่มที่ regionBottom = ระดับเพื่อนบ้านที่ต่ำกว่า เพื่อย่อหน้าข้าง
+  //     แต่เมื่อสแลบสูงซ้อนทับ/อยู่บนชั้นที่ต่ำกว่า จะเกิดโพรงว่างใต้สแลบ
+  //     ทำให้มองทะลุพื้น/บาง face หายไป)
   // ============================================================
   regionsByLevel.forEach(
     (regions, level) => {
       regions.forEach(
         (region) => {
-          if (level === 0) {
-            addMergedFloorSlab(
-              region,
-              cs,
-              0,
-              BASE_SLAB,
-            );
-          } else {
-            const bottom =
-              regionBottom(
-                region,
-                room.blocks!,
-                levels,
-              );
-
-            addMergedFloorSlab(
-              region,
-              cs,
-              bottom,
-              level,
-            );
-          }
-        },
-      );
-    },
-  );
-
-  // ============================================================
-  // 1.5 Riser walls
-  // ============================================================
-  regionsByLevel.forEach(
-    (regions, level) => {
-      if (level <= 0) {
-        return;
-      }
-
-      regions.forEach(
-        (region) => {
-          const bottom =
-            regionBottom(
-              region,
-              room.blocks!,
-              levels,
-            );
-
-          if (
-            bottom <=
-            0.0005
-          ) {
-            return;
-          }
-
-          region.forEach(
-            (cell) => {
-              const [i, j] =
-                cell
-                  .split(",")
-                  .map(
-                    Number,
-                  );
-
-              for (
-                const [
-                  di,
-                  dj,
-                  side,
-                ] of SIDE_DIRS
-              ) {
-                const neighbor =
-                  `${i + di},${
-                    j + dj
-                  }`;
-
-                if (
-                  region.has(
-                    neighbor,
-                  )
-                ) {
-                  continue;
-                }
-
-                let baseY: number;
-
-                if (
-                  room.blocks!.has(
-                    neighbor,
-                  )
-                ) {
-                  const neighborLevel =
-                    cellLevelOf(
-                      levels,
-                      neighbor,
-                    );
-
-                  baseY =
-                    neighborLevel === 0
-                      ? BASE_SLAB
-                      : neighborLevel;
-                } else {
-                  baseY = 0;
-                }
-
-                if (
-                  bottom -
-                    baseY >
-                  0.0005
-                ) {
-                  addBlockWall(
-                    i,
-                    j,
-                    side,
-                    baseY,
-                    bottom,
-                    true,
-                  );
-                }
-              }
-            },
+          addMergedFloorSlab(
+            region,
+            cs,
+            0,
+            level === 0
+              ? BASE_SLAB
+              : level,
           );
         },
       );
