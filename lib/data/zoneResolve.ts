@@ -156,6 +156,34 @@ export function isZoneColorTaken(
 }
 
 /**
+ * ⭐ ตรวจ uniqueness ของ name / icon / color ของโซน — ใช้ร่วมกันทั้ง ZoneEditModal
+ *    และ ZoneAddModal (ข้อความ error ต้องมาจากที่เดียว)
+ *    - name: ห้ามซ้ำกับโซนใด ๆ (เทียบชื่อที่ resolve แล้ว)
+ *    - icon/color: ห้ามซ้ำกับโซนชนิดอื่น (โซนที่มาจาก ZoneDef เดียวกันใช้ค่าร่วมกันได้)
+ * @param opts.live true = ตรวจแบบ live (ชื่อว่างยังไม่ถือเป็น error)
+ */
+export function validateZoneIdentity(
+  draft: { name: string; icon: string; color: number },
+  excludeZuid: string | null,
+  opts?: { live?: boolean },
+): string {
+  const name = draft.name.trim();
+  const live = !!opts?.live;
+
+  if (!name) return live ? "" : "กรุณากรอกชื่อโซน";
+  if (isZoneNameTaken(name, excludeZuid)) {
+    return `ชื่อ "${name}" ถูกใช้ไปแล้ว — กรุณาตั้งชื่ออื่น`;
+  }
+  if (isZoneIconTaken(draft.icon, excludeZuid)) {
+    return `ไอคอน ${draft.icon} ถูกใช้ในโซนอื่นแล้ว — กรุณาเลือกไอคอนอื่น`;
+  }
+  if (isZoneColorTaken(draft.color, excludeZuid)) {
+    return "สีนี้ถูกใช้ในโซนอื่นแล้ว — กรุณาเลือกสีอื่น";
+  }
+  return "";
+}
+
+/**
  * ⭐ หาชื่อที่ไม่ซ้ำให้โซนใหม่ — "โซนนอน", "โซนนอน 2", "โซนนอน 3" ...
  */
 export function pickUniqueZoneName(

@@ -120,6 +120,9 @@ export default function BlocksEditor() {
   const [strokeTool, setStrokeTool] = useState<Tool | null>(null);
   const [paintLevel, setPaintLevel] = useState(0);
   const [hoverUid, setHoverUid] = useState<string | null>(null);
+  // ⭐ UI disclosure (ไม่เกี่ยวกับ draft/history)
+  const [tipsOpen, setTipsOpen] = useState(false);
+  const [fineOpen, setFineOpen] = useState(false);
 
   // ⭐ draft undo/redo (เฉพาะผังในหน้านี้)
   const [past, setPast] = useState<DraftSnap[]>([]);
@@ -286,6 +289,8 @@ export default function BlocksEditor() {
       setTool("paint");
       setStrokeTool(null);
       setHoverUid(null);
+      setTipsOpen(false);
+      setFineOpen(false);
       resetDraftHistory();
       setBlocksEditorOpen(true);
     };
@@ -480,12 +485,23 @@ export default function BlocksEditor() {
       <div className="blocks-box">
         <div className="blocks-head">
           <div className="blocks-title">
-            <span>▦ วาดผนังห้อง + พื้นต่างระดับ</span>
-            <span className="bt-sub">
-              เลือกเครื่องมือ/ระดับ → วาดหรือลบช่อง • 1 ช่อง = {room.cellSize} ม.
+            <span>▦ ผังพื้นห้อง</span>
+            <span className="blocks-hint">
+              {tool === "erase"
+                ? "🧽 คลิกหรือลากบนช่องเพื่อลบ • กด B เพื่อกลับมาโหมดวาด"
+                : `🖌 คลิกหรือลากบนผังเพื่อเพิ่มช่อง • 1 ช่อง = ${room.cellSize} ม.`}
             </span>
           </div>
           <div className="blocks-head-actions">
+            <button
+              type="button"
+              className="blocks-ghost-btn"
+              aria-expanded={tipsOpen}
+              title="วิธีใช้ + คีย์ลัด"
+              onClick={() => setTipsOpen((v) => !v)}
+            >
+              ? วิธีใช้
+            </button>
             <button
               type="button"
               className="blocks-icon-btn"
@@ -504,31 +520,10 @@ export default function BlocksEditor() {
             >
               ↪
             </button>
-            <div className="blocks-tool-sep" />
-            <button
-              type="button"
-              className="blocks-icon-btn"
-              onClick={handleZoomOut}
-            >
-              −
-            </button>
-            <button
-              type="button"
-              className="blocks-icon-btn"
-              onClick={handleZoomFit}
-            >
-              ⛶
-            </button>
-            <button
-              type="button"
-              className="blocks-icon-btn"
-              onClick={handleZoomIn}
-            >
-              +
-            </button>
             <button
               type="button"
               className="blocks-close"
+              title="ปิด (Esc)"
               onClick={() => setBlocksEditorOpen(false)}
             >
               ✕
@@ -536,71 +531,252 @@ export default function BlocksEditor() {
           </div>
         </div>
 
+        {/* ⭐ วิธีใช้ — แสดงเมื่อกด ไม่กินพื้นที่โดยค่าเริ่มต้น */}
+        {tipsOpen && (
+          <div className="blocks-tips">
+            <ul>
+              <li>
+                เลือกระดับพื้น (ซม.) แล้ววาดช่องบนผัง — ช่องที่วาดจะยกพื้นสูงตามระดับ
+              </li>
+              <li>ลบด้วย 🧽 ยางลบ หรือกด E • กลับมาโหมดวาดด้วย B</li>
+              <li>ย้อน/ทำซ้ำได้ด้วย ↩ ↪ หรือ Ctrl+Z / Ctrl+Shift+Z</li>
+              <li>
+                เสร็จแล้วกด ✓ ใช้รูปทรงนี้ — ประตู/หน้าต่างเดิมจะถูกจัดตำแหน่งให้อัตโนมัติ
+              </li>
+            </ul>
+            <div className="blocks-tips-keys">
+              B = วาด · E = ยางลบ · Ctrl+Z = ย้อนกลับ · Ctrl+Shift+Z =
+              ทำซ้ำ · Esc = ปิด
+            </div>
+          </div>
+        )}
+
         <div className="blocks-body">
-          {/* ⭐ Level picker */}
-          <div
-            className={`blocks-level-picker${
-              tool === "erase" ? " is-dim" : ""
-            }`}
-          >
-            <span className="blp-label">
-              ระดับพื้น:
-              {tool === "erase" && (
-                <span className="blp-note">
-                  {" "}
-                  (ยางลบไม่ใช้ระดับพื้น)
+          {/* ⭐ แถบเครื่องมือเดียว: เครื่องมือ · ระดับพื้น · ซูม */}
+          <div className="blocks-bar">
+            <div className="blocks-seg" role="group" aria-label="เครื่องมือ">
+              <button
+                type="button"
+                className={`blocks-seg-btn${
+                  tool === "paint" ? " active" : ""
+                }`}
+                title="วาดช่อง (B)"
+                aria-pressed={tool === "paint"}
+                onClick={() => setTool("paint")}
+              >
+                🖌 วาด
+              </button>
+              <button
+                type="button"
+                className={`blocks-seg-btn${
+                  tool === "erase" ? " active" : ""
+                }`}
+                title="ยางลบ (E)"
+                aria-pressed={tool === "erase"}
+                onClick={() => setTool("erase")}
+              >
+                🧽 ยางลบ
+              </button>
+            </div>
+
+            <div className="blocks-tool-sep" />
+
+            <div
+              className={`blocks-levels${
+                tool === "erase" ? " is-dim" : ""
+              }`}
+            >
+              <span className="blocks-bar-label">ระดับพื้น (ซม.)</span>
+              <div className="blocks-chip-row">
+                {LEVEL_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`blocks-chip${
+                      paintLevel === p.value ? " active" : ""
+                    }`}
+                    style={{ background: p.color }}
+                    onClick={() => setPaintLevel(p.value)}
+                    title={`สูง ${(p.value * 100).toFixed(0)} ซม.`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={`blocks-fine-toggle${
+                    fineOpen ? " active" : ""
+                  }`}
+                  aria-expanded={fineOpen}
+                  title="ปรับระดับละเอียด (ทุก 5 ซม.)"
+                  onClick={() => setFineOpen((v) => !v)}
+                >
+                  ละเอียด
+                </button>
+              </div>
+              {paintLevel > 0 && tool !== "erase" && (
+                <span className="blocks-badge">
+                  +{Math.round(paintLevel * 100)} ซม.
                 </span>
               )}
-            </span>
-            <div className="blp-chips">
-              {LEVEL_PRESETS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`blp-chip${
-                    paintLevel === p.value ? " active" : ""
-                  }`}
-                  style={{ background: p.color }}
-                  onClick={() => setPaintLevel(p.value)}
-                  title={`${(p.value * 100).toFixed(0)} ซม.`}
-                >
-                  {p.label}
-                </button>
-              ))}
+              {fineOpen && (
+                <div className="blocks-fine">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1.5"
+                    step={LEVEL_STEP}
+                    value={paintLevel}
+                    aria-label="ระดับพื้นละเอียด"
+                    onChange={(e) =>
+                      setPaintLevel(parseFloat(e.target.value))
+                    }
+                  />
+                  <span className="blocks-badge">
+                    {Math.round(paintLevel * 100)} ซม.
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="blp-custom">
-              <input
-                type="range"
-                min="0"
-                max="1.5"
-                step={LEVEL_STEP}
-                value={paintLevel}
-                onChange={(e) =>
-                  setPaintLevel(parseFloat(e.target.value))
-                }
-              />
-              <span className="blp-value">
-                {(paintLevel * 100).toFixed(0)} ซม.
-              </span>
+
+            <div className="blocks-tool-sep" />
+
+            <div className="blocks-zoom">
+              <button
+                type="button"
+                className="blocks-icon-btn"
+                title="ย่อ"
+                onClick={handleZoomOut}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                className="blocks-icon-btn"
+                title="พอดีจอ"
+                onClick={handleZoomFit}
+              >
+                ⛶
+              </button>
+              <button
+                type="button"
+                className="blocks-icon-btn"
+                title="ขยาย"
+                onClick={handleZoomIn}
+              >
+                +
+              </button>
             </div>
           </div>
 
-          {/* ⭐ โครงสร้างในห้อง — บอกว่าอันไหนคืออะไร */}
-          <div className="blocks-structs">
-            <span className="bss-label">โครงสร้างในห้อง:</span>
-            {structPlan.length === 0 ? (
-              <span className="bss-empty">
-                — ยังไม่มี (ประตู / หน้าต่าง / เสา / ฉากกั้น)
-              </span>
-            ) : (
-              <div className="bss-chips">
+          <div className="blocks-canvas" ref={canvasRef}>
+            <div className="blocks-stage">
+              <div className="blocks-grid-wrap">
+                <div
+                  className={`blocks-grid tool-${tool}`}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${N}, ${cellPx}px)`,
+                    gridAutoRows: `${cellPx}px`,
+                    background: "#e6dfce",
+                    gap: GRID_GAP,
+                    padding: GRID_PAD,
+                    borderRadius: 4,
+                  }}
+                >
+                  {Array.from({ length: N * N }).map((_, idx) => {
+                    const j = Math.floor(idx / N) - extent;
+                    const i = (idx % N) - extent;
+                    const key = cellKey(i, j);
+                    const on = draft.has(key);
+                    const y = draftLevels[key] ?? 0;
+                    const bgColor = getCellColor(i, j);
+                    return (
+                      <div
+                        key={idx}
+                        data-i={i}
+                        data-j={j}
+                        className={`blocks-cell${on ? " on" : ""}${
+                          i === 0 && j === 0 ? " origin" : ""
+                        }`}
+                        style={{
+                          background: bgColor,
+                          position: "relative",
+                          userSelect: "none",
+                        }}
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          handleCellDown(i, j);
+                        }}
+                      >
+                        {on && y > 0 && (
+                          <span
+                            style={{
+                              position: "absolute",
+                              bottom: 1,
+                              right: 2,
+                              fontSize: 8,
+                              color: "#5a4a30",
+                              fontFamily: "monospace",
+                              fontWeight: 700,
+                              pointerEvents: "none",
+                            }}
+                          >
+                            {(y * 100).toFixed(0)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="blocks-structures">
+                  {structPlan.map((s) => {
+                    const wPx = s.hw * 2 * pxPerMeter;
+                    const hPx = s.hd * 2 * pxPerMeter;
+                    if (wPx < 0.5 && hPx < 0.5) return null;
+                    // ⭐ ศูนย์กลางรูปต้องตรงกับ cell center ของ world position นั้น
+                    const left = worldToPx(s.cx, structOrigin.oi) - wPx / 2;
+                    const top = worldToPx(s.cz, structOrigin.oj) - hPx / 2;
+                    return (
+                      <div
+                        key={s.uid}
+                        className={`blocks-structure blocks-structure--${
+                          s.productId
+                        }${hoverUid === s.uid ? " is-hover" : ""}`}
+                        style={{ left, top, width: wPx, height: hPx }}
+                      >
+                        <div
+                          className="blocks-structure-rect"
+                          style={{ transform: `rotate(${s.deg}deg)` }}
+                        />
+                        {wPx >= 30 ? (
+                          <span className="blocks-structure-label">
+                            <span className="bsl-name">{s.shortName}</span>
+                            <span className="bsl-dim">{s.label}</span>
+                          </span>
+                        ) : wPx >= 10 ? (
+                          <span className="blocks-structure-label">
+                            <span className="bsl-name">{s.shortName}</span>
+                          </span>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ⭐ legend โครงสร้าง — ติดท้ายผัง ซ่อนเมื่อไม่มีโครงสร้าง */}
+            {structPlan.length > 0 && (
+              <div className="blocks-legend">
+                <span className="blocks-legend-label">โครงสร้าง:</span>
                 {structPlan.map((s) => (
                   <button
                     key={s.uid}
                     type="button"
-                    className={`bst-chip blocks-structure--${s.productId}${
-                      hoverUid === s.uid ? " is-hover" : ""
-                    }`}
+                    className={`blocks-legend-item blocks-structure--${
+                      s.productId
+                    }${hoverUid === s.uid ? " is-hover" : ""}`}
                     title={`${s.name} • ${s.label} • ${
                       s.wallMount ? "ติดผนัง" : "วางพื้น"
                     }`}
@@ -613,190 +789,69 @@ export default function BlocksEditor() {
                       setHoverUid((cur) => (cur === s.uid ? null : cur))
                     }
                   >
-                    <span className="bst-dot" />
-                    <span className="bst-name">{s.name}</span>
-                    <b className="bst-dim">{s.label}</b>
-                    <span className="bst-mount">
-                      {s.wallMount ? "ติดผนัง" : "วางพื้น"}
-                    </span>
+                    <span className="blocks-legend-dot" />
+                    <span className="blocks-legend-name">{s.shortName}</span>
+                    <b className="blocks-legend-dim">{s.label}</b>
                   </button>
                 ))}
               </div>
             )}
           </div>
-
-          <div className="blocks-toolbar">
-            <button
-              type="button"
-              className={`blocks-tool-toggle${
-                tool === "paint" ? " active" : ""
-              }`}
-              title="วาดช่อง (B) — คลิก/ลากเพื่อวาด"
-              onClick={() => setTool("paint")}
-            >
-              🖌 วาด
-            </button>
-            <button
-              type="button"
-              className={`blocks-tool-toggle${
-                tool === "erase" ? " active" : ""
-              }`}
-              title="ยางลบ (E) — คลิก/ลากเพื่อลบช่อง"
-              onClick={() => setTool("erase")}
-            >
-              🧽 ยางลบ
-            </button>
-            <div className="blocks-tool-sep" />
-            <div className="blocks-tool">
-              ขนาด:{" "}
-              <span className="val">
-                {bbox
-                  ? `${bbox.w.toFixed(1)} × ${bbox.d.toFixed(1)} ม.`
-                  : "0.0 × 0.0 ม."}
-              </span>
-            </div>
-            <div className="blocks-tool-sep" />
-            <div className="blocks-tool">
-              บล็อก: <span className="val">{draft.size}</span>
-            </div>
-            <div className="blocks-tool-sep" />
-            <button type="button" onClick={handleRect}>
-              ⬜ เติมสี่เหลี่ยม
-            </button>
-            <button type="button" onClick={handleClear}>
-              🗑 ล้าง
-            </button>
-          </div>
-
-          <div className="blocks-canvas" ref={canvasRef}>
-            <div className="blocks-grid-wrap">
-              <div
-                className={`blocks-grid tool-${tool}`}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: `repeat(${N}, ${cellPx}px)`,
-                  gridAutoRows: `${cellPx}px`,
-                  background: "#e6dfce",
-                  gap: GRID_GAP,
-                  padding: GRID_PAD,
-                  borderRadius: 4,
-                }}
-              >
-                {Array.from({ length: N * N }).map((_, idx) => {
-                  const j = Math.floor(idx / N) - extent;
-                  const i = (idx % N) - extent;
-                  const key = cellKey(i, j);
-                  const on = draft.has(key);
-                  const y = draftLevels[key] ?? 0;
-                  const bgColor = getCellColor(i, j);
-                  return (
-                    <div
-                      key={idx}
-                      data-i={i}
-                      data-j={j}
-                      className={`blocks-cell${on ? " on" : ""}${
-                        i === 0 && j === 0 ? " origin" : ""
-                      }`}
-                      style={{
-                        background: bgColor,
-                        position: "relative",
-                        userSelect: "none",
-                      }}
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        handleCellDown(i, j);
-                      }}
-                    >
-                      {on && y > 0 && (
-                        <span
-                          style={{
-                            position: "absolute",
-                            bottom: 1,
-                            right: 2,
-                            fontSize: 8,
-                            color: "#5a4a30",
-                            fontFamily: "monospace",
-                            fontWeight: 700,
-                            pointerEvents: "none",
-                          }}
-                        >
-                          {(y * 100).toFixed(0)}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="blocks-structures">
-                {structPlan.map((s) => {
-                  const wPx = s.hw * 2 * pxPerMeter;
-                  const hPx = s.hd * 2 * pxPerMeter;
-                  if (wPx < 0.5 && hPx < 0.5) return null;
-                  // ⭐ ศูนย์กลางรูปต้องตรงกับ cell center ของ world position นั้น
-                  const left = worldToPx(s.cx, structOrigin.oi) - wPx / 2;
-                  const top = worldToPx(s.cz, structOrigin.oj) - hPx / 2;
-                  return (
-                    <div
-                      key={s.uid}
-                      className={`blocks-structure blocks-structure--${
-                        s.productId
-                      }${hoverUid === s.uid ? " is-hover" : ""}`}
-                      style={{ left, top, width: wPx, height: hPx }}
-                    >
-                      <div
-                        className="blocks-structure-rect"
-                        style={{ transform: `rotate(${s.deg}deg)` }}
-                      />
-                      {wPx >= 30 ? (
-                        <span className="blocks-structure-label">
-                          <span className="bsl-name">{s.shortName}</span>
-                          <span className="bsl-dim">{s.label}</span>
-                        </span>
-                      ) : wPx >= 10 ? (
-                        <span className="blocks-structure-label">
-                          <span className="bsl-name">{s.shortName}</span>
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="blocks-foot">
-          <div className="blocks-foot-left">
+          <div className="blocks-stats">
+            <span className="blocks-stat">
+              ขนาด{" "}
+              <b>
+                {bbox
+                  ? `${bbox.w.toFixed(1)}×${bbox.d.toFixed(1)}`
+                  : "0×0"}
+              </b>{" "}
+              ม.
+            </span>
+            <span className="blocks-stat">
+              <b>{draft.size}</b> ช่อง
+            </span>
+            <span className="blocks-stat">
+              ใช้สอย <b>{bbox ? (bbox.w * bbox.d).toFixed(1) : "0"}</b>{" "}
+              ตร.ม.
+            </span>
+          </div>
+          <div className="blocks-actions">
             <button
               type="button"
+              className="blocks-ghost-btn"
+              title="เติมช่องเป็นสี่เหลี่ยมเท่าขนาดห้องปัจจุบัน"
+              onClick={handleRect}
+            >
+              ⬜ เติมทั้งห้อง
+            </button>
+            <button
+              type="button"
+              className="blocks-ghost-btn"
+              title="ลบทุกช่อง (ย้อนกลับได้)"
+              onClick={handleClear}
+            >
+              🗑 ล้าง
+            </button>
+            <button
+              type="button"
+              className="blocks-ghost-btn"
+              title="เริ่มจากสี่เหลี่ยมขนาดห้อง + ล้างระดับพื้น + คืนซูม"
               onClick={handleReset}
-              style={{
-                padding: "8px 14px",
-                border: "1px solid var(--panel-line)",
-                background: "#fbf8f2",
-                borderRadius: 9,
-                fontFamily: "inherit",
-                fontSize: 12.5,
-                fontWeight: 600,
-                cursor: "pointer",
-                color: "var(--ink)",
-              }}
             >
               ↺ เริ่มใหม่
             </button>
-            <span className="blocks-size-info">
-              พื้นที่ใช้สอย:{" "}
-              <b>{bbox ? (bbox.w * bbox.d).toFixed(1) : "0"}</b> ตร.ม.
-            </span>
+            <button
+              type="button"
+              className="blocks-apply"
+              disabled={draft.size === 0}
+              onClick={handleApply}
+            >
+              ✓ ใช้รูปทรงนี้
+            </button>
           </div>
-          <button
-            type="button"
-            className="blocks-apply"
-            disabled={draft.size === 0}
-            onClick={handleApply}
-          >
-            ✓ ใช้รูปทรงนี้
-          </button>
         </div>
       </div>
     </div>

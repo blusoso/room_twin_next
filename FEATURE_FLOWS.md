@@ -435,6 +435,70 @@ Important:
 
 ---
 
+# 11.2 Add Zone from "ห้องของฉัน" Tab
+
+Flow:
+
+```text
+RoomPanel "+ เพิ่มโซน" (id=addZoneBtn) (แท็บ "ห้องของฉัน")
+    ↓
+openZoneAddDialog() → useZoneAddStore (mode = "choose")
+    ├─ "สร้างโซนเอง" → mode = "create"
+    │      ↓
+    │   draft: name / icon / color  +  memberUids (ติ๊กของในห้อง)
+    │      ↓
+    │   validateZoneIdentity() (lib/data/zoneResolve.ts — name/icon/color ห้ามซ้ำ)
+    │      ↓
+    │   createCustomZoneFull() (lib/three/zoneActions.ts)
+    │      ↓
+    │   setZoneMeta(zuid, { name, icon, color })
+    │      ↓
+    │   replaceItems patch: zoneUid = zuid, zoneDefId = null, slotId = undefined (atomic)
+    │      ↓
+    │   selectZone(zuid) → resolveRestHeights()
+    │      ↓
+    │   saveState() (1 การสร้าง = 1 undo step)
+    │
+    └─ "เลือกจากโซนสำเร็จรูปใน catalog" (พฤติกรรมเดิมของปุ่ม)
+           ↓
+        setSwapTarget(null) → setActivePanel("build") → setActiveCat("zone") → expandDrawer()
+           ↓
+        ผู้ใช้ลาก/แตะการ์ดโซนในแคตตาล็อก (flow # 11)
+```
+
+Inspect:
+
+```text
+components/sidebar/RoomPanel.tsx
+components/modals/ZoneAddModal.tsx
+components/modals/useModalStores.ts
+lib/three/zoneActions.ts
+lib/data/zoneResolve.ts
+components/sidebar/ThumbIcon.tsx
+```
+
+Important:
+
+```text
+⭐ โซนยัง derive จาก items — โซนที่ไม่มีของไม่แสดงที่ไหนเลย
+   ดังนั้น "สร้างโซนเอง" ต้องมีสมาชิกอย่างน้อย 1 ชิ้นเสมอ (ปุ่มสร้างถูก disable เมื่อยังไม่ติ๊ก)
+
+⭐ โซนเองไม่มี ZoneDef → สมาชิกทุกตัวมี zoneDefId = null
+   identity (name/icon/color) มาจาก zoneMeta เท่านั้น ผ่าน resolveZoneDisplay()
+   ห้าม hardcode ค่าเหล่านี้ที่ UI/3D
+
+⭐ สินค้าหมวด structure / fixtures (ประตู/หน้าต่าง/เสา/ฉากกั้น/บันได/ม่าน/แอร์)
+   ไม่ปรากฏในรายการติ๊ก และถูกกรองซ้ำใน createCustomZoneFull()
+   (สอดคล้องกับ storage migration ที่ตัดสินค้ากลุ่มนี้ออกจากโซน)
+
+⭐ ไม่มีการ instantiate/remove Three.js object ตอนสร้างโซน — ของอยู่ตำแหน่งเดิม
+   ขอบเขตโซนใน 3D มาจาก buildZoneBoundary() รายเฟรมตาม selectedZoneUid
+
+⭐ ไม่เปลี่ยน serialized shape → ไม่ bump STORAGE_KEY
+```
+
+---
+
 # 12. Delete Zone
 
 Flow:

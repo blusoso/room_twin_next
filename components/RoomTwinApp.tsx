@@ -5,7 +5,7 @@ import Header from "./Header";
 import { Sidebar } from "./sidebar";
 import { Viewport } from "./viewport";
 import { CartDrawer } from "./cart";
-import { ConfirmModal, ZoneEditModal } from "./modals";
+import { ConfirmModal, ZoneEditModal, ZoneAddModal } from "./modals";
 import { useRoomTwinInit } from "@/hooks/useRoomTwinInit";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSaveState } from "@/hooks/useSaveState";
@@ -35,6 +35,7 @@ export default function RoomTwinApp() {
       <CartDrawer />
       <ConfirmModal />
       <ZoneEditModal />
+      <ZoneAddModal />
       <div className="rotate-badge" id="rotateBadge">
         0°
       </div>

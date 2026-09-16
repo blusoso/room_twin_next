@@ -1,5 +1,6 @@
 // lib/three/zoneActions.ts
 import { useRoomTwin } from "@/lib/state/store";
+import { isAutoZoneExcludedProduct } from "@/lib/data/products";
 import { removeInstantiated, reinstantiateItem } from "./instantiate";
 import { resolveRestHeights } from "./placement";
 import { rebuildBaseboards } from "./roomShell";
@@ -95,6 +96,57 @@ export function swapZoneSlotFull(uid: string, newProductId: string) {
   }
 
   saveStateSafe();
+}
+
+/**
+ * ⭐ สร้าง "โซนเอง" (ไม่มี ZoneDef) จากแท็บห้องของฉัน
+ *    โซน derive จาก items — จึงต้องมีสมาชิกอย่างน้อย 1 ชิ้นเสมอ
+ *    identity ทั้งหมด (name/icon/color) เก็บใน zoneMeta และสมาชิกทุกตัวมี zoneDefId = null
+ *    ไม่แตะ Three.js object (ของอยู่ตำแหน่งเดิม) — caller ต้องเรียก saveState() เอง
+ */
+export interface CustomZoneInput {
+  name: string;
+  icon: string;
+  color: number;
+  memberUids: string[];
+}
+
+export function createCustomZoneFull(
+  input: CustomZoneInput,
+): { zuid: string | null } {
+  const store = useRoomTwin.getState();
+
+  // ⭐ กันของกลุ่มโครงสร้าง/ม่าน & แอร์ (สอดคล้อง storage migration + auto-zone exclusion)
+  const byUid = new Set(
+    store.placedItems
+      .filter((i) => !isAutoZoneExcludedProduct(i.productId))
+      .map((i) => i.uid),
+  );
+  const members = new Set(input.memberUids.filter((uid) => byUid.has(uid)));
+  if (members.size === 0) return { zuid: null };
+
+  const zuid = "z" + Math.random().toString(36).slice(2, 10);
+
+  // ⭐ identity ของโซนเองมาจาก zoneMeta เท่านั้น (ไม่มี def ให้ resolve)
+  store.setZoneMeta(zuid, {
+    name: input.name,
+    icon: input.icon,
+    color: input.color,
+  });
+
+  // ⭐ patch สมาชิกทั้งหมดใน update เดียว (atomic) — ย้ายออกจากโซนเดิมด้วย
+  store.replaceItems(
+    useRoomTwin.getState().placedItems.map((i) =>
+      members.has(i.uid)
+        ? { ...i, zoneUid: zuid, zoneDefId: null, slotId: undefined }
+        : i,
+    ),
+  );
+
+  store.selectZone(zuid);
+  resolveRestHeights();
+
+  return { zuid };
 }
 
 // ============================================================

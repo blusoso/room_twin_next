@@ -1,20 +1,14 @@
 // components/sidebar/RoomPanel.tsx
 "use client";
-import { useRoomTwin } from "@/lib/state/store";
+import { openZoneAddDialog } from "@/components/modals";
 import RoomTree from "./RoomTree";
 
 export default function RoomPanel() {
-  const setActivePanel = useRoomTwin((s) => s.setActivePanel);
-  const setActiveCat = useRoomTwin((s) => s.setActiveCat);
-  const expandDrawer = useRoomTwin((s) => s.expandDrawer);
-  const closeSwapPanel = useRoomTwin((s) => s.setSwapTarget);
-
+  // ⭐ "+ เพิ่มโซน" เปิดตัวเลือก 2 ทาง (สร้างโซนเอง / เลือกจากโซนสำเร็จรูปใน catalog)
+  //    — logic เดิม (สลับไปแท็บสร้างห้อง + หมวดโซน) ย้ายไปอยู่ใน ZoneAddModal
   const handleAddZone = (e: React.MouseEvent) => {
     e.stopPropagation();
-    closeSwapPanel(null);
-    setActivePanel("build");
-    setActiveCat("zone");
-    expandDrawer();
+    openZoneAddDialog();
   };
 
   return (

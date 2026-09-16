@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
-import { getProductIcon } from "@/lib/data/icons";
-import { getProductThumbnail } from "@/lib/three/thumbnails";
 import { removeInstantiated } from "@/lib/three/instantiate";
 import { rebuildBaseboards } from "@/lib/three/roomShell";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
@@ -13,6 +11,7 @@ import { flyCameraTo } from "@/lib/three/cameraFlight";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import { useTreeItemDrag } from "@/hooks/useTreeItemDrag";
+import ThumbIcon from "./ThumbIcon";
 import {
   removeZoneFull,
   moveItemOutOfZoneFull,
@@ -356,42 +355,6 @@ function TreeItem({
         </button>
       </span>
     </div>
-  );
-}
-
-// ============================================================
-// Thumbnail (lazy)
-// ============================================================
-
-function ThumbIcon({ productId }: { productId: string }) {
-  const [url, setUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = () => {
-      const u = getProductThumbnail(productId);
-      if (!cancelled) setUrl(u);
-    };
-
-    if (typeof (window as any).requestIdleCallback !== "undefined") {
-      (window as any).requestIdleCallback(run, { timeout: 1200 });
-    } else {
-      setTimeout(run, 200);
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [productId]);
-
-  if (url) return <img src={url} alt="" />;
-
-  const p = PRODUCT_BY_ID.get(productId);
-  return (
-    <span className="icon-fallback">
-      {p ? getProductIcon(p) : "📦"}
-    </span>
   );
 }
 

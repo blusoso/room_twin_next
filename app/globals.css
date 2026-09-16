@@ -1592,6 +1592,144 @@ aside {
   border-color: var(--ochre-deep);
 }
 
+.zone-edit-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   Zone Add Dialog ("+ เพิ่มโซน" ในแท็บห้องของฉัน)
+   ============================================================ */
+
+.zone-add-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border: 1.5px solid var(--panel-line);
+  border-radius: 12px;
+  background: #fbf8f2;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.zone-add-choice:hover {
+  border-color: var(--ochre);
+  background: #fff3dc;
+}
+
+.zone-add-choice-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.zone-add-choice-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.zone-add-choice-body b {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.zone-add-choice-body small {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+.zone-add-members {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  padding-right: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.zone-add-member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.zone-add-member:hover {
+  background: #fbf8f2;
+}
+
+.zone-add-member input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  accent-color: var(--ochre);
+  cursor: pointer;
+  margin: 0;
+}
+
+.zone-add-member-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  background: #f8f4eb;
+  border: 1px solid rgba(42, 35, 48, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.zone-add-member-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.zone-add-member-icon .icon-fallback {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ink-soft);
+}
+
+.zone-add-member-name {
+  flex: 1;
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zone-add-member-from {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zone-add-hint {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  margin: 0 0 12px 0;
+}
+
 .drawer-handle {
   display: none;
 }
@@ -2491,7 +2629,7 @@ aside {
 .blocks-box {
   background: #fff;
   border-radius: 18px;
-  width: min(1000px, 96vw);
+  width: min(1060px, 96vw);
   height: min(92vh, 860px);
   display: flex;
   flex-direction: column;
@@ -2503,7 +2641,8 @@ aside {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 18px;
+  gap: 12px;
+  padding: 12px 16px;
   background: linear-gradient(180deg, #fbf8f2, #f6f1e6);
   border-bottom: 1px solid var(--panel-line);
   flex-shrink: 0;
@@ -2517,13 +2656,18 @@ aside {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
-.blocks-title .bt-sub {
+/* ⭐ บรรทัดบอกวิธีทำ — เปลี่ยนตามเครื่องมือที่เลือก */
+.blocks-hint {
   font-size: 11.5px;
   font-weight: 400;
   color: var(--ink-soft);
   font-family: var(--font-noto), sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .blocks-head-actions {
@@ -2583,6 +2727,80 @@ aside {
   color: var(--ink);
 }
 
+/* ⭐ ปุ่มข้อความ (วิธีใช้ / งานก้อนใหญ่) */
+.blocks-ghost-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: all 0.12s;
+}
+
+.blocks-ghost-btn:hover {
+  background: #f0ead9;
+  color: var(--ink);
+}
+
+.blocks-ghost-btn[aria-expanded="true"] {
+  background: #f0ead9;
+  color: var(--ink);
+  border-color: var(--ochre);
+}
+
+.blocks-ghost-btn:focus-visible,
+.blocks-icon-btn:focus-visible,
+.blocks-close:focus-visible,
+.blocks-seg-btn:focus-visible,
+.blocks-chip:focus-visible,
+.blocks-fine-toggle:focus-visible,
+.blocks-legend-item:focus-visible,
+.blocks-apply:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* ⭐ แผงวิธีใช้ — แสดงเมื่อกดเท่านั้น */
+.blocks-tips {
+  padding: 12px 16px;
+  background: #fffdf6;
+  border-bottom: 1px solid var(--panel-line);
+  flex-shrink: 0;
+}
+
+.blocks-tips ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blocks-tips li {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.blocks-tips-keys {
+  margin-top: 8px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--ink-soft);
+  background: rgba(42, 35, 48, 0.05);
+  border-radius: 7px;
+  padding: 5px 9px;
+}
+
 .blocks-body {
   flex: 1;
   min-height: 0;
@@ -2593,77 +2811,211 @@ aside {
   background: #fbf8f2;
 }
 
-.blocks-toolbar {
+/* ============================================================
+   Blocks Editor — แถบเครื่องมือเดียว (เครื่องมือ · ระดับพื้น · ซูม)
+   ============================================================ */
+
+.blocks-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 10px;
+  row-gap: 8px;
+  padding: 9px 16px;
   background: #fff;
   border-bottom: 1px solid var(--panel-line);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
 
-.blocks-tool {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.blocks-tool .val {
-  font-family: var(--font-fraunces), serif;
-  color: var(--ochre-deep);
+.blocks-bar-label {
+  font-size: 11.5px;
   font-weight: 700;
+  color: var(--ink-soft);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 .blocks-tool-sep {
   width: 1px;
-  height: 20px;
+  height: 22px;
   background: var(--panel-line);
-  margin: 0 4px;
+  margin: 0 2px;
 }
 
-.blocks-toolbar button {
-  padding: 6px 12px;
+/* ⭐ เครื่องมือ วาด / ยางลบ (segmented) */
+.blocks-seg {
+  display: inline-flex;
   border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  overflow: hidden;
   background: #fbf8f2;
-  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.blocks-seg-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
   font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
   cursor: pointer;
-  color: var(--ink);
   transition: all 0.12s;
+  white-space: nowrap;
 }
 
-.blocks-toolbar button:hover {
+.blocks-seg-btn + .blocks-seg-btn {
+  border-left: 1px solid var(--panel-line);
+}
+
+.blocks-seg-btn:hover {
   background: #f0ead9;
+  color: var(--ink);
 }
 
-/* ⭐ ปุ่มเลือกเครื่องมือ วาด / ยางลบ */
-.blocks-tool-toggle.active {
+.blocks-seg-btn.active {
   background: var(--ochre);
-  border-color: var(--ochre-deep);
   color: #fff;
 }
 
-.blocks-tool-toggle.active:hover {
-  background: var(--ochre-deep);
+/* ⭐ ระดับพื้น */
+.blocks-levels {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  row-gap: 6px;
+  flex-wrap: wrap;
+  transition: opacity 0.12s;
+}
+
+/* โหมดยางลบ — ระดับพื้นไม่ถูกใช้ */
+.blocks-levels.is-dim {
+  opacity: 0.45;
+}
+
+.blocks-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.blocks-chip {
+  min-width: 38px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  font-family: "Courier New", monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #5a4a30;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(42, 35, 48, 0.08);
+  transition: box-shadow 0.12s, border-color 0.12s;
+  touch-action: manipulation;
+}
+
+.blocks-chip:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(42, 35, 48, 0.08),
+    0 2px 6px rgba(42, 35, 48, 0.18);
+}
+
+.blocks-chip.active {
+  border-color: var(--ink);
+  box-shadow:
+    inset 0 0 0 1px rgba(42, 35, 48, 0.08),
+    0 0 0 3px rgba(184, 117, 46, 0.2);
+}
+
+.blocks-fine-toggle {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px dashed var(--panel-line);
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.blocks-fine-toggle:hover {
+  border-color: var(--ochre);
+  color: var(--ink);
+}
+
+.blocks-fine-toggle.active {
+  border-style: solid;
+  border-color: var(--ochre);
+  background: #f8efdd;
+  color: var(--ochre-deep);
+}
+
+.blocks-fine {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 2px;
+}
+
+.blocks-fine input[type="range"] {
+  flex: 1;
+  min-width: 140px;
+  accent-color: var(--ochre);
+  height: 4px;
+}
+
+.blocks-badge {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ochre-deep);
+  background: #f8efdd;
+  border-radius: 7px;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+
+.blocks-zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .blocks-canvas {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #faf7f0;
+}
+
+/* ⭐ พื้นที่ผัง (scroll เฉพาะส่วนนี้) — legend ด้านล่างไม่เลื่อนหาย */
+.blocks-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fbf8f2;
-  padding: 24px;
+  padding: 22px;
+  background-image: radial-gradient(
+    rgba(184, 117, 46, 0.09) 1px,
+    transparent 1px
+  );
+  background-size: 16px 16px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -2830,21 +3182,22 @@ aside {
 }
 
 /* ============================================================
-   Blocks Editor — Legend โครงสร้างในห้อง
+   Blocks Editor — Legend โครงสร้าง (แถบท้ายผัง)
    ============================================================ */
 
-.blocks-structs {
+.blocks-legend {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 7px 16px;
-  background: #fffdf6;
-  border-bottom: 1px solid var(--panel-line);
+  background: #fbf8f2;
+  border-top: 1px solid var(--panel-line);
   flex-shrink: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
-.bss-label {
+.blocks-legend-label {
   font-size: 11.5px;
   font-weight: 700;
   color: var(--ink-soft);
@@ -2853,30 +3206,14 @@ aside {
   flex-shrink: 0;
 }
 
-.bss-empty {
-  font-size: 11.5px;
-  color: var(--ink-soft);
-  opacity: 0.75;
-}
-
-.bss-chips {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
-}
-
-.bst-chip {
+.blocks-legend-item {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 8px;
-  border: 1px solid var(--panel-line);
-  background: #fff;
-  border-radius: 8px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 7px;
   font-family: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -2884,59 +3221,72 @@ aside {
   cursor: help;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.12s;
+  transition: background 0.12s, border-color 0.12s;
 }
 
-.bst-chip:hover,
-.bst-chip:focus-visible,
-.bst-chip.is-hover {
+.blocks-legend-item:hover,
+.blocks-legend-item.is-hover {
+  background: #fff;
   border-color: var(--sp-line, var(--ochre-deep));
-  box-shadow: 0 0 0 2px rgba(184, 117, 46, 0.18);
-  outline: none;
 }
 
-.bst-dot {
-  width: 11px;
-  height: 11px;
+.blocks-legend-dot {
+  width: 10px;
+  height: 10px;
   border-radius: 3px;
   background: var(--sp-fill, #e8dcc4);
   border: 1px solid var(--sp-line, #7c4a1e);
   flex-shrink: 0;
 }
 
-.bst-dim {
+.blocks-legend-name {
+  color: var(--ink-soft);
+}
+
+.blocks-legend-dim {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 10.5px;
   font-weight: 700;
   color: var(--ochre-deep);
 }
 
-.bst-mount {
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  background: rgba(42, 35, 48, 0.06);
-  padding: 1px 5px;
-  border-radius: 5px;
-}
-
 .blocks-foot {
-  padding: 12px 18px;
+  padding: 11px 16px;
   background: #fff;
   border-top: 1px solid var(--panel-line);
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ⭐ สรุปตัวเลข — รวมไว้ที่เดียว */
+.blocks-stats {
+  display: flex;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.blocks-foot-left {
+.blocks-stat {
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.blocks-stat b {
+  font-family: var(--font-fraunces), serif;
+  color: var(--ochre-deep);
+  font-size: 14px;
+}
+
+.blocks-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  align-items: center;
 }
 
 .blocks-apply {
@@ -2964,18 +3314,6 @@ aside {
 .blocks-apply:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-.blocks-size-info {
-  font-size: 12.5px;
-  color: var(--ink-soft);
-  font-family: "Courier New", monospace;
-}
-
-.blocks-size-info b {
-  color: var(--ochre-deep);
-  font-family: var(--font-fraunces), serif;
-  font-size: 15px;
 }
 
 /* ============================================================
@@ -4380,8 +4718,20 @@ aside {
   .blocks-body {
     overflow: hidden;
   }
-  .blocks-canvas {
+  .blocks-hint {
+    display: none;
+  }
+  .blocks-bar {
+    row-gap: 8px;
+  }
+  .blocks-zoom {
+    margin-left: 0;
+  }
+  .blocks-stage {
     padding: 14px;
+  }
+  .blocks-tips ul {
+    padding-left: 16px;
   }
 }
 
@@ -4719,94 +5069,4 @@ aside {
     width: auto;
     max-height: 60vh;
   }
-}
-
-/* ============================================================
-   Blocks Editor — Level Picker
-   ============================================================ */
-
-.blocks-level-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 16px;
-  background: linear-gradient(180deg, #fffdf6, #fbf8f2);
-  border-bottom: 1px solid var(--panel-line);
-  flex-shrink: 0;
-}
-
-.blp-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  letter-spacing: 0.3px;
-}
-
-/* ⭐ โหมดยางลบ — ระดับพื้นไม่ถูกใช้ */
-.blocks-level-picker.is-dim .blp-chips,
-.blocks-level-picker.is-dim .blp-custom {
-  opacity: 0.45;
-}
-
-.blp-note {
-  font-weight: 500;
-  color: var(--ochre-deep);
-}
-
-.blp-chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.blp-chip {
-  min-width: 44px;
-  height: 34px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  font-family: "Courier New", monospace;
-  font-size: 12px;
-  font-weight: 700;
-  color: #5a4a30;
-  cursor: pointer;
-  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
-  box-shadow: inset 0 0 0 1px rgba(42, 35, 48, 0.08);
-  touch-action: manipulation;
-}
-
-.blp-chip:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 0 0 1px rgba(42, 35, 48, 0.08),
-    0 3px 8px rgba(42, 35, 48, 0.15);
-}
-
-.blp-chip.active {
-  border-color: var(--ink);
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 0 0 1px rgba(42, 35, 48, 0.08),
-    0 0 0 3px rgba(184, 117, 46, 0.2);
-}
-
-.blp-custom {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.blp-custom input[type="range"] {
-  flex: 1;
-  accent-color: var(--ochre);
-  height: 4px;
-}
-
-.blp-value {
-  font-family: "Courier New", monospace;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--ochre-deep);
-  min-width: 56px;
-  text-align: right;
 }

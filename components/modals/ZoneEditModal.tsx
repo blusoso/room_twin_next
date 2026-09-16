@@ -6,9 +6,7 @@ import type { ZoneMeta } from "@/lib/state/types";
 import {
   getZoneDefForZone,
   resolveZoneDisplay,
-  isZoneNameTaken,
-  isZoneIconTaken,
-  isZoneColorTaken,
+  validateZoneIdentity,
 } from "@/lib/data/zoneResolve";
 import { ZONE_FALLBACK } from "@/lib/data/zones";
 import { useZoneEditStore } from "./useModalStores";
@@ -26,28 +24,15 @@ interface Draft {
 }
 
 /**
- * ⭐ ตรวจ uniqueness ของ name / emoji / color
- *    - name: ห้ามซ้ำกับโซนใด ๆ (เทียบชื่อที่ resolve แล้ว)
- *    - icon/color: ห้ามซ้ำกับโซนชนิดอื่น (โซนชนิดเดียวกันใช้ค่าร่วมกันได้)
+ * ⭐ ตรวจ uniqueness ของ name / emoji / color — logic/ข้อความอยู่ที่
+ *    validateZoneIdentity() ใน lib/data/zoneResolve.ts (ใช้ร่วมกับ ZoneAddModal)
  */
 function validateDraft(
   draft: Draft,
   exclude: string | null,
   live = false,
 ): string {
-  const name = draft.name.trim();
-
-  if (!name) return live ? "" : "กรุณากรอกชื่อโซน";
-  if (isZoneNameTaken(name, exclude)) {
-    return `ชื่อ "${name}" ถูกใช้ไปแล้ว — กรุณาตั้งชื่ออื่น`;
-  }
-  if (isZoneIconTaken(draft.icon, exclude)) {
-    return `ไอคอน ${draft.icon} ถูกใช้ในโซนอื่นแล้ว — กรุณาเลือกไอคอนอื่น`;
-  }
-  if (isZoneColorTaken(draft.color, exclude)) {
-    return `สีนี้ถูกใช้ในโซนอื่นแล้ว — กรุณาเลือกสีอื่น`;
-  }
-  return "";
+  return validateZoneIdentity(draft, exclude, { live });
 }
 
 /**
