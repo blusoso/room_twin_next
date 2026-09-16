@@ -4,12 +4,17 @@ import { useCallback, useEffect } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
 import { PARAM_SCHEMA } from "@/lib/data/schemas";
+import { clampPresetParams, hasSizePresets } from "@/lib/data/sizePresets";
+import type { SizePreset } from "@/lib/data/sizePresets";
 import { hexOf, numOf } from "@/lib/utils/format";
 import { reinstantiateItem } from "@/lib/three/instantiate";
 import { resolveRestHeights } from "@/lib/three/placement";
 import { rebuildBaseboards } from "@/lib/three/roomShell";
+// ⭐ แก้ params ใช้เจ้าของเดียวร่วมกับปุ่มขนาดบน floating toolbar
+import { applyParamEdit, applyParamsPatch } from "@/lib/three/paramEdit";
+import SizePresetList from "./SizePresetList";
 import { useSaveState } from "@/hooks/useSaveState";
-import type { PlacedItem, Params } from "@/lib/state/types";
+import type { PlacedItem } from "@/lib/state/types";
 import type { DimDef, ColorDef, BoolDef } from "@/lib/data/schemas";
 
 export default function CustomizePanel() {
@@ -128,6 +133,20 @@ function CustomizeBody({
         {hasDims && (
           <div className="cz-section">
             <div className="cz-section-label">📐 ขนาด</div>
+            {/* ⭐ ขนาดสำเร็จรูป — แตะเดียวได้ขนาดที่รู้จักชื่อ (รายการเดียวกับปุ่ม 📐 บน toolbar) */}
+            {hasSizePresets(item.productId) && (
+              <SizePresetList
+                productId={item.productId}
+                params={item.params}
+                variant="chips"
+                onPick={(preset: SizePreset) =>
+                  applyParamsPatch(
+                    item,
+                    clampPresetParams(item.productId, preset.params),
+                  )
+                }
+              />
+            )}
             {schema.dims!.map((def) => (
               <DimRow key={def.key} item={item} def={def} />
             ))}
@@ -176,96 +195,6 @@ function CustomizeBody({
 // ============================================================
 // Rows
 // ============================================================
-
-function applyParamEdit(item: PlacedItem, key: string, value: any) {
-  const product = PRODUCT_BY_ID.get(item.productId);
-  if (!product) return;
-
-  const newParams: Params = { ...item.params, [key]: value };
-  useRoomTwin.getState().updateItem(item.uid, { params: newParams });
-
-  const isDim = key === "w" || key === "d" || key === "h";
-
-  if (isDim) {
-    resolveRestHeights();
-    import("@/lib/three/placement").then(
-      ({ footprintOf, resolvePlacement, resolveRestHeights: rrh }) => {
-        const { placedItems, updateItem } = useRoomTwin.getState();
-        const it = placedItems.find((i) => i.uid === item.uid);
-        if (!it) return;
-        const fp = footprintOf(newParams, it.rotY || 0);
-
-        if (it.wallMount) {
-          import("@/lib/three/wallPlacement").then(
-            ({ resolveWallPlacement, wallFootprint, targetOfItem }) => {
-              const target = targetOfItem(it);
-              if (!target) return;
-              const { halfU, halfV } = wallFootprint(
-                newParams,
-                it.rotZ || 0,
-              );
-              const c = resolveWallPlacement(
-                it.uid,
-                target,
-                it.u!,
-                it.v!,
-                halfU,
-                halfV,
-                product.groundAnchor || false,
-              );
-              updateItem(it.uid, { u: c.u, v: c.v });
-              reinstantiateItem(it.uid);
-              if (product.id === "door") rebuildBaseboards();
-              // ⭐ ประตู/หน้าต่างเปลี่ยนขนาด → ของที่แขวนอยู่บนพื้ นผิวตามขนาดใหม่
-              import("@/lib/three/reclamp").then(({ reclampAttachmentsOf }) =>
-                reclampAttachmentsOf(it.uid),
-              );
-            },
-          );
-          return;
-        }
-
-        if (it.ceilingMount) {
-          import("@/lib/three/ceilingPlacement").then(
-            ({ resolveCeilingPlacement }) => {
-              const c = resolveCeilingPlacement(
-                it.uid,
-                it.x!,
-                it.z!,
-                fp,
-                newParams.h / 100,
-              );
-              updateItem(it.uid, { x: c.x, z: c.z });
-              reinstantiateItem(it.uid);
-            },
-          );
-          return;
-        }
-
-        const c = resolvePlacement(
-          it.uid,
-          it.x!,
-          it.z!,
-          fp,
-          it.parentUid,
-          product.rug,
-        );
-        updateItem(it.uid, { x: c.x, z: c.z });
-        reinstantiateItem(it.uid);
-        rrh();
-        // ⭐ เสา/ฉากกั้นเปลี่ยนขนาด → ของที่แขวนอยู่บนพื้ นผิวตามพื้ นผิวใหม่
-        import("@/lib/three/reclamp").then(({ reclampAttachmentsOf }) =>
-          reclampAttachmentsOf(it.uid),
-        );
-      },
-    );
-  } else {
-    reinstantiateItem(item.uid);
-    import("@/lib/three/reclamp").then(({ reclampAttachmentsOf }) =>
-      reclampAttachmentsOf(item.uid),
-    );
-  }
-}
 
 function DimRow({ item, def }: { item: PlacedItem; def: DimDef }) {
   const value =

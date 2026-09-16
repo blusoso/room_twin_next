@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
+import { matchSizePreset } from "@/lib/data/sizePresets";
 import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { priceStr, hexOf, affiliateUrl } from "@/lib/utils/format";
 import { trackAffiliateClick } from "@/lib/state/storage";
@@ -49,6 +50,8 @@ export default function ItemPanel() {
 
   const p = item.params;
   const locked = !!item.locked;
+  // ⭐ ชื่อขนาดสำเร็จรูป (ถ้าตรงกับ preset) — ยืนยันผลหลังเลือกขนาดจาก toolbar
+  const sizePreset = matchSizePreset(item.productId, p);
 
   // zone info — ⭐ ใช้ resolver กลาง (definition + override)
   const zone = item.zoneUid
@@ -87,6 +90,7 @@ export default function ItemPanel() {
             {(locked ? "🔒 " : "") + (item.displayName || product.name)}
           </div>
           <div className="ip-meta">
+            {sizePreset ? `${sizePreset.label} • ` : ""}
             {p.w}×{p.d}×{p.h} ซม.{zoneInfo}
           </div>
           <div className="ip-price">{priceStr(product.price)}</div>

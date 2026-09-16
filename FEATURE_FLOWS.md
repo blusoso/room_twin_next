@@ -266,6 +266,51 @@ Do not create a second persistent copy of the item's parameters in the UI.
 
 ---
 
+# 7.1 ขนาดสำเร็จรูป (Size Presets — ปุ่ม 📐 บน floating toolbar)
+
+Flow:
+
+```text
+📐 บน floating toolbar (หรือ chip row ใน CustomizePanel)
+    ↓
+SIZE_PRESETS[productId]          (lib/data/sizePresets.ts — derived data, ไม่ใช่ state)
+    ↓
+clampPresetParams(productId, preset.params)   → clamp ตาม PARAM_SCHEMA
+    ↓
+applyParamsPatch(item, patch)    (lib/three/paramEdit.ts — เจ้าของเดียวของการแก้ params)
+    ↓
+PlacedItem.params (Zustand)
+    ↓
+reinstantiate + resolvePlacement / resolveWallPlacement / resolveCeilingPlacement
+    ↓
+reclampAttachmentsOf(host) + rebuildBaseboards()   (ประตู)
+    ↓
+saveState()/history
+```
+
+กติกา:
+
+```text
+- preset ไม่เก็บลง state → ไม่เปลี่ยน serialized shape → ไม่ bump STORAGE_KEY
+- ปุ่ม 📐 แสดงเมื่อไอเทมไม่ได้ล็อก + สินค้านั้นมี preset เท่านั้น
+  (โหมดโซนซ่อนอัตโนมัติผ่าน .item-btn; โหมดสลับสินค้าซ่อนผ่าน #ftSize ใน CSS)
+- ข้อความบนปุ่มต้องสื่อความหมายเสมอ = ชื่อ preset ถ้าตรง / ไม่ตรงให้ fallback เป็น W×D จริง
+- เลือกแล้ว saveState() ทันที (1 การเลือก = 1 history entry เหมือนปุ่มหมุน/ทำซ้ำ)
+- ห้าม UI คำนวณ/ตั้งตำแหน่งเอง — ต้องผ่าน applyParamsPatch เพื่อให้ clamp + reclamp ครบ
+- เปลี่ยนขนาดประตู/หน้าต่าง/เสา/ฉากกั้น → ของที่แขวนบนพื้นผิวนั้น reclamp ตามอัตโนมัติ
+```
+
+Edge ที่รู้ไว้ (พฤติกรรมเดิม — ไม่แก้ในฟีเจอร์นี้):
+
+```text
+- "รีเซ็ตธีมโซน" คืน params จาก zoneMeta.themeBaseline → ขนาดที่แก้หลังใช้ธีมจะถูกคืนค่า
+  (เหมือนการแก้ params ทางอื่น เช่น สไลเดอร์สี/สไลเดอร์ขนาด — baseline คือ snapshot ตอนใช้ธีม)
+- สไลเดอร์ของ roundrug แก้แค่ w แต่ footprintOf ใช้ทั้ง w/d (ปัญหาก่อนมีฟีเจอร์นี้)
+  → preset ของ roundrug ตั้ง w/d เท่ากันให้ถูกต้อง
+```
+
+---
+
 # 8. Swap Furniture
 
 Flow:
@@ -813,6 +858,11 @@ lib/data/constants.ts
 lib/state/types.ts
 lib/three/instantiate.ts
 ```
+
+⭐ ถ้าสินค้านั้นมี "ขนาดมาตรฐานที่ผู้ใช้รู้จัก" (เตียง/ประตู/หน้าต่าง/ตู้/โต๊ะ/ชั้นวาง/พรม)
+ให้เพิ่มรายการใน `lib/data/sizePresets.ts` ด้วย → ปุ่ม 📐 จะโผล่บน floating toolbar
+และ chip row จะโผล่ในแผงปรับแต่งเอง โดยไม่ต้องแก้ serialization (ดู §7.1)
+`lib/data/products.ts` ควรตั้ง `dims` เริ่มต้นให้ตรงกับ preset ใด preset หนึ่ง เพื่อให้ปุ่มแสดงชื่อขนาดทันที
 
 ---
 

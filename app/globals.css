@@ -789,7 +789,8 @@ aside {
 }
 
 .cat-badge,
-.theme-badge {
+.theme-badge,
+.size-badge {
   font-size: 10px;
   padding: 2px 7px;
   border-radius: var(--radius-pill);
@@ -806,6 +807,14 @@ aside {
   background: #f7ecd9;
   border: 1px solid #e5d6b4;
   color: #8a6a2f;
+}
+
+/* ⭐ สินค้ามีขนาดสำเร็จรูป (size presets) */
+.size-badge {
+  background: #eaf1ea;
+  border: 1px solid #c9dbcb;
+  color: var(--sage-deep);
+  font-weight: 600;
 }
 
 mark.hl {
@@ -1801,6 +1810,184 @@ mark.hl {
   background: linear-gradient(135deg, #8f5a21, #6d431a);
 }
 
+/* ============================================================
+   ⭐ ขนาดสำเร็จรูป (size presets) บน floating toolbar
+   ปุ่มเดียวในแถบที่ไม่ใช่ไอคอนกลม เพราะต้องอ่าน "ชื่อขนาด" ได้ทันที (เข้าใจใน 3 วิ)
+   ============================================================ */
+
+.ft-btn.size {
+  width: auto;
+  padding: 0 13px;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
+  color: #fff;
+}
+
+.ft-btn.size:hover {
+  background: var(--sage-deep);
+}
+
+.ft-btn.size.active {
+  background: #fff;
+  color: var(--sage-deep);
+  box-shadow: 0 0 0 2px rgba(248, 244, 235, 0.55);
+}
+
+.ft-size-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ft-size-text {
+  white-space: nowrap;
+}
+
+/* เมนูขนาด — เปิดขึ้นด้านบนเป็นค่าเริ่มต้น; .down = พลิกไปด้านล่างเมื่อ toolbar ชิดขอบบนจอ */
+.ft-size-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.96);
+  transform-origin: bottom center;
+  width: min(320px, 86vw);
+  background: rgba(42, 35, 48, 0.96);
+  color: #f8f4eb;
+  border: 1px solid rgba(184, 117, 46, 0.55);
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(42, 35, 48, 0.36);
+  padding: 8px;
+  z-index: var(--z-swap-badge);
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s, transform 0.12s;
+}
+
+.ft-size-menu.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) scale(1);
+}
+
+.ft-size-menu.down {
+  bottom: auto;
+  top: calc(100% + 10px);
+  transform-origin: top center;
+}
+
+.sm-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 8px 6px;
+}
+
+.sm-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.sm-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(248, 244, 235, 0.14);
+  color: #f8f4eb;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sm-close:hover {
+  background: rgba(248, 244, 235, 0.26);
+}
+
+.sm-body {
+  max-height: min(52vh, 320px);
+  overflow-y: auto;
+}
+
+.sm-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.size-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid rgba(248, 244, 235, 0.14);
+  border-radius: 10px;
+  background: rgba(248, 244, 235, 0.06);
+  color: #f8f4eb;
+  text-align: left;
+  cursor: pointer;
+}
+
+.size-opt:hover {
+  background: rgba(248, 244, 235, 0.14);
+}
+
+.size-opt.active {
+  background: var(--sage-deep);
+  border-color: rgba(248, 244, 235, 0.4);
+}
+
+.size-opt-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.size-opt-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.size-opt-sub {
+  display: block;
+  margin-top: 1px;
+  font-size: 10.5px;
+  color: #d8cfc0;
+}
+
+.size-opt-check {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #cfe6d2;
+  white-space: nowrap;
+}
+
+.sm-foot {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 8px;
+  border: none;
+  border-top: 1px solid rgba(248, 244, 235, 0.14);
+  background: none;
+  color: #e8d8b8;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.sm-foot:hover {
+  color: #fff;
+}
+
 .floating-toolbar.no-rotate #ftRotLeft,
 .floating-toolbar.no-rotate #ftRotRight {
   display: none;
@@ -1823,6 +2010,7 @@ mark.hl {
 .floating-toolbar.swap-mode #ftRotRight,
 .floating-toolbar.swap-mode #ftLock,
 .floating-toolbar.swap-mode #ftCustomize,
+.floating-toolbar.swap-mode #ftSize,
 .floating-toolbar.swap-mode #ftDuplicate,
 .floating-toolbar.swap-mode .zone-btn {
   display: none !important;
@@ -4127,6 +4315,20 @@ mark.hl {
   background: linear-gradient(90deg, var(--panel-line), transparent);
 }
 
+/* ⭐ chip row ของขนาดสำเร็จรูป — อยู่เหนือสไลเดอร์ขนาดในแผงปรับแต่ง */
+.cz-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--panel-line);
+}
+
+.cz-presets .chip {
+  min-height: 30px;
+}
+
 .cz-row {
   display: flex;
   align-items: center;
@@ -5282,6 +5484,23 @@ mark.hl {
     width: 40px;
     height: 40px;
     font-size: 18px;
+  }
+  /* ⭐ ปุ่ม/เมนูขนาดบนจอมือถือ — ปุ่มยังอ่านชื่อขนาดได้ แต่กระชับขึ้น
+     (ต้องประกาศ width:auto ซ้ำ เพราะ .floating-toolbar .ft-btn ด้านบนกว้าง 40px) */
+  .floating-toolbar .ft-btn.size {
+    width: auto;
+    height: 36px;
+    padding: 0 11px;
+    font-size: 12px;
+  }
+  /* ⭐ ปุ่มเยอะ + ปุ่มขนาดมีข้อความ → ให้ toolbar ตัดบรรทัดได้ ไม่ล้นจอแคบ */
+  .floating-toolbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 94vw;
+  }
+  .ft-size-menu {
+    width: min(300px, 88vw);
   }
   .floating-hint {
     font-size: 13px;

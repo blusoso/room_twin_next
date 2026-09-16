@@ -157,6 +157,9 @@ Important domains include:
 * item customization
 * product catalog filters (`CatalogFilterPanel` — floating, non-modal, no backdrop)
 
+`CustomizePanel` แสดงขนาดสำเร็จรูปเป็น chip row ผ่าน `components/panels/SizePresetList.tsx`
+(รายการเดียวกับเมนู 📐 บน floating toolbar) และแก้ params ผ่าน `lib/three/paramEdit.ts` เท่านั้น
+
 Positioning convention:
 
 ```text
@@ -197,7 +200,8 @@ Contains:
 
 * Canvas3D
 * viewport overlays
-* toolbar
+* toolbar (`FloatingToolbar.tsx` — หมุน 90° / ล็อก / 🎨 ปรับแต่ง / ⇄ เปลี่ยนสินค้า / ⧉ ทำซ้ำ / 🗑 ลบ
+  และปุ่ม 📐 ขนาด ที่เปิดเมนูขนาดสำเร็จรูปของไอเทมที่เลือก)
 * viewport-facing UI
 
 The viewport is the React-side interface to the Three.js world.
@@ -381,6 +385,39 @@ lib/data/productSearch.ts
 ├── ฟังก์ชันช่วย: mountsOf, fitsRoom, inPriceBand, normalizeText, isSearchMode
 └── ไม่รู้จัก store / React / localStorage (pure) → ไม่กระทบ serialized state
 ```
+
+Size presets (ขนาดสำเร็จรูป — เตียง 3/3.5/4/5/6 ฟุต, ควีน, คิง, ประตู, หน้าต่าง, ตู้, โต๊ะ, ชั้นวาง, พรม):
+
+```text
+lib/data/sizePresets.ts
+├── SIZE_PRESETS[productId] = { title, presets: [{ id, label, sub, params }] }
+├── sizePresetGroup / hasSizePresets
+├── matchSizePreset(productId, params) → preset ที่ตรงกับ params ปัจจุบัน (±0.5 ซม.)
+├── sizeChipLabel(productId, params)   → ข้อความบนปุ่ม 📐 (fallback = ขนาดจริง)
+└── clampPresetParams(productId, patch) → clamp ตาม PARAM_SCHEMA ก่อนเขียน store
+```
+
+* preset เป็น **derived data ล้วน** — ไม่เก็บลง state, ไม่เป็น source of truth ที่สอง,
+  ไม่เปลี่ยน serialized shape (จึงไม่ต้อง bump `STORAGE_KEY`) และไม่ต้อง migration
+* `PlacedItem.params` ยังเป็นเจ้าของค่าจริง; ทุกเส้นทางที่เลือก preset ต้องเขียนผ่าน
+  `applyParamsPatch()` เท่านั้น
+* UI ที่แสดงรายการ: `components/panels/SizePresetList.tsx` (`variant="menu"` = popover ของ floating toolbar,
+  `variant="chips"` = chip row เหนือสไลเดอร์ขนาดใน CustomizePanel)
+* สินค้าที่มี preset จะขึ้น badge "📐 N ขนาด" บนการ์ดใน sidebar (`components/sidebar/ProductCard.tsx`)
+
+Param editing (เจ้าของเดียวของการแก้ params):
+
+```text
+lib/three/paramEdit.ts
+├── applyParamEdit(item, key, value)    → key เดียว (สไลเดอร์/สี/ตัวเลือก)
+└── applyParamsPatch(item, patch)       → หลาย key (size preset ตั้ง w/d พร้อมกัน)
+        ↓ เขียน PlacedItem.params (synchronous)
+        ↓ reinstantiate + resolvePlacement / resolveWallPlacement / resolveCeilingPlacement
+        ↓ reclampAttachmentsOf (ของที่แขวนบนพื้นผิวของ host) + rebuildBaseboards (ประตู)
+```
+
+`applyParamEdit` ย้ายมาจาก `components/panels/CustomizePanel.tsx` — ห้ามสร้างสำเนาที่สอง:
+ทุกเส้นทางที่แก้ `w`/`d`/`h` ต้องผ่านไฟล์นี้ เพื่อให้การ clamp ตำแหน่งและ reclamp ทำงานครบ
 
 Important:
 

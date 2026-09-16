@@ -1,6 +1,6 @@
 // components/viewport/FloatingToolbar.tsx
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useRoomTwin } from "@/lib/state/store";
 import { camera, renderer, objectsByUid } from "@/lib/three/scene";
@@ -17,6 +17,15 @@ import { targetOfItem } from "@/lib/three/wallPlacement";
 import { reclampAttachmentsOf } from "@/lib/three/reclamp";
 import { rebuildBaseboards } from "@/lib/three/roomShell";
 import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+// ⭐ ขนาดสำเร็จรูป (derived data) — แก้ค่าจริงผ่าน applyParamsPatch เท่านั้น
+import {
+  clampPresetParams,
+  sizeChipLabel,
+  sizePresetGroup,
+} from "@/lib/data/sizePresets";
+import type { SizePreset } from "@/lib/data/sizePresets";
+import { applyParamsPatch } from "@/lib/three/paramEdit";
+import SizePresetList from "@/components/panels/SizePresetList";
 import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
@@ -46,6 +55,55 @@ export default function FloatingToolbar() {
 
   const zoneMode = !!selectedZoneUid;
   const swapMode = !!swapTargetUid;
+
+  // ===== ⭐ ขนาดสำเร็จรูป (size presets) =====
+  //  กติกา: preset เป็น derived data — เลือกแล้วเขียน PlacedItem.params เท่านั้น
+  const [sizeOpen, setSizeOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  const sizeGroup = item ? sizePresetGroup(item.productId) : null;
+  const sizeLabel = item ? sizeChipLabel(item.productId, item.params) : "";
+  // ล็อกอยู่ / สินค้านั้นไม่มีตัวเลือกขนาด → ไม่แสดงปุ่ม 📐 เลย
+  const canSize = !!item && !item.locked && !!sizeGroup;
+
+  // ปิดเมนูเมื่อเปลี่ยนชิ้นที่เลือก / ออกโหมดโซน / เข้าโหมดสลับสินค้า / ของถูกล็อก
+  useEffect(() => {
+    setSizeOpen(false);
+  }, [selectedUid, selectedZoneUid, swapTargetUid, canSize]);
+
+  const handleSizePick = useCallback(
+    (preset: SizePreset) => {
+      if (!item) return;
+      applyParamsPatch(item, clampPresetParams(item.productId, preset.params));
+      saveState();
+      setSizeOpen(false);
+    },
+    [item, saveState],
+  );
+
+  // ⭐ คลิกนอกเมนู = ปิด (แพทเทิร์นเดียวกับ CatalogFilterPanel) + Escape ปิด
+  //    หมายเหตุ: usePointerInteraction ผูก listener ที่ canvas ไม่ใช่ window → คลิกในเมนูไม่เริ่มลาก object
+  useEffect(() => {
+    if (!sizeOpen) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (rootRef.current && rootRef.current.contains(t)) return;
+      setSizeOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setSizeOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [sizeOpen]);
 
   // ===== Position RAF loop =====
   useEffect(() => {
@@ -207,6 +265,7 @@ export default function FloatingToolbar() {
 
   return (
     <div
+      ref={rootRef}
       className={`floating-toolbar ${
         zoneMode ? "zone-mode" : "item-mode"
       }${swapMode ? " swap-mode" : ""} show`}
@@ -214,6 +273,19 @@ export default function FloatingToolbar() {
       style={{ left: pos.x + "px", top: pos.y + "px" }}
     >
       {/* ===== Item mode ===== */}
+      {/* ⭐ ขนาดสำเร็จรูป — ปุ่มซ้ายสุด แสดงขนาดปัจจุบันเป็นตัวอักษร (ไม่ใช่ icon ลอย ๆ) */}
+      {item && canSize && (
+        <button
+          type="button"
+          className={`ft-btn item-btn size${sizeOpen ? " active" : ""}`}
+          id="ftSize"
+          title={`ขนาด — เลือกขนาดสำเร็จรูป (ตอนนี้: ${sizeLabel})`}
+          onClick={() => setSizeOpen((v) => !v)}
+        >
+          <span className="ft-size-icon">📐</span>
+          <span className="ft-size-text">{sizeLabel}</span>
+        </button>
+      )}
       <button
         type="button"
         className="ft-btn item-btn"
@@ -354,6 +426,50 @@ export default function FloatingToolbar() {
       >
         ✕
       </button>
+
+      {/* ===== ⭐ เมนูขนาดสำเร็จรูป =====
+          เปิดขึ้นด้านบนเป็นค่าเริ่มต้น; ถ้า toolbar อยู่ชิดขอบบนจอ (pos.y น้อย)
+          ให้พลิกไปเปิดด้านล่าง เพื่อไม่ให้เมนูหลุดจอ (body เป็น overflow: hidden) */}
+      {item && canSize && sizeOpen && (
+        <div
+          className={`ft-size-menu show${pos.y < 260 ? " down" : ""}`}
+          role="menu"
+          aria-label={sizeGroup ? sizeGroup.title : "เลือกขนาด"}
+        >
+          <div className="sm-head">
+            <span className="sm-title">📐 {sizeGroup ? sizeGroup.title : "ขนาด"}</span>
+            <button
+              type="button"
+              className="sm-close"
+              onClick={() => setSizeOpen(false)}
+              title="ปิด"
+              aria-label="ปิดเมนูขนาด"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="sm-body">
+            <SizePresetList
+              productId={item.productId}
+              params={item.params}
+              variant="menu"
+              onPick={handleSizePick}
+            />
+          </div>
+
+          <button
+            type="button"
+            className="sm-foot"
+            onClick={() => {
+              setSizeOpen(false);
+              setCustomizeTarget(item.uid);
+            }}
+          >
+            ปรับละเอียด (กว้าง × ยาว × สูง) →
+          </button>
+        </div>
+      )}
 
       <div className="ft-arrow" />
     </div>

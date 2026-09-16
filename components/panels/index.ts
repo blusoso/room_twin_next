@@ -6,3 +6,4 @@ export { default as ZoneThemePanel } from "./ZoneThemePanel";
 export { default as ZoneChooser } from "./ZoneChooser";
 export { default as BlocksEditor } from "./BlocksEditor";
 export { default as CatalogFilterPanel } from "./CatalogFilterPanel";
+export { default as SizePresetList } from "./SizePresetList";

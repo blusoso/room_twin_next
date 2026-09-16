@@ -1,6 +1,7 @@
 // components/sidebar/ProductCard.tsx
 "use client";
 import type { ProductDef } from "@/lib/data/types";
+import { sizePresetGroup } from "@/lib/data/sizePresets";
 import { themeDisplayName, themedSwatchColor } from "@/lib/data/themes";
 import { hexOf, priceStr } from "@/lib/utils/format";
 import HighlightedText from "./HighlightedText";
@@ -45,6 +46,10 @@ export default function ProductCard({
       ? themedSwatchColor(product.id, themeId)
       : product.color;
 
+  // ⭐ สินค้านี้มีขนาดสำเร็จรูปให้เลือก (📐 บน toolbar / chip ในแผงปรับแต่ง) ไหม
+  //    ผู้ใช้จะได้รู้ตั้งแต่ก่อนวางว่ามีตัวเลือกขนาด
+  const presetCount = sizePresetGroup(product.id)?.presets.length || 0;
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isSwapping) return;
     startDrag(
@@ -85,8 +90,13 @@ export default function ProductCard({
         {product.dims.w}×{product.dims.d}×{product.dims.h} ซม.
       </div>
 
-      {(catBadge || (isThemed && themeName)) && (
+      {(presetCount > 0 || catBadge || (isThemed && themeName)) && (
         <div className="card-badges">
+          {presetCount > 0 && (
+            <span className="size-badge" title="มีขนาดสำเร็จรูปให้เลือก">
+              📐 {presetCount} ขนาด
+            </span>
+          )}
           {catBadge && <span className="cat-badge">{catBadge}</span>}
           {isThemed && themeName && (
             <span className="theme-badge">{themeName}</span>
