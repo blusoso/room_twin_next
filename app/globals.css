@@ -30,6 +30,7 @@
   --z-lock-badge: 6;        /* 🔒 lock-badge + lock-toggle-btn — ห้ามสูงกว่า panel/modal */
   --z-viewport-veil: 6;     /* viewport-wrap.drag-over — เส้นประขณะลากเข้าวิวพอร์ต */
   --z-toolbar: 7;           /* floating-toolbar */
+  --z-swap-badge: 9;        /* swap-badge (โหมดเปลี่ยนสินค้า) — เหนือ toolbar */
   --z-item-panel: 8;        /* item-panel */
   --z-header: 20;           /* header */
   --z-toast: 20;            /* placement-toast */
@@ -1237,6 +1238,89 @@ aside {
 .floating-toolbar.zone-mode .item-btn {
   display: none !important;
 }
+
+/* ============================================================
+   Swap Mode (เปลี่ยนสินค้า)
+   ============================================================ */
+
+/* ปุ่มที่ใช้ไม่ได้ระหว่างโหมด replace — เหลือ ⇄ + ยกเลิก */
+.floating-toolbar.swap-mode #ftRotLeft,
+.floating-toolbar.swap-mode #ftRotRight,
+.floating-toolbar.swap-mode #ftLock,
+.floating-toolbar.swap-mode #ftCustomize,
+.floating-toolbar.swap-mode #ftDuplicate,
+.floating-toolbar.swap-mode .zone-btn {
+  display: none !important;
+}
+
+/* ปุ่ม ⇄ ติดสว่างตอนอยู่ในโหมด */
+.ft-btn.swap.active {
+  background: #fff;
+  color: var(--ochre-deep);
+  box-shadow: 0 0 0 2px rgba(248, 244, 235, 0.55);
+}
+
+/* เลื่อน toolbar ขึ้นอีก เพื่อไม่ทับ badge ของโหมด */
+.floating-toolbar.swap-mode {
+  transform: translate(-50%, calc(-100% - 78px)) scale(1);
+}
+
+/* Badge ลอยเหนือ object ที่กำลังถูกเปลี่ยน */
+.swap-badge {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 30px));
+  background: rgba(42, 35, 48, 0.92);
+  color: #f8f4eb;
+  padding: 7px 13px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(42, 35, 48, 0.28);
+  border: 1px solid rgba(184, 117, 46, 0.85);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: var(--z-swap-badge);
+  max-width: 240px;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.swap-badge.show {
+  opacity: 1;
+}
+
+.swap-badge b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.swap-badge small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: #d8cfc0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sidebar swap header — เน้นว่าเป็นโหมดพิเศษ */
+.swap-header.swapping {
+  border-left: 3px solid var(--ochre);
+}
+
+.swap-header .swap-tip {
+  display: block;
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  margin-top: 2px;
+}
+
 /* Lock Badge — centered */
 .lock-badges {
   position: absolute;

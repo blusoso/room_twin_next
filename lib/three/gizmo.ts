@@ -130,14 +130,17 @@ export function gizmoRadiusFor(
 
 // ===== Update per-frame (called in animation loop) =====
 export function updateRotateGizmo() {
-  const { selectedUid, selectedZoneUid, placedItems } = useRoomTwin.getState();
+  const { selectedUid, selectedZoneUid, swapTargetUid, placedItems } =
+    useRoomTwin.getState();
 
-  // Hide if nothing selected, or dragging item/zone, or zone is selected
+  // Hide if nothing selected, or dragging item/zone, or zone is selected,
+  // or อยู่ในโหมด "เปลี่ยนสินค้า" (ล็อกการหมุนระหว่างเลือกสินค้าแทนที่)
   if (
     !selectedUid ||
     interactionState.itemDragging ||
     interactionState.zoneDragging ||
-    selectedZoneUid
+    selectedZoneUid ||
+    swapTargetUid
   ) {
     gizmoGroup.visible = false;
     return;

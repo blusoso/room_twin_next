@@ -298,14 +298,31 @@ export const useRoomTwin = create<RoomTwinState>()(
     selectedUid: null,
     selectedZoneUid: null,
 
+    // ⭐ เลือก object อื่น = ออกจากโหมด "เปลี่ยนสินค้า" ของ object เดิม
+    //    (คลิก object เดิมซ้ำไม่หลุดโหมด)
     selectItem: (uid) =>
-      set({ selectedUid: uid, selectedZoneUid: null }),
+      set((s) => ({
+        selectedUid: uid,
+        selectedZoneUid: null,
+        swapTargetUid: s.swapTargetUid === uid ? s.swapTargetUid : null,
+      })),
 
     selectZone: (zuid) =>
-      set({ selectedZoneUid: zuid, selectedUid: null }),
+      set({
+        selectedZoneUid: zuid,
+        selectedUid: null,
+        swapTargetUid: null,
+      }),
 
-    deselectZone: () => set({ selectedZoneUid: null }),
-    closeItemPanel: () => set({ selectedUid: null }),
+    // ⭐ ย้ายบริบทไปโซน = ออกจากโหมด "เปลี่ยนสินค้า" (object ที่เปลี่ยนค้างอยู่)
+    deselectZone: () =>
+      set({
+        selectedZoneUid: null,
+        swapTargetUid: null,
+      }),
+    // ⭐ ปิด item panel = ออกจากโหมด "เปลี่ยนสินค้า" ด้วย
+    closeItemPanel: () =>
+      set({ selectedUid: null, swapTargetUid: null }),
 
     placingProductId: null,
     placingThemeId: null,
@@ -354,8 +371,25 @@ export const useRoomTwin = create<RoomTwinState>()(
 
     swapTargetUid: null,
     customizeTargetUid: null,
-    setSwapTarget: (uid) => set({ swapTargetUid: uid }),
-    setCustomizeTarget: (uid) => set({ customizeTargetUid: uid }),
+
+    // ⭐ เข้าโหมด "เปลี่ยนสินค้า" — เป็น transient UI ล้วน ๆ (ไม่เข้า serialize/history)
+    //    เคลียร์โหมด placing/ปรับแต่งที่ค้างอยู่ + พา sidebar ไปแท็บ "สร้างห้อง" ให้เห็น catalog
+    setSwapTarget: (uid) =>
+      set(
+        uid
+          ? {
+              swapTargetUid: uid,
+              customizeTargetUid: null,
+              placingProductId: null,
+              placingThemeId: null,
+              placingZoneId: null,
+              activePanel: "build" as const,
+            }
+          : { swapTargetUid: null },
+      ),
+
+    setCustomizeTarget: (uid) =>
+      set({ customizeTargetUid: uid }),
 
     activePanel: "build",
     setActivePanel: (p) => set({ activePanel: p }),

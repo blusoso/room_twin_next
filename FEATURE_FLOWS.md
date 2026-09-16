@@ -140,6 +140,24 @@ lib/three/placement.ts
 hooks/useSaveState.ts
 ```
 
+Important — การแตะการ์ด vs การลากการ์ด (สองคนละพาธ):
+
+```text
+แตะการ์ด (ไม่ขยับเกิน 8px)
+    → startPlacing(pid)  = "arm" เท่านั้น ยังไม่วางของ
+    → วางจริงตอนคลิก canvas (usePointerInteraction onUp → placeProduct → cancelPlacing)
+    → hint/toast "แตะจุดในห้องเพื่อวางไอเทมนี้" เป็นตัวบอกว่ากำลัง arm อยู่
+
+ลากการ์ดไปวางใน canvas
+    → วางทันทีตอนปล่อย (useCardDrag onUp)
+    → ⭐ ต้องยกเลิก placing ที่ค้างจากการ "แตะการ์ดใบอื่น" ก่อนหน้า (cancelPlacing)
+       ไม่งั้นตอนคลิก canvas ครั้งถัดไปจะวางของที่ค้าง arm อยู่อีกชิ้น (bug "วาง 2 อัน")
+    → ยกเว้นลากการ์ดใบที่ arm อยู่เอง (armedId === state.id) = ตั้งใจวางชิ้นนั้น ไม่ต้องแตะ
+
+⭐ class .placing บนการ์ด sync จาก store ผ่าน hooks/usePlacingHighlight.ts
+   ทุกทางที่ออกจากโหมดวางของ (วางสำเร็จ / ปุ่มยกเลิกการวาง / Escape) ไฮไลต์จึงหายเอง
+```
+
 ---
 
 # 4. Move Furniture
@@ -288,6 +306,55 @@ locked
 ```
 
 Do not accidentally reset placement metadata when swapping products.
+
+## 8.1 Swap Mode (ปุ่ม ⇄ บน floating toolbar)
+
+Flow:
+
+```text
+FloatingToolbar #ftSwap
+    ↓
+setSwapTarget(item.uid)
+    + setActiveCat(PRODUCT_BY_ID.get(item.productId).cat)   ← sidebar ไปหมวดของ object
+    + expandDrawer()                                        ← กาง drawer (มือถือ)
+    ↓
+swapTargetUid (transient UI — ไม่เข้า serialize/history)
+    ├─ BuildPanel: swap-header.swapping + การ์ดเป็น "แตะเพื่อแทนที่"
+    └─ useSwapHighlight → lib/three/swapHighlight.ts
+           → updateSwapHighlight() รายเฟรมใน useAnimationLoop
+               = กรอบ dashed wireframe 2 ชั้น (pulse) รอบ object
+               + badge #swapBadge บอกชื่อสินค้าที่กำลังเปลี่ยน
+    ↓
+แตะการ์ด → roomtwin:swapSlot → SwapSlotListener → swapZoneSlotFull → saveState
+```
+
+การออกจากโหมด (ทุกทางต้องเคลียร์ `swapTargetUid` และซ่อน highlight):
+
+```text
+คลิก object อื่น       → selectItem(uid)      (คลิก object เดิมซ้ำไม่หลุดโหมด)
+คลิกพื้นที่ว่าง/✕ panel → closeItemPanel()
+คลิก/เลือกโซน          → selectZone() / deselectZone()
+ยกเลิกใน sidebar       → setSwapTarget(null)
+Escape                → useKeyboardShortcuts → closeItemPanel()
+ลบ object ที่กำลังเปลี่ยน → removeItem() (เคลียร์ swapTargetUid อยู่แล้ว)
+undo/redo             → restoreSnapshot() → setSwapTarget(null)
+
+⭐ ระหว่างโหมด replace: updateRotateGizmo() ซ่อน gizmo หมุน
+   และ usePointerInteraction() ไม่เริ่มลาก object (ล็อกตำแหน่งระหว่างเลือกสินค้า)
+⭐ ไม่เปลี่ยน serialized shape → ไม่ bump STORAGE_KEY
+```
+
+Inspect:
+
+```text
+components/viewport/FloatingToolbar.tsx
+lib/three/swapHighlight.ts
+hooks/useSwapHighlight.ts
+lib/state/store.ts
+components/sidebar/BuildPanel.tsx
+lib/three/gizmo.ts
+hooks/usePointerInteraction.ts
+```
 
 ---
 

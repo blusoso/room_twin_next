@@ -28,7 +28,10 @@ export default function FloatingToolbar() {
   const selectedZoneUid = useRoomTwin((s) => s.selectedZoneUid);
   const placedItems = useRoomTwin((s) => s.placedItems);
   const setCustomizeTarget = useRoomTwin((s) => s.setCustomizeTarget);
+  const swapTargetUid = useRoomTwin((s) => s.swapTargetUid);
   const setSwapTarget = useRoomTwin((s) => s.setSwapTarget);
+  const setActiveCat = useRoomTwin((s) => s.setActiveCat);
+  const expandDrawer = useRoomTwin((s) => s.expandDrawer);
   const selectZone = useRoomTwin((s) => s.selectZone);
   const deselectZone = useRoomTwin((s) => s.deselectZone);
   const updateItem = useRoomTwin((s) => s.updateItem);
@@ -41,6 +44,7 @@ export default function FloatingToolbar() {
     : null;
 
   const zoneMode = !!selectedZoneUid;
+  const swapMode = !!swapTargetUid;
 
   // ===== Position RAF loop =====
   useEffect(() => {
@@ -160,6 +164,16 @@ export default function FloatingToolbar() {
     selectZone(item.zoneUid);
   };
 
+  // ===== ⭐ เปลี่ยนสินค้า =====
+  // เข้าโหมด replace + พา sidebar ไปยังหมวดของสินค้านั้น (กาง drawer บนมือถือ)
+  const handleSwap = () => {
+    if (!item) return;
+    const cat = PRODUCT_BY_ID.get(item.productId)?.cat;
+    setSwapTarget(item.uid);
+    if (cat) setActiveCat(cat);
+    expandDrawer();
+  };
+
   // ===== Zone handlers =====
   const handleZoneRotate = (dir: -1 | 1) => {
     if (!selectedZoneUid) return;
@@ -194,7 +208,7 @@ export default function FloatingToolbar() {
     <div
       className={`floating-toolbar ${
         zoneMode ? "zone-mode" : "item-mode"
-      } show`}
+      }${swapMode ? " swap-mode" : ""} show`}
       id="floatingToolbar"
       style={{ left: pos.x + "px", top: pos.y + "px" }}
     >
@@ -239,10 +253,14 @@ export default function FloatingToolbar() {
       </button>
       <button
         type="button"
-        className="ft-btn item-btn swap"
+        className={`ft-btn item-btn swap${swapMode ? " active" : ""}`}
         id="ftSwap"
-        title="เปลี่ยนสินค้า"
-        onClick={() => selectedUid && setSwapTarget(selectedUid)}
+        title={
+          swapMode
+            ? "กำลังเปลี่ยนสินค้า — เลือกการ์ดในแถบด้านข้าง (คลิก object อื่นเพื่อยกเลิก)"
+            : "เปลี่ยนสินค้า"
+        }
+        onClick={handleSwap}
       >
         ⇄
       </button>

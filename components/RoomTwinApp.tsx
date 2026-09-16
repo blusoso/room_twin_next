@@ -8,6 +8,7 @@ import { CartDrawer } from "./cart";
 import { ConfirmModal, ZoneEditModal, ZoneAddModal } from "./modals";
 import { useRoomTwinInit } from "@/hooks/useRoomTwinInit";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { usePlacingHighlight } from "@/hooks/usePlacingHighlight";
 import { useSaveState } from "@/hooks/useSaveState";
 import { useRoomTwin } from "@/lib/state/store";
 import { reinstantiateItem, removeInstantiated } from "@/lib/three/instantiate";
@@ -24,6 +25,7 @@ import { WALL_COLORS, CELL_SIZE } from "@/lib/data/constants";
 export default function RoomTwinApp() {
   useRoomTwinInit();
   useKeyboardShortcuts();
+  usePlacingHighlight();
 
   return (
     <>

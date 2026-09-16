@@ -115,6 +115,9 @@ export function usePointerInteraction() {
 
       if (store.placingProductId || store.placingZoneId) return;
 
+      // ⭐ โหมด "เปลี่ยนสินค้า" — ล็อกการลาก/ย้าย object ระหว่างเลือกสินค้าแทนที่
+      if (store.swapTargetUid) return;
+
       // Rotate handle?
       if (
         store.selectedUid &&

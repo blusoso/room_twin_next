@@ -107,6 +107,13 @@ export function useCardDrag({
 
         // ===== Moved → drop in canvas =====
         if (state.moved) {
+          // ⭐ placing mode ที่ค้างจากการ "แตะ" การ์ดก่อนหน้า (คนละใบ)
+          //    ต้องถูกยกเลิก ไม่งั้นคลิก canvas ครั้งถัดไปจะวางชิ้นนั้นซ้ำอีกชิ้น
+          const armedId = store.placingProductId;
+          const armedTheme = store.placingThemeId;
+          const draggingArmedCard =
+            armedId === state.id && armedTheme === (state.themeId || null);
+
           if (isOverCanvas(ue.clientX, ue.clientY)) {
             if (state.kind === "zone") {
               placeZone(state.id, ue.clientX, ue.clientY);
@@ -125,6 +132,9 @@ export function useCardDrag({
               store.collapseDrawer();
             }
           }
+
+          // ลากการ์ดใบเดิมที่ arm อยู่ = ตั้งใจวางชิ้นนั้น (1 ลาก = 1 วาง) → ไม่ต้องแตะ
+          if (armedId && !draggingArmedCard) store.cancelPlacing();
           return;
         }
 

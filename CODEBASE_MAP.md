@@ -441,6 +441,7 @@ lib/three/
 ├── ceilingPlacement.ts
 ├── reclamp.ts
 ├── zoneActions.ts
+├── swapHighlight.ts
 └── index.ts
 ```
 
@@ -589,6 +590,7 @@ placement
 pointer interaction
 keyboard interaction
 save
+swap highlight (useSwapHighlight → lib/three/swapHighlight.ts)
 ```
 
 When changing interaction behavior, search both the hook and its callers.

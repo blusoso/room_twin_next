@@ -38,13 +38,16 @@ export default function BuildPanel() {
     <>
       {/* ===== Swap header ===== */}
       {isSwapping && currentItem && (
-        <div className="swap-header show" id="swapHeader">
+        <div className="swap-header swapping show" id="swapHeader">
           <div className="swap-title" id="swapTitle">
-            ⇄ เปลี่ยนสินค้า
+            ⇄ กำลังเปลี่ยนสินค้า
             <small>
               ตอนนี้: {PRODUCT_BY_ID.get(currentItem.productId)?.name || ""} •
               แตะการ์ดเพื่อแทนที่
             </small>
+            <span className="swap-tip">
+              คลิก object อื่นในแบบ 3D เพื่อออกจากโหมดนี้
+            </span>
           </div>
           <button
             type="button"
