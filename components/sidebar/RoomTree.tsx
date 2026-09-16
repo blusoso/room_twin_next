@@ -6,7 +6,8 @@ import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { getProductIcon } from "@/lib/data/icons";
 import { getProductThumbnail } from "@/lib/three/thumbnails";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
-import { camera, controls } from "@/lib/three/scene";
+import { controls } from "@/lib/three/scene";
+import { flyCameraTo } from "@/lib/three/cameraFlight";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import {
@@ -109,8 +110,11 @@ function ZoneGroup({
     e.stopPropagation();
     selectZone(zuid);
     const b = getZoneBounds(zuid);
-    if (!b || !camera || !controls) return;
-    controls.target.set(b.cx, 1.0, b.cz);
+    if (!b) return;
+    flyCameraTo(b.cx + 2.4, 2.4, b.cz + 3.2, 1.1);
+    setTimeout(() => {
+      if (controls) controls.target.set(b.cx, 1.0, b.cz);
+    }, 700);
   };
 
   const handleTheme = (e: React.MouseEvent) => {

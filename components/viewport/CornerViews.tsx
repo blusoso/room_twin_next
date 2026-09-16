@@ -1,9 +1,8 @@
 // components/viewport/CornerViews.tsx
 "use client";
 import { useCallback } from "react";
-import * as THREE from "three";
-import { camera, controls, isInitialized } from "@/lib/three/scene";
 import { useRoomTwin } from "@/lib/state/store";
+import { flyCameraTo } from "@/lib/three/cameraFlight";
 
 const CORNER_VIEWS: Record<
   string,
@@ -14,42 +13,6 @@ const CORNER_VIEWS: Record<
   fl: { x: 2.6, y: 2.5, z: -5.6, targetY: 1.1 },
   fr: { x: -2.6, y: 2.5, z: -5.6, targetY: 1.1 },
 };
-
-let flyToken = 0;
-
-function flyCameraTo(
-  x: number,
-  y: number,
-  z: number,
-  targetY: number,
-) {
-  if (!isInitialized()) return;
-  const myToken = ++flyToken;
-  const startPos = camera.position.clone();
-  const startTarget = controls.target.clone();
-  const endPos = new THREE.Vector3(x, y, z);
-  const endTarget = new THREE.Vector3(0, targetY, 0);
-  const duration = 650;
-  const t0 = performance.now();
-
-  controls.enabled = false;
-
-  function step(now: number) {
-    if (myToken !== flyToken) return;
-    const t = Math.min(1, (now - t0) / duration);
-    // ease-in-out quad
-    const e = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-
-    camera.position.lerpVectors(startPos, endPos, e);
-    controls.target.lerpVectors(startTarget, endTarget, e);
-    controls.update();
-
-    if (t < 1) requestAnimationFrame(step);
-    else controls.enabled = true;
-  }
-
-  requestAnimationFrame(step);
-}
 
 export default function CornerViews() {
   const room = useRoomTwin((s) => s.room);
@@ -75,7 +38,7 @@ export default function CornerViews() {
   );
 
   return (
-    <div className="corner-views" id="cornerViews">
+    <div className="corner-views">
       <button
         type="button"
         className="corner-view-btn"
