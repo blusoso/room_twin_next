@@ -198,3 +198,97 @@ If unrelated problems are found:
 * do not modify them unless required for the requested behavior.
 
 The goal is a complete change, not a broad refactor.
+
+---
+
+## Build Completion Requirements
+
+After completing any implementation/build task, ALWAYS finish with these sections:
+
+### 1. What Changed
+
+Briefly summarize the actual changes that were implemented.
+
+### 2. Verification Performed
+
+List the checks/tests that were actually run by the agent.
+
+Do NOT claim a test was performed if it was not actually run.
+
+### 3. Manual Test Cases
+
+Always provide a concrete list of manual test cases the user should perform.
+
+The test cases must be based on the feature/bug that was changed.
+
+For each test case include:
+
+* Scenario
+* Steps
+* Expected result
+
+Prioritize:
+
+1. The exact reproduction case from the original bug/request
+2. Normal/success case
+3. Edge cases
+4. Regression cases for related existing behavior
+5. Persistence/reload cases when state or room data was changed
+
+Example:
+
+### Manual Test Cases
+
+#### Test 1 — Original Bug
+
+1. Create a 15 cm raised floor.
+2. Place an object on it.
+3. Raise the floor to 50 cm.
+4. Expected: the object moves with the floor and remains correctly placed.
+
+#### Test 2 — Persistence
+
+1. Create the raised floor.
+2. Save/reload the room.
+3. Expected: floor elevation and object position are preserved.
+
+#### Test 3 — Regression
+
+1. Place an object on a normal floor.
+2. Change an unrelated floor.
+3. Expected: the unrelated object does not move.
+
+### 4. Suggested Git Commit
+
+Provide a suggested Git commit message.
+
+Do NOT run `git commit`.
+
+Do NOT stage files with `git add` unless explicitly requested.
+
+Use conventional commit style when appropriate:
+
+* `feat:` new functionality
+* `fix:` bug fixes
+* `refactor:` structural/code changes
+* `perf:` performance changes
+* `ui:` UI/UX changes
+* `chore:` tooling/configuration changes
+
+Example:
+
+### Suggested Git Commit
+
+`fix: keep objects aligned with raised floors`
+
+### Important
+
+Never create a Git commit unless the user explicitly asks you to commit.
+
+Never claim that manual testing was performed unless it was actually performed.
+
+The final response must always include both:
+
+* `Manual Test Cases`
+* `Suggested Git Commit`
+

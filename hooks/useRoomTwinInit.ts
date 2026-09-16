@@ -325,6 +325,7 @@ export function useRoomTwinInit() {
         shape: state.room?.shape || "rect",
         cellSize: state.room?.cellSize || CELL_SIZE,
         blocks: state.room?.blocks ? new Set(state.room.blocks) : null,
+        cellLevels: state.room?.cellLevels || {},
       });
 
       setSurface({

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { useSaveState } from "@/hooks/useSaveState";
 import { rebuildRoomShell } from "@/lib/three/roomShell";
+import { reclampAllToRoom } from "@/lib/three/reclamp";
 import {
   captureWallItems,
   remapOrphanedWallItems,
@@ -218,6 +219,7 @@ export default function BlocksEditor() {
     });
 
     rebuildRoomShell();
+    reclampAllToRoom();
     remapOrphanedWallItems(wallSnapshots);
     setOpen(false);
     saveState();
