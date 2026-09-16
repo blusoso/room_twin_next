@@ -4,6 +4,7 @@ import Canvas3D from "./Canvas3D";
 import ItemPanel from "./ItemPanel";
 import FloatingToolbar from "./FloatingToolbar";
 import Overlays from "./Overlays";
+import RulerOverlay from "./RulerOverlay";
 import CornerViews from "./CornerViews";
 import {
   RoomStructurePanel,
@@ -24,6 +25,8 @@ export default function Viewport() {
     <div className="viewport-wrap" id="viewportWrap">
       <Canvas3D />
       <Overlays />
+      {/* ⭐ โหมด 📏 ไม้บรรทัดห้อง — ไม้บรรทัด + เส้นไกด์ ลอยเหนือ canvas (pointer-events: none) */}
+      <RulerOverlay />
       <ItemPanel />
       <FloatingToolbar />
       {/* ⭐ badge ของโหมด "เปลี่ยนสินค้า" — อัปเดตตำแหน่งจาก lib/three/swapHighlight */}

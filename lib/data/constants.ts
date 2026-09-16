@@ -22,6 +22,8 @@ export const LEGACY_STORAGE_KEYS = [
 ];
 /** ⭐ view preference: โหมดแสดงผนังรอบด้าน — เก็บแยกจาก SerializedState (ไม่ผูกกับห้อง/undo) */
 export const SHOW_ALL_WALLS_KEY = "roomtwin_show_all_walls";
+/** ⭐ view preference: โหมดวัดขนาด (📏) — เก็บแยกจาก SerializedState (ไม่ผูกกับห้อง/undo) */
+export const MEASURE_KEY = "roomtwin_show_measure";
 
 /** ⭐ id ของช่องค้นหาสินค้าในแคตตาล็อก (ใช้ร่วมกันระหว่าง UI กับ keyboard shortcut) */
 export const CATALOG_SEARCH_INPUT_ID = "catalogSearchInput";

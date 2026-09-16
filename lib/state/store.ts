@@ -127,6 +127,13 @@ export interface RoomTwinState {
   setShowAllWalls: (v: boolean) => void;
   toggleAllWalls: () => void;
 
+  // ⭐ โหมด "วัดขนาด" (📏 ไม้บรรทัดห้อง) — แสดงไม้บรรทัดบนพื้นห้อง
+  //    + ตีเส้นไกด์ระยะจากผนังตอนลาก object
+  //    เป็น view preference ชั่วคราว (ไม่เข้า serialize/history) แต่ persist แยก key
+  showMeasure: boolean;
+  setShowMeasure: (v: boolean) => void;
+  toggleMeasure: () => void;
+
   // ⭐ สถานะเปิด/ปิด Blocks Editor (transient — ไม่เข้า serialize/history)
   blocksEditorOpen: boolean;
   setBlocksEditorOpen: (open: boolean) => void;
@@ -556,6 +563,10 @@ export const useRoomTwin = create<RoomTwinState>()(
     setShowAllWalls: (v) => set({ showAllWalls: v }),
     toggleAllWalls: () =>
       set((s) => ({ showAllWalls: !s.showAllWalls })),
+
+    showMeasure: false,
+    setShowMeasure: (v) => set({ showMeasure: v }),
+    toggleMeasure: () => set((s) => ({ showMeasure: !s.showMeasure })),
 
     blocksEditorOpen: false,
     setBlocksEditorOpen: (open) => set({ blocksEditorOpen: open }),

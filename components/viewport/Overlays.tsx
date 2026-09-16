@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useRoomTwin } from "@/lib/state/store";
 import { getWallStatusText } from "@/lib/three/roomShell";
-import { saveShowAllWallsPref } from "@/lib/state/storage";
+import { saveShowAllWallsPref, saveMeasurePref } from "@/lib/state/storage";
 import { objectsByUid, camera, renderer } from "@/lib/three/scene";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 
@@ -16,6 +16,8 @@ export default function Overlays() {
   const toggleLockBadges = useRoomTwin((s) => s.toggleLockBadges);
   const showAllWalls = useRoomTwin((s) => s.showAllWalls);
   const toggleAllWalls = useRoomTwin((s) => s.toggleAllWalls);
+  const showMeasure = useRoomTwin((s) => s.showMeasure);
+  const toggleMeasure = useRoomTwin((s) => s.toggleMeasure);
 
   const [wallStatus, setWallStatus] = useState("");
   const [toast, setToast] = useState<{ msg: string; show: boolean }>({
@@ -47,6 +49,13 @@ export default function Overlays() {
     const next = !showAllWalls;
     toggleAllWalls();
     saveShowAllWallsPref(next);
+  };
+
+  // ⭐ สลับโหมด "วัดขนาด" + persist view preference
+  const handleToggleMeasure = () => {
+    const next = !showMeasure;
+    toggleMeasure();
+    saveMeasurePref(next);
   };
 
   let hintText = "";
@@ -108,6 +117,21 @@ export default function Overlays() {
         onClick={handleToggleAllWalls}
       >
         🧱 ผนังรอบด้าน
+      </button>
+
+      <button
+        type="button"
+        className={`measure-toggle${showMeasure ? " active" : ""}`}
+        id="measureToggle"
+        title={
+          showMeasure
+            ? "ปิด: ซ่อนไม้บรรทัดห้องและเส้นไกด์"
+            : "เปิด: แสดงไม้บรรทัดวัดขนาดห้อง + ตีเส้นไกด์ระยะจากผนังตอนลาก object"
+        }
+        aria-pressed={showMeasure}
+        onClick={handleToggleMeasure}
+      >
+        📏 วัดขนาด
       </button>
 
       {showLockBadges && <LockBadges />}

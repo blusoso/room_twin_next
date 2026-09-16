@@ -27,6 +27,7 @@
      ============================================================ */
   --z-inside: 2;            /* ตัวควบคุมซ้อนใน component (cz-toggle input, cart-close) */
   --z-viewport-ui: 5;       /* floating-hint / cancel-place / wall-status / corner-views */
+  --z-measure: 4;           /* 📏 เส้นวัด + label — ต่ำกว่า viewport UI/panel/modal ทุกตัว */
   --z-lock-badge: 6;        /* 🔒 lock-badge + lock-toggle-btn — ห้ามสูงกว่า panel/modal */
   --z-viewport-veil: 6;     /* viewport-wrap.drag-over — เส้นประขณะลากเข้าวิวพอร์ต */
   --z-toolbar: 7;           /* floating-toolbar */
@@ -1358,6 +1359,130 @@ mark.hl {
 
 .wall-all-toggle.active:hover {
   background: var(--ochre-deep);
+}
+
+/* ⭐ ปุ่มสลับโหมด "วัดขนาด" (📏) — อยู่ใต้ปุ่มผนังรอบด้าน */
+.measure-toggle {
+  position: absolute;
+  top: 88px;
+  left: 16px;
+  background: rgba(42, 35, 48, 0.72);
+  color: #f8f4eb;
+  border: none;
+  font-size: 11.5px;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  z-index: var(--z-viewport-ui);
+  touch-action: manipulation;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.measure-toggle:hover {
+  background: rgba(42, 35, 48, 0.88);
+}
+
+.measure-toggle.active {
+  background: var(--ochre);
+  color: #fff;
+}
+
+.measure-toggle.active:hover {
+  background: var(--ochre-deep);
+}
+
+/* ============================================================
+   ⭐ โหมด 📏 ไม้บรรทัดห้อง — ไม้บรรทัดบนพื้น + เส้นไกด์ตอนลาก object
+   ต้องเป็น pointer-events: none ทั้งชั้น เพื่อไม่บังกล้อง/การลาก object
+   ============================================================ */
+
+.ruler-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: var(--z-measure);
+}
+
+.ruler-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ruler-line {
+  stroke: var(--ochre);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.ruler-line.base {
+  stroke-width: 1.6;
+  opacity: 0.95;
+}
+
+.ruler-line.tick {
+  opacity: 0.75;
+}
+
+.ruler-line.tick.major {
+  stroke-width: 1.6;
+  opacity: 0.95;
+}
+
+.ruler-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: var(--panel);
+  color: var(--ochre-deep);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius-pill);
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(42, 35, 48, 0.14);
+}
+
+.guide-line {
+  stroke: var(--sage-deep);
+  stroke-width: 1.4;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.guide-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: var(--sage-deep);
+  color: #fff;
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(42, 35, 48, 0.22);
+}
+
+.ruler-marker {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border: 1.5px solid var(--sage-deep);
+  border-radius: 50%;
+  background: rgba(248, 244, 235, 0.6);
+  pointer-events: none;
 }
 
 .corner-views {
@@ -5072,6 +5197,20 @@ mark.hl {
     left: 10px;
     font-size: 10.5px;
     padding: 5px 10px;
+  }
+  .measure-toggle {
+    top: 76px;
+    left: 10px;
+    font-size: 10.5px;
+    padding: 5px 10px;
+  }
+  .ruler-label {
+    font-size: 9.5px;
+    padding: 1px 5px;
+  }
+  .guide-label {
+    font-size: 10px;
+    padding: 2px 7px;
   }
   .corner-views {
     bottom: 70px;

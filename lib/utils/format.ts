@@ -13,3 +13,12 @@ export function numOf(hex: string) {
 export function affiliateUrl(p: { id: string }) {
   return `https://example-shop.com/product/${p.id}?ref=roomtwin_aff`;
 }
+
+// ============================================================
+// ⭐ หน่วยวัด (โหมด 📏 ไม้บรรทัดห้อง)
+// ============================================================
+
+/** "45 ซม." — ระยะเส้นไกด์จาก object ถึงผนัง (เซนติเมตร) */
+export function cmStr(m: number) {
+  return Math.round(m * 100) + " ซม.";
+}

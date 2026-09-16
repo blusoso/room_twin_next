@@ -1,5 +1,5 @@
 // lib/state/storage.ts
-import { LEGACY_STORAGE_KEYS, STORAGE_KEY, SHOW_ALL_WALLS_KEY } from "@/lib/data/constants";
+import { LEGACY_STORAGE_KEYS, STORAGE_KEY, SHOW_ALL_WALLS_KEY, MEASURE_KEY } from "@/lib/data/constants";
 import { isAutoZoneExcludedProduct } from "@/lib/data/products";
 import type { SerializedState } from "./types";
 
@@ -176,6 +176,30 @@ export function trackAffiliateClick(): void {
     const key = "roomtwin_clicks";
     const n = Number(localStorage.getItem(key) || "0") + 1;
     localStorage.setItem(key, String(n));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+// ============================================================
+// ⭐ View preference: โหมดวัดขนาด (📏)
+//    เก็บแยกจาก SerializedState — ไม่กระทบ undo/redo และไม่ต้อง bump STORAGE_KEY
+// ============================================================
+
+export function loadMeasurePref(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(MEASURE_KEY) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+export function saveMeasurePref(v: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (v) localStorage.setItem(MEASURE_KEY, "1");
+    else localStorage.removeItem(MEASURE_KEY);
   } catch (e) {
     /* ignore */
   }

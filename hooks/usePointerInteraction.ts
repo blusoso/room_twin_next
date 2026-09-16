@@ -294,7 +294,7 @@ export function usePointerInteraction() {
         if (!id.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
           id.moved = true;
           controls.enabled = false;
-          setItemDragging(true);
+          setItemDragging(true, id.uid);
           setHoveredZone(null);
           useRoomTwin.getState().closeItemPanel();
           try {
