@@ -315,7 +315,8 @@ export function usePointerInteraction() {
           const { placedItems } = useRoomTwin.getState();
           const item = placedItems.find((i) => i.uid === id.uid);
           if (obj && item) {
-            if (item.ceilingMount) obj.position.y = 4;
+            if (item.ceilingMount)
+              obj.position.y = useRoomTwin.getState().room.h;
             else if (!item.wallMount) obj.position.y = 0.02;
           }
           el.style.cursor = "grabbing";
@@ -499,7 +500,7 @@ export function usePointerInteraction() {
           const { placedItems } = useRoomTwin.getState();
           const it = placedItems.find((i) => i.uid === id.uid);
           if (obj && it) {
-            if (it.ceilingMount) obj.position.y = 4;
+            if (it.ceilingMount) obj.position.y = store.room.h;
             else if (it.wallMount) obj.position.y = it.v!;
             else obj.position.y = it.restY || 0;
           }
