@@ -1,0 +1,94 @@
+:root {
+  /* =========================
+     COLORS
+     ========================= */
+
+  --rt-bg: #FAF4E6;
+  --rt-surface: #f8f4eb;
+  --rt-surface-dark: #EEE6DB;
+  --rt-surface-soft: #FDF9F6;
+
+  --rt-text: #2a2330;
+  --rt-text-muted: #746c60;
+  --rt-text-contrast: #fff;
+
+  --rt-primary: #ee86bd;
+  --rt-primary-dark: #d968a4;
+  --rt-secondary: #F6D868;
+  --rt-third: #B6CAED;
+;
+
+  --rt-accent: #b8752e;
+
+
+  --rt-button-primary: #171717;
+  --rt-button-primary-hover: #232323;
+  --rt-button-primary-text: #f8f4eb;
+
+  --rt-button-secondary: #FFFBF0;
+  --rt-button-secondary-hover: #F5EFDD;
+  --rt-button-secondary-text: #171717;
+
+  --rt-danger: #a6473f;
+  --rt-success: #7d9d78;
+
+  --rt-border: #171717;
+  --rt-border-soft: #dcd1ba;
+
+
+  /* =========================
+     SHAPE
+     ========================= */
+
+  --rt-radius-xs: 8px;
+  --rt-radius-sm: 12px;
+  --rt-radius-md: 16px;
+  --rt-radius-lg: 24px;
+  --rt-radius-xl: 30px;
+  --rt-radius-pill: 999px;
+
+
+  /* =========================
+     BORDER
+     ========================= */
+
+  --rt-border-width: 2px;
+  --rt-border-width-thin: 1px;
+
+
+  /* =========================
+     SHADOW
+     ========================= */
+
+  --rt-shadow-soft:
+    0 4px 14px rgba(23, 23, 23, 0.08);
+
+  --rt-shadow-card:
+    3px 4px 0 rgba(23, 23, 23, 0.08);
+
+  --rt-shadow-floating:
+    4px 5px 0 rgba(23, 23, 23, 0.12);
+
+
+  /* =========================
+     SPACING
+     ========================= */
+
+  --rt-space-1: 4px;
+  --rt-space-2: 8px;
+  --rt-space-3: 12px;
+  --rt-space-4: 16px;
+  --rt-space-5: 20px;
+  --rt-space-6: 24px;
+  --rt-space-7: 32px;
+  --rt-space-8: 40px;
+
+
+  /* =========================
+     MOTION
+     ========================= */
+
+  --rt-transition-fast: 120ms ease;
+  --rt-transition: 180ms ease;
+  --rt-transition-slow: 260ms ease;
+}

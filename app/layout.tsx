@@ -1,7 +1,8 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import { Fraunces, Inter, Noto_Sans_Thai } from "next/font/google";
+
 import "./globals.css";
+import "../styles/tokens.css";
 
 const fraunces = Fraunces({
   subsets: ["latin"],

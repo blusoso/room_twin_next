@@ -1,6 +1,7 @@
 // components/Header.tsx
 "use client";
 import { useRoomTwin } from "@/lib/state/store";
+import { Box, Eye, Sun, ShoppingCart } from "lucide-react";
 import { WALL_COLORS } from "@/lib/data/constants";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { hexOf, priceStr } from "@/lib/utils/format";
@@ -21,9 +22,7 @@ export default function Header() {
 
   const { saveState } = useSaveState();
 
-  const activeItems = placedItems.filter(
-    (i) => !cartExcluded.has(i.productId),
-  );
+  const activeItems = placedItems.filter((i) => !cartExcluded.has(i.productId));
   const activeCount = activeItems.length;
   const total = activeItems.reduce(
     (s, i) => s + (PRODUCT_BY_ID.get(i.productId)?.price || 0),
@@ -36,7 +35,7 @@ export default function Header() {
   const handleWallColor = (idx: number, color: number) => {
     setCurrentWallIdx(idx);
     setSurface({ wallAll: color, wallUniform: true });
-    applySurface();  // ⭐ calls syncPartitionColors internally
+    applySurface(); // ⭐ calls syncPartitionColors internally
     saveState();
   };
 
@@ -65,9 +64,7 @@ export default function Header() {
   };
 
   const handleToggleRoomSize = () => {
-    window.dispatchEvent(
-      new CustomEvent("roomtwin:toggleRoomStructure"),
-    );
+    window.dispatchEvent(new CustomEvent("roomtwin:toggleRoomStructure"));
   };
 
   const handleReset = () => {
@@ -81,10 +78,7 @@ export default function Header() {
         const toRemove: typeof store.placedItems = [];
 
         store.placedItems.forEach((item) => {
-          if (
-            item.productId === "door" ||
-            item.productId === "window"
-          ) {
+          if (item.productId === "door" || item.productId === "window") {
             openings.push(item);
           } else {
             toRemove.push(item);
@@ -145,29 +139,38 @@ export default function Header() {
     );
   };
 
+  const handleToggleView = () => {
+    window.dispatchEvent(new CustomEvent("roomtwin:toggleView"));
+  }
+
+  const handleToggleLighting = () => {
+    window.dispatchEvent(new CustomEvent("roomtwin:toggleLighting"));
+  }
+
   return (
-    <header>
-      <div className="brand">
-        <h1>RoomTwin</h1>
-        <span>ลองแต่งก่อนซื้อจริง</span>
+    <header className="relative w-full px-6 py-5 flex items-start justify-between z-50 select-none">
+      <div className="brand flex items-center z-10">
+        <img
+          src="/assets/roomtwin_logo.png"
+          alt="RoomTwin Logo"
+          className="h-12 md:h-14 object-contain"
+        />
+        {/* <span>ลองแต่งก่อนซื้อจริง</span> */}
       </div>
 
-      <div className="wall-picker">
-        <span className="lbl">สีผนัง</span>
-        {WALL_COLORS.map((c, i) => (
-          <div
-            key={i}
-            className={`swatch${
-              surface.wallUniform && surface.wallAll === c ? " active" : ""
-            }`}
-            data-wall={i}
-            style={{ background: hexOf(c) }}
-            onClick={() => handleWallColor(i, c)}
-          />
-        ))}
+      <div className="absolute left-1/2 -translate-x-1/2 flex justify-between items-center -space-x-3 z-20">
+        <button className="circle-btn--primary" onClick={handleToggleRoomSize}>
+            <Box size="1.1rem" strokeWidth={2.5} />
+        </button>
+        <button className="circle-btn--primary" onClick={handleToggleView}>
+            <Eye size="1.1rem" strokeWidth={2.5} />
+        </button>
+        <button className="circle-btn--primary" onClick={handleToggleLighting}>
+            <Sun size="1.1rem" strokeWidth={2.5} />
+        </button>
       </div>
 
-      <div className="history-controls">
+      {/* <div className="history-controls">
         <button
           type="button"
           className="icon-header-btn"
@@ -188,30 +191,31 @@ export default function Header() {
         >
           ↪
         </button>
+      </div> */}
+      <div className="flex items-center gap-3 z-10">
+        <button
+          type="button"
+          className="cart-btn"
+          id="cartBtn"
+          onClick={handleToggleCart}
+        >
+          <span className="cart-icon">
+            <ShoppingCart size="1.1rem" strokeWidth={2.5} />
+            <span
+              className="cart-count"
+              id="cartCount"
+              style={{ display: activeCount > 0 ? "flex" : "none" }}
+            >
+              {activeCount}
+            </span>
+          </span>
+          <span className="cart-total" id="cartBtnTotal">
+            {priceStr(total)}
+          </span>
+        </button>
       </div>
 
-      <button
-        type="button"
-        className="cart-btn"
-        id="cartBtn"
-        onClick={handleToggleCart}
-      >
-        <span className="cart-icon">
-          🛒
-          <span
-            className="cart-count"
-            id="cartCount"
-            style={{ display: activeCount > 0 ? "flex" : "none" }}
-          >
-            {activeCount}
-          </span>
-        </span>
-        <span className="cart-total" id="cartBtnTotal">
-          {priceStr(total)}
-        </span>
-      </button>
-
-      <button
+      {/* <button
         type="button"
         className="reset-btn"
         id="roomSizeBtn"
@@ -242,7 +246,7 @@ export default function Header() {
         onClick={handleReset}
       >
         รีเซ็ตห้อง
-      </button>
+      </button> */}
     </header>
   );
 }
