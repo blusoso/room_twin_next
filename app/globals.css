@@ -91,7 +91,7 @@ header {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 14px 22px;
+  padding: 0.4rem 1.5rem;
   background: var(--panel);
   border-bottom: 1px solid var(--panel-line);
   z-index: var(--z-header);

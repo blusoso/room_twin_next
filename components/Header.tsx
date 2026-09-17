@@ -21,9 +21,7 @@ export default function Header() {
 
   const { saveState } = useSaveState();
 
-  const activeItems = placedItems.filter(
-    (i) => !cartExcluded.has(i.productId),
-  );
+  const activeItems = placedItems.filter((i) => !cartExcluded.has(i.productId));
   const activeCount = activeItems.length;
   const total = activeItems.reduce(
     (s, i) => s + (PRODUCT_BY_ID.get(i.productId)?.price || 0),
@@ -36,7 +34,7 @@ export default function Header() {
   const handleWallColor = (idx: number, color: number) => {
     setCurrentWallIdx(idx);
     setSurface({ wallAll: color, wallUniform: true });
-    applySurface();  // ⭐ calls syncPartitionColors internally
+    applySurface(); // ⭐ calls syncPartitionColors internally
     saveState();
   };
 
@@ -65,9 +63,7 @@ export default function Header() {
   };
 
   const handleToggleRoomSize = () => {
-    window.dispatchEvent(
-      new CustomEvent("roomtwin:toggleRoomStructure"),
-    );
+    window.dispatchEvent(new CustomEvent("roomtwin:toggleRoomStructure"));
   };
 
   const handleReset = () => {
@@ -81,10 +77,7 @@ export default function Header() {
         const toRemove: typeof store.placedItems = [];
 
         store.placedItems.forEach((item) => {
-          if (
-            item.productId === "door" ||
-            item.productId === "window"
-          ) {
+          if (item.productId === "door" || item.productId === "window") {
             openings.push(item);
           } else {
             toRemove.push(item);
@@ -146,13 +139,17 @@ export default function Header() {
   };
 
   return (
-    <header>
-      <div className="brand">
-        <h1>RoomTwin</h1>
-        <span>ลองแต่งก่อนซื้อจริง</span>
+    <header className="relative w-full px-6 flex items-start justify-between z-50 select-none">
+      <div className="brand flex items-center z-10">
+        <img
+          src="/assets/roomtwin_logo.png"
+          alt="RoomTwin Logo"
+          className="h-12 md:h-14 object-contain"
+        />
+        {/* <span>ลองแต่งก่อนซื้อจริง</span> */}
       </div>
 
-      <div className="wall-picker">
+      {/* <div className="wall-picker">
         <span className="lbl">สีผนัง</span>
         {WALL_COLORS.map((c, i) => (
           <div
@@ -165,9 +162,18 @@ export default function Header() {
             onClick={() => handleWallColor(i, c)}
           />
         ))}
-      </div>
+      </div> */}
 
-      <div className="history-controls">
+      <div className="history-controls pl-60">
+        <button
+          type="button"
+          className="reset-btn"
+          id="roomSizeBtn"
+          title="ปรับขนาดห้อง"
+          onClick={handleToggleRoomSize}
+        >
+          📐 <span className="rsp-btn-label">โครงห้อง</span>
+        </button>
         <button
           type="button"
           className="icon-header-btn"
@@ -188,61 +194,51 @@ export default function Header() {
         >
           ↪
         </button>
+        <button
+          type="button"
+          className="reset-btn"
+          id="resetBtn"
+          onClick={handleReset}
+        >
+          รีเซ็ตห้อง
+        </button>
       </div>
 
-      <button
-        type="button"
-        className="cart-btn"
-        id="cartBtn"
-        onClick={handleToggleCart}
-      >
-        <span className="cart-icon">
-          🛒
-          <span
-            className="cart-count"
-            id="cartCount"
-            style={{ display: activeCount > 0 ? "flex" : "none" }}
-          >
-            {activeCount}
+      <div className="flex items-center gap-2 z-10">
+        <button
+          type="button"
+          className="reset-btn"
+          id="saveShareBtn"
+          title={
+            activeCloudRoomId
+              ? "บันทึกทับไฟล์เดิม หรือแชร์ลิงก์ให้เพื่อน"
+              : "บันทึกขึ้นเซิร์ฟเวอร์ หรือแชร์ลิงก์ให้เพื่อน"
+          }
+          onClick={openSaveShareDialog}
+        >
+          💾 <span className="rsp-btn-label"></span>
+        </button>
+        <button
+          type="button"
+          className="cart-btn"
+          id="cartBtn"
+          onClick={handleToggleCart}
+        >
+          <span className="cart-icon">
+            🛒
+            <span
+              className="cart-count"
+              id="cartCount"
+              style={{ display: activeCount > 0 ? "flex" : "none" }}
+            >
+              {activeCount}
+            </span>
           </span>
-        </span>
-        <span className="cart-total" id="cartBtnTotal">
-          {priceStr(total)}
-        </span>
-      </button>
-
-      <button
-        type="button"
-        className="reset-btn"
-        id="roomSizeBtn"
-        title="ปรับขนาดห้อง"
-        onClick={handleToggleRoomSize}
-      >
-        📐 <span className="rsp-btn-label">ขนาดห้อง</span>
-      </button>
-
-      <button
-        type="button"
-        className="reset-btn"
-        id="saveShareBtn"
-        title={
-          activeCloudRoomId
-            ? "บันทึกทับไฟล์เดิม หรือแชร์ลิงก์ให้เพื่อน"
-            : "บันทึกขึ้นเซิร์ฟเวอร์ หรือแชร์ลิงก์ให้เพื่อน"
-        }
-        onClick={openSaveShareDialog}
-      >
-        💾 <span className="rsp-btn-label">บันทึก / แชร์</span>
-      </button>
-
-      <button
-        type="button"
-        className="reset-btn"
-        id="resetBtn"
-        onClick={handleReset}
-      >
-        รีเซ็ตห้อง
-      </button>
+          <span className="cart-total" id="cartBtnTotal">
+            {priceStr(total)}
+          </span>
+        </button>
+      </div>
     </header>
   );
 }
