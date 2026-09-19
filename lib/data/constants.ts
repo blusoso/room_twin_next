@@ -2,7 +2,7 @@
 import { ZONE_DEFINITIONS } from "./zones";
 
 export const CATEGORIES = [
-  { id: "zone", label: "🏠 โซนสำเร็จรูป" },
+  { id: "zone", label: "ชุดโซน" },
   { id: "structure", label: "🧱 โครงสร้างพื้นฐาน" },
   { id: "sleep", label: "🛏️ เตียง & ที่นั่ง" },
   { id: "storage", label: "🗄️ โต๊ะ & จัดเก็บ" },

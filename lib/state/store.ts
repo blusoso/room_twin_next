@@ -486,7 +486,7 @@ export const useRoomTwin = create<RoomTwinState>()(
           : { activePanel: p },
       ),
 
-    activeCat: "zone",
+    activeCat: "all",
     setActiveCat: (c) => set({ activeCat: c }),
 
     // ============================================================

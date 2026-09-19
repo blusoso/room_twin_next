@@ -7132,3 +7132,321 @@ mark.hl {
     background: var(--ochre);
   }
 }
+
+
+/* ============================================================
+   ⭐ Section head + ลิงก์ "ดูทั้งหมด"
+   ============================================================ */
+
+.catalog-section-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0 6px;
+  font-size: 15.5px;
+}
+
+.catalog-section-head .csh-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.catalog-section-head .catalog-see-all {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ochre);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 3px 8px;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+  touch-action: manipulation;
+}
+
+.catalog-section-head .catalog-see-all:hover {
+  background: #f0ead9;
+  color: var(--ochre-deep);
+}
+
+.catalog-section-head .catalog-section-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+/* ============================================================
+   ⭐ Zone Rail — carousel แนวนอนแบบ Canva
+   + ขอบฟุ้งแบบ dynamic (ฟุ้งเฉพาะตอนมีปุ่มโผล่)
+   + ปุ่ม ‹ › + ปุ่มวงกลม "ดูทั้งหมด" + ซ่อน scrollbar
+   ============================================================ */
+
+.zone-rail-wrap {
+  grid-column: 1 / -1;
+  position: relative;
+  width: 100%;
+}
+
+.zone-rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  /* padding-right เผื่อพื้นที่ปุ่ม see-all ไม่ถูก mask ฟุ้ง */
+  padding: 2px 60px 6px 4px;
+
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+
+  /* ซ่อน scrollbar ทุกเบราว์เซอร์ */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  /* ⭐ ขนาดความฟุ้งของ mask (override ได้ตาม breakpoint) */
+  --mask-size: 28px;
+  --mask-l: 0px;
+  --mask-r: 0px;
+
+  /* ⭐ mask แบบ dynamic — ฟุ้งเฉพาะด้านที่มีปุ่ม */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--mask-l),
+    #000 calc(100% - var(--mask-r)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--mask-l),
+    #000 calc(100% - var(--mask-r)),
+    transparent 100%
+  );
+}
+
+.zone-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.zone-rail > .item-card {
+  flex: 0 0 200px;
+  width: 200px;
+  min-width: 200px;
+  max-width: 200px;
+  scroll-snap-align: start;
+}
+
+/* ============================================================
+   ⭐ Fallback สำหรับเบราว์เซอร์เก่าที่ไม่รองรับ mask-image
+   — ใช้ overlay gradient ที่โชว์ตาม data attributes
+   ============================================================ */
+
+@supports not (mask-image: linear-gradient(to right, #000, #000)) {
+  .zone-rail-wrap::before,
+  .zone-rail-wrap::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.18s;
+  }
+  .zone-rail-wrap::before {
+    left: 0;
+    background: linear-gradient(
+      to right,
+      var(--panel) 0%,
+      rgba(248, 244, 235, 0) 100%
+    );
+  }
+  .zone-rail-wrap::after {
+    right: 0;
+    background: linear-gradient(
+      to left,
+      var(--panel) 0%,
+      rgba(248, 244, 235, 0) 100%
+    );
+  }
+  .zone-rail-wrap[data-can-left="1"]::before {
+    opacity: 1;
+  }
+  .zone-rail-wrap[data-can-right="1"]::after {
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+   ⭐ ปุ่มลูกศร ‹ › — โผล่เฉพาะเมื่อเลื่อนได้
+   ============================================================ */
+
+.zone-rail-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-line);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(42, 35, 48, 0.18);
+  z-index: 3; /* ⭐ สูงกว่า overlay ฟุ้ง (z-index: 1) */
+  touch-action: manipulation;
+  transition:
+    background 0.15s,
+    transform 0.12s,
+    box-shadow 0.15s;
+}
+
+.zone-rail-nav:hover {
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(42, 35, 48, 0.24);
+}
+
+.zone-rail-nav:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.zone-rail-nav.prev {
+  left: -8px;
+}
+
+.zone-rail-nav.next {
+  right: -8px;
+}
+
+/* ============================================================
+   ⭐ ปุ่ม "ดูทั้งหมด" ท้าย carousel — วงกลมลูกศรแบบ Canva
+   ============================================================ */
+
+.zone-rail-see-all {
+  flex: 0 0 auto;
+  width: 130px;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  scroll-snap-align: end;
+  touch-action: manipulation;
+}
+
+.zone-rail-see-all .zr-sa-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1.5px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(42, 35, 48, 0.08);
+  transition:
+    background 0.18s,
+    color 0.18s,
+    border-color 0.18s,
+    transform 0.15s,
+    box-shadow 0.18s;
+}
+
+.zone-rail-see-all .zr-sa-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  transition: color 0.18s;
+}
+
+.zone-rail-see-all:hover .zr-sa-circle {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(42, 35, 48, 0.22);
+}
+
+.zone-rail-see-all:hover .zr-sa-label {
+  color: var(--ink);
+}
+
+.zone-rail-see-all:active .zr-sa-circle {
+  transform: translateY(0) scale(0.94);
+}
+
+/* ============================================================
+   ⭐ Responsive — มือถือ
+   ============================================================ */
+
+@media (max-width: 820px) {
+  .zone-rail {
+    /* ลดความกว้าง mask ลง */
+    --mask-size: 18px;
+    padding: 2px 40px 6px 2px;
+  }
+
+  .zone-rail > .item-card {
+    flex-basis: 160px;
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+  }
+
+  .zone-rail-nav {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+  .zone-rail-nav.prev {
+    left: -4px;
+  }
+  .zone-rail-nav.next {
+    right: -4px;
+  }
+
+  .zone-rail-see-all {
+    width: 110px;
+    min-width: 110px;
+  }
+  .zone-rail-see-all .zr-sa-circle {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  .zone-rail-see-all .zr-sa-label {
+    font-size: 11.5px;
+  }
+}

@@ -49,8 +49,8 @@ export default function CatalogSearch() {
             viewBox="0 0 20 20"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
+            strokeWidth="2"
+            strokeLinecap="round"
           >
             <circle cx="9" cy="9" r="6" />
             <path d="M14 14l4 4" />
@@ -91,7 +91,7 @@ export default function CatalogSearch() {
           title="ตัวกรองสินค้า"
           onClick={toggleCatalogFilters}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h9M16 6h1M3 14h1M8 14h9"/><circle cx="14" cy="6" r="2"/><circle cx="6" cy="14" r="2"/></svg>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h9M16 6h1M3 14h1M8 14h9"/><circle cx="14" cy="6" r="2"/><circle cx="6" cy="14" r="2"/></svg>
           {filterCount > 0 && <span className="count">{filterCount}</span>}
         </button>
       </div>

@@ -1,5 +1,6 @@
 // components/sidebar/BuildPanel.tsx
 "use client";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { CATEGORIES } from "@/lib/data/constants";
 import { PRODUCTS, PRODUCT_BY_ID } from "@/lib/data/products";
@@ -78,20 +79,19 @@ export default function BuildPanel() {
       {/* ===== Smart search & filter ===== */}
       <CatalogSearch />
 
-      {/* ===== Tips ===== */}
-      <div className="tip">
-        <span aria-hidden="true">✋</span>
-        <span>
-          <b>ลาก</b>ของไปวางในห้อง หรือแตะ <b>＋</b>
-        </span>
-        <button data-act="tipx" aria-label="ปิดคำแนะนำ">
-          ✕
-        </button>
-      </div>
-
       {/* ===== Category tabs (แสดงเฉพาะโหมดเลือกดูปกติ) ===== */}
       {!searchMode && (
         <div className="tabs" id="tabs">
+          {/* แท็บ "ทั้งหมด" อยู่ตัวแรกเสมอ */}
+          <button
+            type="button"
+            className={`tab${activeCat === "all" ? " active" : ""}`}
+            data-cat="all"
+            onClick={() => setActiveCat("all")}
+          >
+            ทั้งหมด
+          </button>
+
           {CATEGORIES.map((c) => (
             <button
               key={c.id}
@@ -106,6 +106,17 @@ export default function BuildPanel() {
         </div>
       )}
 
+      {/* ===== Tips ===== */}
+      <div className="tip">
+        <span aria-hidden="true">✋</span>
+        <span>
+          <b>ลาก</b>ของไปวางในห้อง หรือแตะ <b>＋</b>
+        </span>
+        <button data-act="tipx" aria-label="ปิดคำแนะนำ">
+          ✕
+        </button>
+      </div>
+
       {/* ===== Catalog grid ===== */}
       <div
         className={`catalog${searchMode ? " search-mode" : ""}`}
@@ -116,7 +127,9 @@ export default function BuildPanel() {
             {zoneHits.length > 0 && (
               <>
                 <div className="catalog-section-head">
-                  🏠 โซนสำเร็จรูป <span>({zoneHits.length})</span>
+                  <span className="csh-title">
+                    🏠 โซนสำเร็จรูป ({zoneHits.length})
+                  </span>
                 </div>
                 {zoneHits.map((z) => (
                   <ZoneCard
@@ -132,7 +145,7 @@ export default function BuildPanel() {
 
             {hits.length > 0 && (
               <div className="catalog-section-head">
-                🛋️ สินค้า <span>({hits.length})</span>
+                <span className="csh-title">🛋️ สินค้า ({hits.length})</span>
               </div>
             )}
 
@@ -157,6 +170,14 @@ export default function BuildPanel() {
           </>
         ) : activeCat === "zone" ? (
           <ZoneGrid startDrag={startDrag} isSwapping={isSwapping} />
+        ) : activeCat === "all" ? (
+          <AllGrid
+            startDrag={startDrag}
+            isSwapping={isSwapping}
+            currentItem={currentItem}
+            onSwapSelect={handleSwapSelect}
+            onSeeAllZones={() => setActiveCat("zone")}
+          />
         ) : (
           <ProductGrid
             cat={activeCat}
@@ -245,6 +266,183 @@ function ProductGrid({
             ),
           ),
         )}
+    </>
+  );
+}
+
+// ============================================================
+// ZoneRail — carousel แนวนอนแบบ Canva (ปุ่ม ‹ › + ซ่อน scrollbar)
+// ============================================================
+
+function ZoneRail({ children }: { children: React.ReactNode }) {
+  const railRef = useRef<HTMLDivElement>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  const updateArrows = useCallback(() => {
+    const el = railRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setCanLeft(el.scrollLeft > 4);
+    setCanRight(el.scrollLeft < max - 4);
+  }, []);
+
+  useEffect(() => {
+    updateArrows();
+    const el = railRef.current;
+    if (!el) return;
+
+    el.addEventListener("scroll", updateArrows, { passive: true });
+    const ro = new ResizeObserver(updateArrows);
+    ro.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", updateArrows);
+      ro.disconnect();
+    };
+  }, [updateArrows]);
+
+  const scrollBy = (dir: -1 | 1) => {
+    const el = railRef.current;
+    if (!el) return;
+    const step = (200 + 12) * 2;
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
+  };
+
+  return (
+    <div
+      className="zone-rail-wrap"
+      data-can-left={canLeft ? "1" : "0"}
+      data-can-right={canRight ? "1" : "0"}
+    >
+      {canLeft && (
+        <button
+          type="button"
+          className="zone-rail-nav prev"
+          aria-label="เลื่อนไปทางซ้าย"
+          onClick={() => scrollBy(-1)}
+        >
+          ‹
+        </button>
+      )}
+
+      <div
+        className="zone-rail"
+        ref={railRef}
+        style={
+          {
+            "--mask-l": canLeft ? "var(--mask-size)" : "0px",
+            "--mask-r": canRight ? "var(--mask-size)" : "0px",
+          } as React.CSSProperties
+        }
+      >
+        {children}
+      </div>
+
+      {canRight && (
+        <button
+          type="button"
+          className="zone-rail-nav next"
+          aria-label="เลื่อนไปทางขวา"
+          onClick={() => scrollBy(1)}
+        >
+          ›
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// AllGrid — แท็บ "ทั้งหมด": โซนสำเร็จรูป + เฟอร์นิเจอร์ทั้งหมด
+// ============================================================
+
+function AllGrid({
+  startDrag,
+  isSwapping,
+  currentItem,
+  onSwapSelect,
+  onSeeAllZones,
+}: {
+  startDrag: ReturnType<typeof useCardDrag>["startDrag"];
+  isSwapping: boolean;
+  currentItem: any;
+  onSwapSelect: (pid: string) => void;
+  onSeeAllZones: () => void;
+}) {
+  return (
+    <>
+      {/* ===== Section: ชุดโซนสำเร็จรูป ===== */}
+      {!isSwapping && ZONES.length > 0 && (
+        <>
+          <div className="catalog-section-head">
+            <span className="csh-title">🏠 ชุดโซนสำเร็จรูป</span>
+            <button
+              type="button"
+              className="catalog-see-all"
+              onClick={onSeeAllZones}
+            >
+              ดูทั้งหมด
+            </button>
+          </div>
+
+          <ZoneRail>
+            {ZONES.map((z) => (
+              <ZoneCard
+                key={z.id}
+                zone={z}
+                startDrag={startDrag}
+                disabled={isSwapping}
+              />
+            ))}
+
+            {/* ⭐ ปุ่มดูทั้งหมดท้าย carousel */}
+            <button
+              type="button"
+              className="zone-rail-see-all"
+              onClick={onSeeAllZones}
+              aria-label="ดูโซนทั้งหมด"
+            >
+              <span className="zr-sa-circle" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="22"
+                  height="22"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="13 6 19 12 13 18" />
+                </svg>
+              </span>
+              {/* <span className="zr-sa-label">ดูทั้งหมด</span> */}
+            </button>
+          </ZoneRail>
+        </>
+      )}
+
+      {/* ===== Section: เฟอร์นิเจอร์ทั้งหมด ===== */}
+      <div className="catalog-section-head">
+        <span className="csh-title">
+          🛋️ เฟอร์นิเจอร์
+        </span>
+          <span className="catalog-section-count">{PRODUCTS.length} ชิ้น</span>
+      </div>
+
+      {PRODUCTS.map((p) => (
+        <ProductCard
+          key={p.id}
+          product={p}
+          startDrag={startDrag}
+          themeId={null}
+          isSwapping={isSwapping}
+          isCurrent={currentItem?.productId === p.id}
+          onSwapClick={() => onSwapSelect(p.id)}
+        />
+      ))}
     </>
   );
 }
