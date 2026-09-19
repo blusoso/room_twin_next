@@ -10,7 +10,7 @@
   --bg: #ece4d4;
   --panel: #f8f4eb;
   --panel-line: #dcd1ba;
-  --ink: #2a2330;
+  --ink: #2a2333;
   --ink-soft: #746c60;
   --ochre: #b8752e;
   --ochre-deep: #8f5a21;
@@ -19,6 +19,7 @@
   --danger: #a6473f;
   --radius-card: 14px;
   --radius-pill: 999px;
+  --tab: #e9dfcd;
 
   /* ============================================================
      Layer Scale — ไล่จากล่างขึ้นบน (ทุกค่าใช้ var() เสมอ ห้าม hardcode)
@@ -27,28 +28,28 @@
      กติกา: --z-dialog (confirm) ต้องสูงกว่า modal ทุกตัว เพราะ confirm
      ถูกเปิดซ้อนจากใน modal ได้ (save/share, zone-edit, blocks)
      ============================================================ */
-  --z-inside: 2;            /* ตัวควบคุมซ้อนใน component (cz-toggle input, cart-close) */
-  --z-viewport-ui: 5;       /* floating-hint / cancel-place / wall-status / corner-views */
-  --z-measure: 4;           /* 📏 เส้นวัด + label — ต่ำกว่า viewport UI/panel/modal ทุกตัว */
-  --z-lock-badge: 6;        /* 🔒 lock-badge + lock-toggle-btn — ห้ามสูงกว่า panel/modal */
-  --z-viewport-veil: 6;     /* viewport-wrap.drag-over — เส้นประขณะลากเข้าวิวพอร์ต */
-  --z-toolbar: 7;           /* floating-toolbar */
-  --z-swap-badge: 9;        /* swap-badge (โหมดเปลี่ยนสินค้า) — เหนือ toolbar */
-  --z-item-panel: 8;        /* item-panel */
-  --z-header: 20;           /* header */
-  --z-panel-backdrop: 29;   /* backdrop ของ panel (ต่ำกว่า panel เล็กน้อย) */
-  --z-panel: 30;            /* customize / zone-theme / room-size / room-setup / rotate-badge */
+  --z-inside: 2; /* ตัวควบคุมซ้อนใน component (cz-toggle input, cart-close) */
+  --z-viewport-ui: 5; /* floating-hint / cancel-place / wall-status / corner-views */
+  --z-measure: 4; /* 📏 เส้นวัด + label — ต่ำกว่า viewport UI/panel/modal ทุกตัว */
+  --z-lock-badge: 6; /* 🔒 lock-badge + lock-toggle-btn — ห้ามสูงกว่า panel/modal */
+  --z-viewport-veil: 6; /* viewport-wrap.drag-over — เส้นประขณะลากเข้าวิวพอร์ต */
+  --z-toolbar: 7; /* floating-toolbar */
+  --z-swap-badge: 9; /* swap-badge (โหมดเปลี่ยนสินค้า) — เหนือ toolbar */
+  --z-item-panel: 8; /* item-panel */
+  --z-header: 20; /* header */
+  --z-panel-backdrop: 29; /* backdrop ของ panel (ต่ำกว่า panel เล็กน้อย) */
+  --z-panel: 30; /* customize / zone-theme / room-size / room-setup / rotate-badge */
   --z-chooser-backdrop: 34; /* backdrop ของ zone chooser */
-  --z-chooser: 35;          /* zone chooser */
-  --z-cart: 40;             /* cart drawer */
-  --z-modal: 55;            /* zone-edit modal */
-  --z-modal-top: 60;        /* blocks editor (modal ที่อยู่บนสุด) */
-  --z-toast: 65;            /* placement-toast — ต้องเห็นได้ขณะ modal เปิดอยู่ */
-  --z-dialog: 70;           /* confirm dialog — ต้องสูงกว่า modal ทุกตัว
+  --z-chooser: 35; /* zone chooser */
+  --z-cart: 40; /* cart drawer */
+  --z-modal: 55; /* zone-edit modal */
+  --z-modal-top: 60; /* blocks editor (modal ที่อยู่บนสุด) */
+  --z-toast: 65; /* placement-toast — ต้องเห็นได้ขณะ modal เปิดอยู่ */
+  --z-dialog: 70; /* confirm dialog — ต้องสูงกว่า modal ทุกตัว
                                เพราะเปิดซ้อนจากใน modal ได้ (save/share, zone-edit, blocks) */
-  --z-drag-ghost: 200;      /* drag ghost */
-  --z-tree-ghost: 400;      /* tree drag ghost */
-  --z-boot-overlay: 90;     /* boot overlay (โหลดห้องที่แชร์) — สูงกว่า dialog 70
+  --z-drag-ghost: 200; /* drag ghost */
+  --z-tree-ghost: 400; /* tree drag ghost */
+  --z-boot-overlay: 90; /* boot overlay (โหลดห้องที่แชร์) — สูงกว่า dialog 70
                                แต่ต่ำกว่า drag ghost เพราะ ghost โผล่เฉพาะตอนลากของ */
 }
 
@@ -140,7 +141,9 @@ header {
   border: 2px solid transparent;
   cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-  transition: transform 0.15s, border-color 0.15s;
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
   touch-action: manipulation;
 }
 
@@ -163,7 +166,9 @@ header {
   cursor: pointer;
   white-space: nowrap;
   font-family: inherit;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   touch-action: manipulation;
 }
 
@@ -186,7 +191,9 @@ header {
   cursor: pointer;
   white-space: nowrap;
   touch-action: manipulation;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
   flex-shrink: 0;
 }
 
@@ -248,7 +255,10 @@ header {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.15s, opacity 0.15s, transform 0.12s;
+  transition:
+    background 0.15s,
+    opacity 0.15s,
+    transform 0.12s;
   touch-action: manipulation;
 }
 
@@ -266,13 +276,14 @@ header {
    ============================================================ */
 
 .layout {
-  flex: 1;
-  display: flex;
-  min-height: 0;
+  display: grid;
+  grid-template-columns: 392px minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
 }
 
 aside {
-  width: 280px;
+  width: 100%;
   flex-shrink: 0;
   background: var(--panel);
   border-right: 1px solid var(--panel-line);
@@ -284,14 +295,14 @@ aside {
 }
 
 .panel-main-tabs {
-  display: flex;
-  gap: 3px;
-  margin: 10px 12px 8px 12px;
-  padding: 3px;
-  background: #e6dfce;
-  border-radius: 11px;
-  flex-shrink: 0;
-  box-shadow: inset 0 1px 2px rgba(42, 35, 48, 0.05);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin: 10px 14px 10px;
+  padding: 4px;
+  background: var(--tab);
+  border-radius: 18px;
+  height: 42px;
 }
 
 .panel-main-tab {
@@ -302,21 +313,24 @@ aside {
   background: transparent;
   color: var(--ink-soft);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+  transition:
+    background 0.18s,
+    color 0.18s,
+    box-shadow 0.18s;
   white-space: nowrap;
   touch-action: manipulation;
   line-height: 1;
 }
 
 .panel-main-tab .tab-icon {
-  font-size: 14px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   line-height: 1;
@@ -334,7 +348,10 @@ aside {
 .panel-main-tab.active {
   background: #fff;
   color: var(--ink);
-  box-shadow: 0 1px 3px rgba(42, 35, 48, 0.14), 0 0 0 1px rgba(42, 35, 48, 0.03);
+  box-shadow:
+    0 1px 3px rgba(42, 35, 48, 0.14),
+    0 0 0 1px rgba(42, 35, 48, 0.03);
+  border-radius: 18px;
 }
 
 .panel-body {
@@ -394,7 +411,10 @@ aside {
   cursor: grab;
   user-select: none;
   touch-action: none;
-  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s,
+    border-color 0.15s;
   position: relative;
 }
 
@@ -457,7 +477,9 @@ aside {
   user-select: text;
   -webkit-user-select: text;
   touch-action: manipulation;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .catalog-search-input:focus {
@@ -505,7 +527,10 @@ aside {
   cursor: pointer;
   white-space: nowrap;
   touch-action: manipulation;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .catalog-filter-btn.open,
@@ -543,7 +568,8 @@ aside {
   background: #fff;
   border: 1px solid var(--panel-line);
   border-radius: 16px;
-  box-shadow: 0 20px 48px rgba(42, 35, 48, 0.22),
+  box-shadow:
+    0 20px 48px rgba(42, 35, 48, 0.22),
     0 2px 6px rgba(42, 35, 48, 0.06);
   z-index: var(--z-panel);
   overflow: hidden;
@@ -611,7 +637,9 @@ aside {
   line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .cfp-close:hover {
@@ -677,7 +705,10 @@ aside {
   color: var(--ink-soft);
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .chip:hover:not(:disabled):not(.active) {
@@ -1080,7 +1111,10 @@ mark.hl {
   justify-content: center;
   padding: 0;
   font-family: inherit;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
 }
 
 .tree-action-btn:hover {
@@ -1292,7 +1326,9 @@ mark.hl {
   box-shadow: 0 6px 18px rgba(42, 35, 48, 0.22);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
   z-index: var(--z-toast);
   text-align: center;
 }
@@ -1359,7 +1395,9 @@ mark.hl {
   white-space: nowrap;
   z-index: var(--z-viewport-ui);
   touch-action: manipulation;
-  transition: background 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
 }
 
 .wall-all-toggle:hover {
@@ -1391,7 +1429,9 @@ mark.hl {
   white-space: nowrap;
   z-index: var(--z-viewport-ui);
   touch-action: manipulation;
-  transition: background 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
 }
 
 .measure-toggle:hover {
@@ -1433,7 +1473,9 @@ mark.hl {
   border-radius: var(--radius-pill);
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .lo-btn:hover {
@@ -1775,7 +1817,9 @@ mark.hl {
   transform: translate(-50%, calc(-100% - 44px)) scale(0.82);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    opacity 0.15s,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: var(--z-toolbar);
   white-space: nowrap;
 }
@@ -1914,7 +1958,9 @@ mark.hl {
   white-space: normal;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s, transform 0.12s;
+  transition:
+    opacity 0.12s,
+    transform 0.12s;
 }
 
 .ft-size-menu.show {
@@ -2322,7 +2368,9 @@ mark.hl {
   background: #fbf8f2;
   margin-bottom: 6px;
   outline: none;
-  transition: border-color 0.12s, background 0.12s;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
 }
 
 .zone-edit-input:focus {
@@ -2387,7 +2435,9 @@ mark.hl {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
   padding: 0;
   font-family: inherit;
 }
@@ -2415,7 +2465,9 @@ mark.hl {
   border: 2px solid transparent;
   cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-  transition: transform 0.12s, border-color 0.12s;
+  transition:
+    transform 0.12s,
+    border-color 0.12s;
   padding: 0;
 }
 
@@ -2513,7 +2565,9 @@ mark.hl {
   font-family: inherit;
   color: var(--ink);
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
 }
 
 .zone-add-choice:hover {
@@ -2650,18 +2704,18 @@ mark.hl {
   flex-direction: column;
   max-height: calc(100vh - 72px);
   opacity: 0;
-  visibility: hidden;          /* ⭐ เพิ่ม */
+  visibility: hidden; /* ⭐ เพิ่ม */
   pointer-events: none;
   transition:
     transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 0.18s,
-    visibility 0s 0.26s;       /* ⭐ transition delay */
+    visibility 0s 0.26s; /* ⭐ transition delay */
 }
 
 .room-size-panel.show {
   transform: translateY(0);
   opacity: 1;
-  visibility: visible;         /* ⭐ เพิ่ม */
+  visibility: visible; /* ⭐ เพิ่ม */
   pointer-events: auto;
   transition:
     transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -2676,8 +2730,8 @@ mark.hl {
 .room-size-backdrop {
   position: fixed;
   inset: 0;
-  background: transparent;   /* โปร่งใส — แค่จับคลิก */
-  z-index: var(--z-panel-backdrop);   /* ต่ำกว่า panel (30) */
+  background: transparent; /* โปร่งใส — แค่จับคลิก */
+  z-index: var(--z-panel-backdrop); /* ต่ำกว่า panel (30) */
   display: none;
   opacity: 0;
   transition: opacity 0.18s;
@@ -2711,7 +2765,8 @@ mark.hl {
   max-height: calc(100vh - 72px);
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 0.18s;
 }
 
@@ -2789,7 +2844,10 @@ mark.hl {
   gap: 3px;
   white-space: nowrap;
   touch-action: manipulation;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
 }
 
 .rsp-tab:hover:not(.active) {
@@ -2799,7 +2857,9 @@ mark.hl {
 .rsp-tab.active {
   background: #fff;
   color: var(--ink);
-  box-shadow: 0 1px 3px rgba(42, 35, 48, 0.14), 0 0 0 1px rgba(42, 35, 48, 0.03);
+  box-shadow:
+    0 1px 3px rgba(42, 35, 48, 0.14),
+    0 0 0 1px rgba(42, 35, 48, 0.03);
 }
 
 .rsp-tab-panel {
@@ -2945,7 +3005,10 @@ mark.hl {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s, border-color 0.12s, transform 0.1s;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    transform 0.1s;
   font-family: inherit;
 }
 
@@ -2968,7 +3031,9 @@ mark.hl {
   border-radius: 10px;
   padding: 6px 10px;
   background: #fff;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .rsp-input-wrap:focus-within {
@@ -3021,7 +3086,10 @@ mark.hl {
   padding: 9px 4px;
   cursor: pointer;
   text-align: center;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
 }
 
 .rsp-preset-card:hover {
@@ -3132,7 +3200,10 @@ mark.hl {
   overflow: hidden;
   background-size: cover;
   background-position: center;
-  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    border-color 0.12s;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
@@ -3142,7 +3213,9 @@ mark.hl {
 
 .floor-swatch.active {
   border-color: var(--ochre);
-  box-shadow: 0 0 0 2px rgba(184, 117, 46, 0.18), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 0 0 2px rgba(184, 117, 46, 0.18),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .floor-swatch.active::after {
@@ -3214,7 +3287,9 @@ mark.hl {
   border-radius: 8px;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: transform 0.12s, border-color 0.12s;
+  transition:
+    transform 0.12s,
+    border-color 0.12s;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
@@ -3812,7 +3887,9 @@ mark.hl {
   color: #5a4a30;
   cursor: pointer;
   box-shadow: inset 0 0 0 1px rgba(42, 35, 48, 0.08);
-  transition: box-shadow 0.12s, border-color 0.12s;
+  transition:
+    box-shadow 0.12s,
+    border-color 0.12s;
   touch-action: manipulation;
 }
 
@@ -4119,7 +4196,9 @@ mark.hl {
   cursor: help;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
 }
 
 .blocks-legend-item:hover,
@@ -4230,24 +4309,26 @@ mark.hl {
   backdrop-filter: blur(10px) saturate(1.05);
   border: 1px solid var(--panel-line);
   border-radius: 16px;
-  box-shadow: 0 18px 44px rgba(42, 35, 48, 0.2), 0 2px 6px rgba(42, 35, 48, 0.06);
+  box-shadow:
+    0 18px 44px rgba(42, 35, 48, 0.2),
+    0 2px 6px rgba(42, 35, 48, 0.06);
   z-index: var(--z-panel);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   opacity: 0;
-  visibility: hidden;          /* ⭐ */
+  visibility: hidden; /* ⭐ */
   pointer-events: none;
   transition:
     transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 0.18s,
-    visibility 0s 0.26s;       /* ⭐ */
+    visibility 0s 0.26s; /* ⭐ */
 }
 
 .customize-panel.show {
   transform: translate(-50%, 0);
   opacity: 1;
-  visibility: visible;         /* ⭐ */
+  visibility: visible; /* ⭐ */
   pointer-events: auto;
   transition:
     transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -4310,7 +4391,10 @@ mark.hl {
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  transition: background 0.12s, color 0.12s, transform 0.1s;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    transform 0.1s;
   touch-action: manipulation;
 }
 
@@ -4421,7 +4505,10 @@ mark.hl {
   background: #fbf8f2;
   text-align: right;
   outline: none;
-  transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
+  transition:
+    border-color 0.12s,
+    background 0.12s,
+    box-shadow 0.12s;
 }
 
 .cz-num-input:focus {
@@ -4533,7 +4620,11 @@ mark.hl {
   cursor: pointer;
   border: 1px solid var(--panel-line);
   font-weight: 600;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.1s;
   touch-action: manipulation;
 }
 
@@ -4577,24 +4668,26 @@ mark.hl {
   backdrop-filter: blur(10px) saturate(1.05);
   border: 1px solid var(--panel-line);
   border-radius: 16px;
-  box-shadow: 0 18px 44px rgba(42, 35, 48, 0.2), 0 2px 6px rgba(42, 35, 48, 0.06);
+  box-shadow:
+    0 18px 44px rgba(42, 35, 48, 0.2),
+    0 2px 6px rgba(42, 35, 48, 0.06);
   z-index: var(--z-panel);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   opacity: 0;
-  visibility: hidden;          /* ⭐ */
+  visibility: hidden; /* ⭐ */
   pointer-events: none;
   transition:
     transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 0.18s,
-    visibility 0s 0.26s;       /* ⭐ */
+    visibility 0s 0.26s; /* ⭐ */
 }
 
 .zone-theme-panel.show {
   transform: translate(-50%, 0);
   opacity: 1;
-  visibility: visible;         /* ⭐ */
+  visibility: visible; /* ⭐ */
   pointer-events: auto;
   transition:
     transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -4640,7 +4733,10 @@ mark.hl {
   font-weight: 600;
   border-radius: 999px;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
   touch-action: manipulation;
 }
 
@@ -4664,7 +4760,9 @@ mark.hl {
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   touch-action: manipulation;
 }
 
@@ -4705,7 +4803,11 @@ mark.hl {
   border-radius: 12px;
   cursor: pointer;
   text-align: left;
-  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s,
+    background 0.15s;
   font-family: inherit;
   touch-action: manipulation;
 }
@@ -4794,25 +4896,27 @@ mark.hl {
   backdrop-filter: blur(10px) saturate(1.05);
   border: 1px solid var(--panel-line);
   border-radius: 14px;
-  box-shadow: 0 18px 44px rgba(42, 35, 48, 0.2), 0 2px 6px rgba(42, 35, 48, 0.06);
+  box-shadow:
+    0 18px 44px rgba(42, 35, 48, 0.2),
+    0 2px 6px rgba(42, 35, 48, 0.06);
   z-index: var(--z-chooser);
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   opacity: 0;
-  visibility: hidden;          /* ⭐ */
+  visibility: hidden; /* ⭐ */
   pointer-events: none;
   transition:
     transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 0.18s,
-    visibility 0s 0.22s;       /* ⭐ */
+    visibility 0s 0.22s; /* ⭐ */
 }
 
 .zone-chooser.show {
   transform: translate(-50%, 0);
   opacity: 1;
-  visibility: visible;         /* ⭐ */
+  visibility: visible; /* ⭐ */
   pointer-events: auto;
   transition:
     transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -4850,7 +4954,10 @@ mark.hl {
   font-weight: 600;
   cursor: pointer;
   color: var(--ink);
-  transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    background 0.12s;
   white-space: nowrap;
   touch-action: manipulation;
 }
@@ -4888,7 +4995,9 @@ mark.hl {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.22s, visibility 0s 0.22s;
+  transition:
+    opacity 0.22s,
+    visibility 0s 0.22s;
   display: flex;
   align-items: stretch;
   justify-content: flex-end;
@@ -4899,7 +5008,9 @@ mark.hl {
   opacity: 1;
   pointer-events: none;
   visibility: visible;
-  transition: opacity 0.22s, visibility 0s 0s;
+  transition:
+    opacity 0.22s,
+    visibility 0s 0s;
 }
 
 .cart-panel {
@@ -4912,7 +5023,9 @@ mark.hl {
   flex-direction: column;
   transform: translateX(24px);
   opacity: 0;
-  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s;
   filter: drop-shadow(0 18px 30px rgba(42, 35, 48, 0.28));
 }
 
@@ -5015,7 +5128,10 @@ mark.hl {
   padding: 10px 6px;
   border-bottom: 1px dotted #eee8dc;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
   border-radius: 6px;
   margin: 0 -6px;
 }
@@ -5047,7 +5163,9 @@ mark.hl {
   font-size: 11px;
   opacity: 0.35;
   margin-left: 2px;
-  transition: opacity 0.15s, transform 0.15s;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
   display: inline-block;
   font-weight: 400;
   color: var(--ink-soft);
@@ -5234,7 +5352,10 @@ mark.hl {
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .cart-action-btn:hover:not(:disabled) {
@@ -5735,17 +5856,21 @@ mark.hl {
   z-index: var(--z-panel-backdrop);
   display: none;
   opacity: 0;
-  visibility: hidden;          /* ⭐ */
-  pointer-events: none;        /* ⭐ */
-  transition: opacity 0.18s, visibility 0s 0.18s;
+  visibility: hidden; /* ⭐ */
+  pointer-events: none; /* ⭐ */
+  transition:
+    opacity 0.18s,
+    visibility 0s 0.18s;
 }
 
 .panel-backdrop.show {
   display: block;
   opacity: 1;
-  visibility: visible;         /* ⭐ */
-  pointer-events: auto;        /* ⭐ */
-  transition: opacity 0.18s, visibility 0s 0s;
+  visibility: visible; /* ⭐ */
+  pointer-events: auto; /* ⭐ */
+  transition:
+    opacity 0.18s,
+    visibility 0s 0s;
 }
 
 /* Mobile — โชว์ backdrop สีเทาจางๆ */
@@ -6036,7 +6161,9 @@ mark.hl {
   justify-content: center;
   padding: 0;
   opacity: 0;
-  transition: opacity 0.12s, background 0.12s;
+  transition:
+    opacity 0.12s,
+    background 0.12s;
   flex-shrink: 0;
 }
 
@@ -6254,7 +6381,9 @@ mark.hl {
   overflow: hidden;
   cursor: pointer;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .ss-card:hover,
@@ -6951,4 +7080,3 @@ mark.hl {
     background: var(--ochre);
   }
 }
-
