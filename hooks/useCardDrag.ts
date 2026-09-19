@@ -12,7 +12,9 @@ import {
 import { isOverCanvas } from "@/lib/three/raycast";
 import { hexOf } from "@/lib/utils/format";
 
-const DRAG_THRESHOLD = 8;
+const DRAG_THRESHOLD = 8; // px — ระยะขยับก่อนเริ่ม drag (เมาส์/ปากกา)
+const TOUCH_LONG_PRESS_MS = 260; // ms — ระยะกดแช่บนมือถือ
+const TOUCH_CANCEL_PX = 10; // px — ขยับก่อนครบเวลา = ยกเลิก (ยอมให้ scroll)
 
 type DragKind = "product" | "themed" | "zone";
 
@@ -26,11 +28,18 @@ interface DragState {
   startY: number;
   moved: boolean;
   ghostEl: HTMLElement | null;
+  pointerType: string;
 }
 
 export interface PlaceResult {
   uid: string | null;
   error?: string;
+}
+
+export interface DragCallbacks {
+  onPressStart?: () => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }
 
 export interface UseCardDragOptions {
@@ -56,8 +65,13 @@ export function useCardDrag({
       cardEl: HTMLElement,
       kind: DragKind,
       themeId: string | null = null,
+      callbacks?: DragCallbacks,
     ) => {
       if ("button" in e && e.button !== undefined && e.button !== 0) return;
+
+      const pointerType =
+        "pointerType" in e ? (e as PointerEvent).pointerType : "mouse";
+      const isTouch = pointerType === "touch";
 
       const state: DragState = {
         id,
@@ -69,16 +83,70 @@ export function useCardDrag({
         startY: e.clientY,
         moved: false,
         ghostEl: null,
+        pointerType,
       };
+
+      // ⭐ IMMEDIATE FEEDBACK — cursor grabbing + card "ยุบตัว" ทันทีที่กด
+      document.body.classList.add("rt-pressing");
+      callbacks?.onPressStart?.();
+
+      let longPressTimer: number | null = null;
+      let longPressFired = false;
+
+      // ─────────────────────────────────────────────
+      // เริ่ม drag จริง (เรียกหลัง threshold หรือ long-press)
+      // ─────────────────────────────────────────────
+      const beginDrag = () => {
+        if (state.moved) return;
+        state.moved = true;
+
+        // ปลด pressing, ติด dragging
+        document.body.classList.remove("rt-pressing");
+        document.body.classList.add("rt-dragging");
+        callbacks?.onDragStart?.();
+
+        state.ghostEl = makeGhost(state);
+        document.body.style.userSelect = "none";
+
+        // haptic มือถือ (สั้น ๆ แค่รู้สึก)
+        if (isTouch && "vibrate" in navigator) {
+          try {
+            navigator.vibrate?.(8);
+          } catch {
+            /* ignore */
+          }
+        }
+      };
+
+      // ─────────────────────────────────────────────
+      // มือถือ — กดแช่ → เริ่ม drag
+      // ─────────────────────────────────────────────
+      if (isTouch) {
+        longPressTimer = window.setTimeout(() => {
+          longPressFired = true;
+          beginDrag();
+        }, TOUCH_LONG_PRESS_MS);
+      }
 
       const onMove = (me: PointerEvent) => {
         const dx = me.clientX - state.startX;
         const dy = me.clientY - state.startY;
+        const dist = Math.hypot(dx, dy);
 
-        if (!state.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-          state.moved = true;
-          state.ghostEl = makeGhost(state);
-          document.body.style.userSelect = "none";
+        // มือถือ: ขยับก่อนครบเวลา → ยกเลิก long-press (ให้ผู้ใช้ scroll ได้)
+        if (isTouch && !longPressFired && !state.moved) {
+          if (dist > TOUCH_CANCEL_PX) {
+            if (longPressTimer) {
+              clearTimeout(longPressTimer);
+              longPressTimer = null;
+            }
+            return;
+          }
+        }
+
+        // เมาส์/ปากกา: ขยับเกิน threshold → drag
+        if (!isTouch && !state.moved && dist > DRAG_THRESHOLD) {
+          beginDrag();
         }
 
         if (state.moved && state.ghostEl) {
@@ -95,20 +163,23 @@ export function useCardDrag({
       };
 
       const onUp = (ue: PointerEvent) => {
+        if (longPressTimer) clearTimeout(longPressTimer);
+
         document.removeEventListener("pointermove", onMove);
         document.removeEventListener("pointerup", onUp);
         document.removeEventListener("pointercancel", onUp);
 
+        // ⭐ cleanup ทุก state
+        document.body.classList.remove("rt-pressing", "rt-dragging");
         document.body.style.userSelect = "";
         document.getElementById("viewportWrap")?.classList.remove("drag-over");
         state.ghostEl?.remove();
+        callbacks?.onDragEnd?.();
 
         const store = useRoomTwin.getState();
 
-        // ===== Moved → drop in canvas =====
+        // ===== Dragged → drop =====
         if (state.moved) {
-          // ⭐ placing mode ที่ค้างจากการ "แตะ" การ์ดก่อนหน้า (คนละใบ)
-          //    ต้องถูกยกเลิก ไม่งั้นคลิก canvas ครั้งถัดไปจะวางชิ้นนั้นซ้ำอีกชิ้น
           const armedId = store.placingProductId;
           const armedTheme = store.placingThemeId;
           const draggingArmedCard =
@@ -127,18 +198,16 @@ export function useCardDrag({
             } else {
               placeProduct(state.id, ue.clientX, ue.clientY);
             }
-            // ⭐ ไม่ selectItem อัตโนมัติ — ไม่ให้ toolbar ขึ้นทันที
             if (typeof window !== "undefined" && window.innerWidth <= 820) {
               store.collapseDrawer();
             }
           }
 
-          // ลากการ์ดใบเดิมที่ arm อยู่ = ตั้งใจวางชิ้นนั้น (1 ลาก = 1 วาง) → ไม่ต้องแตะ
           if (armedId && !draggingArmedCard) store.cancelPlacing();
           return;
         }
 
-        // ===== Not moved → tap = toggle placing mode =====
+        // ===== Not moved → tap (toggle placing) =====
         if (state.kind === "zone") {
           if (store.placingZoneId === state.id) {
             store.cancelPlacing();
@@ -165,10 +234,7 @@ export function useCardDrag({
             highlightCard(cardEl);
           }
         } else {
-          if (
-            store.placingProductId === state.id &&
-            !store.placingThemeId
-          ) {
+          if (store.placingProductId === state.id && !store.placingThemeId) {
             store.cancelPlacing();
             document
               .querySelectorAll(".item-card")
@@ -203,17 +269,14 @@ function highlightCard(cardEl: HTMLElement) {
 }
 
 function makeGhost(state: DragState): HTMLElement {
+  if (state.kind === "zone") {
+    return makeZoneGhost(state);
+  }
+
   const el = document.createElement("div");
   el.className = "drag-ghost";
 
-  if (state.kind === "zone") {
-    const z = ZONE_BY_ID.get(state.id);
-    if (z) {
-      el.style.background = hexOf(z.color);
-      el.style.color = "#fff";
-      el.textContent = z.icon + " " + z.name;
-    }
-  } else if (state.kind === "themed") {
+  if (state.kind === "themed") {
     const product = PRODUCT_BY_ID.get(state.id);
     const theme = state.themeId ? THEME_BY_ID.get(state.themeId) : null;
     const color = state.themeId
@@ -235,4 +298,45 @@ function makeGhost(state: DragState): HTMLElement {
 
   document.body.appendChild(el);
   return el;
+}
+
+function makeZoneGhost(state: DragState): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.className = "drag-ghost gh-zone";
+  wrap.setAttribute("aria-hidden", "true");
+
+  const card = state.cardEl;
+  const dataEmojis = card?.dataset?.emojis;
+  const dataCount = card?.dataset?.count;
+  const dataTile = card?.dataset?.tile;
+
+  const z = ZONE_BY_ID.get(state.id);
+  const fallbackEmoji = z?.icon || "🏠";
+
+  const emojis = (dataEmojis && dataEmojis.length ? dataEmojis : fallbackEmoji)
+    .split("|")
+    .filter(Boolean);
+
+  const count = dataCount ?? String(z?.slots?.length ?? 0);
+  const tile = dataTile || (z ? hexOf(z.color) : "#b8752e");
+
+  const gh = document.createElement("div");
+  gh.className = "gh";
+  gh.style.setProperty("--gh-tile", tile);
+
+  const ge = document.createElement("span");
+  ge.className = "ge";
+  ge.innerHTML = emojis.map((e) => `<span>${e}</span>`).join("");
+  gh.appendChild(ge);
+
+  const badge = document.createElement("i");
+  badge.textContent = `${count} ชิ้น`;
+  gh.appendChild(badge);
+
+  wrap.appendChild(gh);
+
+  if (z?.name) wrap.title = z.name;
+
+  document.body.appendChild(wrap);
+  return wrap;
 }
