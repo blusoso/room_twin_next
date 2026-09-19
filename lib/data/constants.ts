@@ -1,43 +1,88 @@
 // lib/data/constants.ts
 import { ZONE_DEFINITIONS } from "./zones";
 
+/* ============================================================
+   ⭐ หมวดหมู่สินค้า (แยกย่อย ไม่รวมกัน)
+   — ใช้ทั้งในแถบ tab และ section header ในแท็บ "ทั้งหมด"
+   ============================================================ */
+
 export const CATEGORIES = [
-  { id: "zone", label: "ชุดโซน" },
-  { id: "structure", label: "🧱 โครงสร้างพื้นฐาน" },
-  { id: "sleep", label: "🛏️ เตียง & ที่นั่ง" },
-  { id: "storage", label: "🗄️ โต๊ะ & จัดเก็บ" },
-  { id: "light", label: "💡 โคมไฟ & ตกแต่ง" },
-  { id: "fixtures", label: "🔧 ม่าน & แอร์" },
-  { id: "floor", label: "🟫 พรม & อื่นๆ" },
-  { id: "ceiling", label: "⬜ เพดาน" },
+  { id: "zone",       label: "🏠 ชุดโซน" },
+  { id: "structure",  label: "🧱 โครงสร้างพื้นฐาน" },
+
+  { id: "bed",        label: "🛏️ เตียง" },
+  { id: "seating",    label: "🛋️ ที่นั่ง" },
+  { id: "table",      label: "🖥️ โต๊ะ" },
+  { id: "cabinet",    label: "🗄️ ตู้" },
+  { id: "shelf",      label: "📚 ชั้นวาง" },
+  { id: "lamp",       label: "💡 โคมไฟ" },
+  { id: "decor",      label: "🖼️ ของตกแต่ง" },
+  { id: "curtain",    label: "🪟 ม่าน" },
+  { id: "air",        label: "❄️ แอร์" },
+  { id: "fan",        label: "🌀 พัดลม" },
+  { id: "rug",        label: "🧶 พรม" },
+  { id: "misc",       label: "📦 อื่น ๆ" },
+
+  { id: "ceiling",    label: "⬜ เพดาน" },
 ] as const;
+
+export type CategoryId = (typeof CATEGORIES)[number]["id"];
+
+/* ⭐ หมวดที่จะไม่โชว์เป็น section ในแท็บ "ทั้งหมด"
+   (เพราะถูกจัดการแยกไปแล้ว เช่น zone มี ZONES ของตัวเอง) */
+export const HIDDEN_IN_ALL_TAB: CategoryId[] = ["zone", "ceiling"];
+
+/* ⭐ ลำดับ section ที่จะแสดงในแท็บ "ทั้งหมด" (เฉพาะที่ต้องการ) */
+export const ALL_TAB_SECTIONS = CATEGORIES.filter(
+  (c) => !HIDDEN_IN_ALL_TAB.includes(c.id),
+);
+
+/* ============================================================
+   Room / Units
+   ============================================================ */
 
 export const CELL_SIZE = 0.5;
 export const GRID = 0.1;
+
+/* ============================================================
+   Storage keys
+   ============================================================ */
+
 export const STORAGE_KEY = "roomtwin_state_v14";
-/** ⭐ key รุ่นก่อน — อ่านเป็น fallback ใน loadFromStorage() เพื่อไม่ให้ห้องที่เซฟไว้หาย */
+
+/** ⭐ key รุ่นก่อน — อ่านเป็น fallback ใน loadFromStorage() */
 export const LEGACY_STORAGE_KEYS = [
   "roomtwin_state_v13",
   "roomtwin_state_v12",
   "roomtwin_state_v11",
 ];
-/** ⭐ view preference: โหมดแสดงผนังรอบด้าน — เก็บแยกจาก SerializedState (ไม่ผูกกับห้อง/undo) */
+
+/** ⭐ view preference: ผนังรอบด้าน */
 export const SHOW_ALL_WALLS_KEY = "roomtwin_show_all_walls";
-/** ⭐ view preference: โหมดวัดขนาด (📏) — เก็บแยกจาก SerializedState (ไม่ผูกกับห้อง/undo) */
+
+/** ⭐ view preference: โหมดวัดขนาด (📏) */
 export const MEASURE_KEY = "roomtwin_show_measure";
-/** ⭐ view preference: โหมดแสงในฉาก + สวิตช์ไฟโคม — เก็บแยกจาก SerializedState (ไม่ผูกกับห้อง/undo) */
+
+/** ⭐ view preference: โหมดแสง + สวิตช์ไฟโคม */
 export const LIGHTING_PREF_KEY = "roomtwin_lighting_pref";
 
-/** ⭐ id ของช่องค้นหาสินค้าในแคตตาล็อก (ใช้ร่วมกันระหว่าง UI กับ keyboard shortcut) */
+/** ⭐ id ของช่องค้นหาสินค้าในแคตตาล็อก */
 export const CATALOG_SEARCH_INPUT_ID = "catalogSearchInput";
 
-// ⭐ แหล่งเดียวของสีผนัง — ใช้ร่วมกันทั้ง header/panel/per-wall/คัสตอม
+/* ============================================================
+   Wall colors
+   ============================================================ */
+
 export const WALL_COLOR_PALETTE = [
   0xf2e9dc, 0xdce6dd, 0xe7d6cc, 0xd7dee6, 0xf5efe3, 0xc8d4c0,
   0xe8d0c0, 0xc0cedc, 0xd4c4ac, 0xbfc9b4, 0xe6d0c6, 0xa8b4c0,
 ];
 
 export const WALL_COLORS = WALL_COLOR_PALETTE.slice(0, 4);
+
+/* ============================================================
+   Room defaults & limits
+   ============================================================ */
 
 export const ROOM_DEFAULT = {
   w: 4.2,
@@ -53,6 +98,10 @@ export const ROOM_LIMITS = {
   d: { min: 3.0, max: 12.0, step: 0.1 },
   h: { min: 2.3, max: 3.2, step: 0.05 },
 };
+
+/* ============================================================
+   Zone / Wall
+   ============================================================ */
 
 export const ZONE_ATTACH_MAX_DIST = 0.6;
 export const ZONE_AMBIGUOUS_GAP = 0.4;
@@ -83,13 +132,17 @@ export const WALL_V_MIN = 0.55;
 export const WALL_OUTWARD = 0.012;
 export const CEILING_CLEARANCE_MIN = 0.18;
 
-// ⭐ สีเริ่มต้นของแต่ละโซนใน palette ต้องมาจาก ZONE_DEFINITIONS (กันสี drift กับ definition)
+/* ⭐ สีโซน — ดึงจาก ZONE_DEFINITIONS ก่อน เพื่อไม่ให้สี drift */
 export const ZONE_COLOR_CHOICES = Array.from(
   new Set([
     ...ZONE_DEFINITIONS.map((z) => z.color),
     0xd9c7a8, 0xb8a4d4, 0xe6a878, 0x7ba4c9, 0xc998b8, 0x88b8a8,
   ]),
 );
+
+/* ============================================================
+   Floors
+   ============================================================ */
 
 export const FLOOR_STYLES = [
   { id: "wood", name: "ไม้โอ๊ค" },
@@ -136,10 +189,17 @@ export const FLOOR_PALETTES: Record<
   },
 };
 
+/* ============================================================
+   Gizmo
+   ============================================================ */
+
 export const GIZMO_SNAP_DEG = 15;
 export const GIZMO_SNAP_THRESHOLD_DEG = 4;
 
-// ⭐ ระดับความสูงของพื้น
+/* ============================================================
+   Levels
+   ============================================================ */
+
 export const LEVEL_PRESETS = [
   { id: "l0", label: "0", value: 0.0, color: "#e8dcc4" },
   { id: "l1", label: "+15", value: 0.15, color: "#dccfaf" },

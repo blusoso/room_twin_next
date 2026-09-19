@@ -12,9 +12,9 @@ import {
 import { isOverCanvas } from "@/lib/three/raycast";
 import { hexOf } from "@/lib/utils/format";
 
-const DRAG_THRESHOLD = 8; // px — ระยะขยับก่อนเริ่ม drag (เมาส์/ปากกา)
-const TOUCH_LONG_PRESS_MS = 260; // ms — ระยะกดแช่บนมือถือ
-const TOUCH_CANCEL_PX = 10; // px — ขยับก่อนครบเวลา = ยกเลิก (ยอมให้ scroll)
+const DRAG_THRESHOLD = 8;
+const TOUCH_LONG_PRESS_MS = 260;
+const TOUCH_CANCEL_PX = 10;
 
 type DragKind = "product" | "themed" | "zone";
 
@@ -86,21 +86,17 @@ export function useCardDrag({
         pointerType,
       };
 
-      // ⭐ IMMEDIATE FEEDBACK — cursor grabbing + card "ยุบตัว" ทันทีที่กด
       document.body.classList.add("rt-pressing");
       callbacks?.onPressStart?.();
 
       let longPressTimer: number | null = null;
       let longPressFired = false;
 
-      // ─────────────────────────────────────────────
-      // เริ่ม drag จริง (เรียกหลัง threshold หรือ long-press)
-      // ─────────────────────────────────────────────
       const beginDrag = () => {
         if (state.moved) return;
         state.moved = true;
 
-        // ปลด pressing, ติด dragging
+        // ⭐ ปลด pressing ทันที → ลดจำนวน class ที่ต้อง recalc
         document.body.classList.remove("rt-pressing");
         document.body.classList.add("rt-dragging");
         callbacks?.onDragStart?.();
@@ -108,7 +104,6 @@ export function useCardDrag({
         state.ghostEl = makeGhost(state);
         document.body.style.userSelect = "none";
 
-        // haptic มือถือ (สั้น ๆ แค่รู้สึก)
         if (isTouch && "vibrate" in navigator) {
           try {
             navigator.vibrate?.(8);
@@ -118,9 +113,6 @@ export function useCardDrag({
         }
       };
 
-      // ─────────────────────────────────────────────
-      // มือถือ — กดแช่ → เริ่ม drag
-      // ─────────────────────────────────────────────
       if (isTouch) {
         longPressTimer = window.setTimeout(() => {
           longPressFired = true;
@@ -133,7 +125,6 @@ export function useCardDrag({
         const dy = me.clientY - state.startY;
         const dist = Math.hypot(dx, dy);
 
-        // มือถือ: ขยับก่อนครบเวลา → ยกเลิก long-press (ให้ผู้ใช้ scroll ได้)
         if (isTouch && !longPressFired && !state.moved) {
           if (dist > TOUCH_CANCEL_PX) {
             if (longPressTimer) {
@@ -144,7 +135,6 @@ export function useCardDrag({
           }
         }
 
-        // เมาส์/ปากกา: ขยับเกิน threshold → drag
         if (!isTouch && !state.moved && dist > DRAG_THRESHOLD) {
           beginDrag();
         }
@@ -162,6 +152,18 @@ export function useCardDrag({
         }
       };
 
+      // ⭐ Cleanup — ทำหลัง placement เสมอ (เบากว่าเดิม: ใช้ rm class แบบเจาะจง)
+      const cleanup = () => {
+        document.body.classList.remove("rt-pressing", "rt-dragging");
+        document.body.style.userSelect = "";
+        document
+          .getElementById("viewportWrap")
+          ?.classList.remove("drag-over");
+        state.ghostEl?.remove();
+        if (state.cardEl) state.cardEl.classList.remove("is-dragging");
+        callbacks?.onDragEnd?.();
+      };
+
       const onUp = (ue: PointerEvent) => {
         if (longPressTimer) clearTimeout(longPressTimer);
 
@@ -169,16 +171,11 @@ export function useCardDrag({
         document.removeEventListener("pointerup", onUp);
         document.removeEventListener("pointercancel", onUp);
 
-        // ⭐ cleanup ทุก state
-        document.body.classList.remove("rt-pressing", "rt-dragging");
-        document.body.style.userSelect = "";
-        document.getElementById("viewportWrap")?.classList.remove("drag-over");
-        state.ghostEl?.remove();
-        callbacks?.onDragEnd?.();
-
         const store = useRoomTwin.getState();
 
-        // ===== Dragged → drop =====
+        // ============================================
+        // ⭐ 1) ถ้า moved → วางของ "ทันที" ก่อน cleanup
+        // ============================================
         if (state.moved) {
           const armedId = store.placingProductId;
           const armedTheme = store.placingThemeId;
@@ -186,6 +183,7 @@ export function useCardDrag({
             armedId === state.id && armedTheme === (state.themeId || null);
 
           if (isOverCanvas(ue.clientX, ue.clientY)) {
+            // ⭐ place ทันที — 3D จะอัปเดตก่อนงานหนัก
             if (state.kind === "zone") {
               placeZone(state.id, ue.clientX, ue.clientY);
             } else if (state.kind === "themed") {
@@ -204,10 +202,17 @@ export function useCardDrag({
           }
 
           if (armedId && !draggingArmedCard) store.cancelPlacing();
+
+          // ⭐ 2) cleanup ทีหลัง — defer ไป next frame ให้ browser วาด item ก่อน
+          requestAnimationFrame(cleanup);
           return;
         }
 
-        // ===== Not moved → tap (toggle placing) =====
+        // ============================================
+        // ⭐ 3) ไม่ moved → tap (toggle placing)
+        // ============================================
+        cleanup();
+
         if (state.kind === "zone") {
           if (store.placingZoneId === state.id) {
             store.cancelPlacing();
@@ -234,7 +239,10 @@ export function useCardDrag({
             highlightCard(cardEl);
           }
         } else {
-          if (store.placingProductId === state.id && !store.placingThemeId) {
+          if (
+            store.placingProductId === state.id &&
+            !store.placingThemeId
+          ) {
             store.cancelPlacing();
             document
               .querySelectorAll(".item-card")
@@ -257,9 +265,9 @@ export function useCardDrag({
   return { startDrag };
 }
 
-// ============================================================
-// Helpers
-// ============================================================
+/* ============================================================
+   Helpers
+   ============================================================ */
 
 function highlightCard(cardEl: HTMLElement) {
   document

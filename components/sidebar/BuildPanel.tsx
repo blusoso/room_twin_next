@@ -1,8 +1,15 @@
 // components/sidebar/BuildPanel.tsx
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRoomTwin } from "@/lib/state/store";
-import { CATEGORIES } from "@/lib/data/constants";
+import { CATEGORIES, ALL_TAB_SECTIONS } from "@/lib/data/constants";
 import { PRODUCTS, PRODUCT_BY_ID } from "@/lib/data/products";
 import { ZONES } from "@/lib/data/zones";
 import { THEME_BY_ID, ZONE_THEMES, themeDisplayName } from "@/lib/data/themes";
@@ -79,10 +86,9 @@ export default function BuildPanel() {
       {/* ===== Smart search & filter ===== */}
       <CatalogSearch />
 
-      {/* ===== Category tabs (แสดงเฉพาะโหมดเลือกดูปกติ) ===== */}
+      {/* ===== Category tabs ===== */}
       {!searchMode && (
         <div className="tabs" id="tabs">
-          {/* แท็บ "ทั้งหมด" อยู่ตัวแรกเสมอ */}
           <button
             type="button"
             className={`tab${activeCat === "all" ? " active" : ""}`}
@@ -110,14 +116,14 @@ export default function BuildPanel() {
       <div className="tip">
         <span aria-hidden="true">✋</span>
         <span>
-          <b>ลาก</b>ของไปวางในห้อง
+          <b>ลาก</b>ของไปวางในห้อง หรือแตะ <b>＋</b>
         </span>
         <button data-act="tipx" aria-label="ปิดคำแนะนำ">
           ✕
         </button>
       </div>
 
-      {/* ===== Catalog grid ===== */}
+      {/* ===== Catalog ===== */}
       <div
         className={`catalog${searchMode ? " search-mode" : ""}`}
         id="catalog"
@@ -125,46 +131,55 @@ export default function BuildPanel() {
         {searchMode ? (
           <>
             {zoneHits.length > 0 && (
-              <>
+              <section className="catalog-block">
                 <div className="catalog-section-head">
                   <span className="csh-title">
                     🏠 โซนสำเร็จรูป ({zoneHits.length})
                   </span>
                 </div>
-                {zoneHits.map((z) => (
-                  <ZoneCard
-                    key={z.id}
-                    zone={z}
-                    startDrag={startDrag}
-                    disabled={isSwapping}
-                    query={catalogQuery}
-                  />
-                ))}
-              </>
+                <HScroll>
+                  {zoneHits.map((z) => (
+                    <ZoneCard
+                      key={z.id}
+                      zone={z}
+                      startDrag={startDrag}
+                      disabled={isSwapping}
+                      query={catalogQuery}
+                    />
+                  ))}
+                </HScroll>
+              </section>
             )}
 
             {hits.length > 0 && (
-              <div className="catalog-section-head">
-                <span className="csh-title">🛋️ สินค้า ({hits.length})</span>
-              </div>
+              <section className="catalog-block">
+                <div className="catalog-section-head">
+                  <span className="csh-title">
+                    🛋️ สินค้า ({hits.length})
+                  </span>
+                </div>
+                <HScroll>
+                  {hits.map((h) => (
+                    <ProductCard
+                      key={`${h.product.id}-${h.themeId ?? "base"}`}
+                      product={h.product}
+                      startDrag={startDrag}
+                      themeId={h.themeId}
+                      isSwapping={isSwapping}
+                      isCurrent={currentItem?.productId === h.product.id}
+                      onSwapClick={() => handleSwapSelect(h.product.id)}
+                      catBadge={categoryLabel(h.product.cat)}
+                      themeName={
+                        h.themeId
+                          ? THEME_BY_ID.get(h.themeId)?.name
+                          : undefined
+                      }
+                      query={catalogQuery}
+                    />
+                  ))}
+                </HScroll>
+              </section>
             )}
-
-            {hits.map((h) => (
-              <ProductCard
-                key={`${h.product.id}-${h.themeId ?? "base"}`}
-                product={h.product}
-                startDrag={startDrag}
-                themeId={h.themeId}
-                isSwapping={isSwapping}
-                isCurrent={currentItem?.productId === h.product.id}
-                onSwapClick={() => handleSwapSelect(h.product.id)}
-                catBadge={categoryLabel(h.product.cat)}
-                themeName={
-                  h.themeId ? THEME_BY_ID.get(h.themeId)?.name : undefined
-                }
-                query={catalogQuery}
-              />
-            ))}
 
             {resultCount === 0 && <CatalogEmptyState query={catalogQuery} />}
           </>
@@ -192,9 +207,9 @@ export default function BuildPanel() {
   );
 }
 
-// ============================================================
-// Grids
-// ============================================================
+/* ============================================================
+   Grids — ทั้งหมดเป็น Grid ลงมา (ไม่ใช่ carousel)
+   ============================================================ */
 
 function ZoneGrid({
   startDrag,
@@ -204,7 +219,7 @@ function ZoneGrid({
   isSwapping: boolean;
 }) {
   return (
-    <>
+    <div className="catalog-grid">
       {ZONES.map((z) => (
         <ZoneCard
           key={z.id}
@@ -213,7 +228,7 @@ function ZoneGrid({
           disabled={isSwapping}
         />
       ))}
-    </>
+    </div>
   );
 }
 
@@ -233,10 +248,9 @@ function ProductGrid({
   const products = PRODUCTS.filter((p) => p.cat === cat);
 
   return (
-    <>
+    <div className="catalog-grid">
       {products.map((p) => {
         const isCurrent = currentItem?.productId === p.id;
-
         return (
           <ProductCard
             key={p.id}
@@ -250,7 +264,6 @@ function ProductGrid({
         );
       })}
 
-      {/* Themed variants */}
       {!isSwapping &&
         products.flatMap((p) =>
           ZONE_THEMES.filter((t) => themeDisplayName(p.id, t.id)).map(
@@ -266,46 +279,51 @@ function ProductGrid({
             ),
           ),
         )}
-    </>
+    </div>
   );
 }
 
-// ============================================================
-// ZoneRail — carousel แนวนอนแบบ Canva (ปุ่ม ‹ › + ซ่อน scrollbar)
-// ============================================================
+/* ============================================================
+   HScroll — แถบเลื่อนแนวนอน (ใช้ในแท็บ "ทั้งหมด" และ search)
+   ============================================================ */
 
-function ZoneRail({ children }: { children: React.ReactNode }) {
-  const railRef = useRef<HTMLDivElement>(null);
+const OVERFLOW_EPS = 16;
+
+function HScroll({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
 
-  const updateArrows = useCallback(() => {
-    const el = railRef.current;
+  const update = useCallback(() => {
+    const el = ref.current;
     if (!el) return;
     const max = el.scrollWidth - el.clientWidth;
+    if (max <= OVERFLOW_EPS) {
+      setCanLeft(false);
+      setCanRight(false);
+      return;
+    }
     setCanLeft(el.scrollLeft > 4);
     setCanRight(el.scrollLeft < max - 4);
   }, []);
 
   useEffect(() => {
-    updateArrows();
-    const el = railRef.current;
+    update();
+    const el = ref.current;
     if (!el) return;
-
-    el.addEventListener("scroll", updateArrows, { passive: true });
-    const ro = new ResizeObserver(updateArrows);
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
     ro.observe(el);
-
     return () => {
-      el.removeEventListener("scroll", updateArrows);
+      el.removeEventListener("scroll", update);
       ro.disconnect();
     };
-  }, [updateArrows]);
+  }, [update]);
 
   const scrollBy = (dir: -1 | 1) => {
-    const el = railRef.current;
+    const el = ref.current;
     if (!el) return;
-    const step = (200 + 12) * 2;
+    const step = (150 + 12) * 3;
     el.scrollBy({ left: dir * step, behavior: "smooth" });
   };
 
@@ -328,7 +346,7 @@ function ZoneRail({ children }: { children: React.ReactNode }) {
 
       <div
         className="zone-rail"
-        ref={railRef}
+        ref={ref}
         style={
           {
             "--mask-l": canLeft ? "var(--mask-size)" : "0px",
@@ -353,9 +371,12 @@ function ZoneRail({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ============================================================
-// AllGrid — แท็บ "ทั้งหมด": โซนสำเร็จรูป + เฟอร์นิเจอร์ทั้งหมด
-// ============================================================
+/* ============================================================
+   AllGrid — แท็บ "ทั้งหมด"
+   • โหมดปกติ → section ละ 1 carousel
+   • กด "ดูทั้งหมด" → grid ลงมา
+   • กด "ย้อนกลับ" → กลับไป section ที่เคยเปิด (scrollIntoView)
+   ============================================================ */
 
 function AllGrid({
   startDrag,
@@ -370,11 +391,104 @@ function AllGrid({
   onSwapSelect: (pid: string) => void;
   onSeeAllZones: () => void;
 }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  // ⭐ id ของ section ที่เพิ่งเปิด — ใช้เป็นเป้าหมาย scroll ตอนกดย้อนกลับ
+  const pendingScrollRef = useRef<string | null>(null);
+
+  const groups = useMemo(() => {
+    return ALL_TAB_SECTIONS.map((c) => ({
+      cat: c,
+      products: PRODUCTS.filter((p) => p.cat === c.id),
+    })).filter((g) => g.products.length > 0);
+  }, []);
+
+  // ⭐ หลังปิด expanded → เลื่อน catalog ไปที่ section ที่เคยเปิด
+  useLayoutEffect(() => {
+    if (expanded !== null) return;
+    const targetId = pendingScrollRef.current;
+    if (!targetId) return;
+
+    pendingScrollRef.current = null;
+
+    const container = document.getElementById("catalog");
+    if (!container) return;
+
+    const section = container.querySelector<HTMLElement>(
+      `[data-section-id="${targetId}"]`,
+    );
+    if (!section) return;
+
+    const cRect = container.getBoundingClientRect();
+    const sRect = section.getBoundingClientRect();
+    const offsetInContainer = sRect.top - cRect.top + container.scrollTop;
+
+    container.scrollTo({
+      top: Math.max(0, offsetInContainer - 8),
+      behavior: "auto", // ⭐ instant — ไม่ให้รู้สึกหนืด
+    });
+  }, [expanded]);
+
+  // ⭐ เปิดดูทั้งหมด → scroll catalog ขึ้นบนสุด (เห็นหัวข้อ expanded ตั้งแต่ต้น)
+  const handleExpand = (id: string) => {
+    setExpanded(id);
+    const container = document.getElementById("catalog");
+    if (container) container.scrollTo({ top: 0, behavior: "auto" });
+  };
+
+  // ⭐ ย้อนกลับ → จำ id ไว้ก่อน แล้วค่อยปิด
+  const handleBack = () => {
+    pendingScrollRef.current = expanded;
+    setExpanded(null);
+  };
+
+  // ===== Expanded: grid ลงมาเต็ม =====
+  if (expanded) {
+    const g = groups.find((x) => x.cat.id === expanded);
+    if (!g) {
+      setExpanded(null);
+      return null;
+    }
+    return (
+      <>
+        <div className="catalog-section-head expanded">
+          <button
+            type="button"
+            className="catalog-back"
+            onClick={handleBack}
+          >
+            ‹ ย้อนกลับ
+          </button>
+          <span className="csh-title">
+            {g.cat.label}{" "}
+            <span className="catalog-section-count">
+              {g.products.length} ชิ้น
+            </span>
+          </span>
+        </div>
+
+        <div className="catalog-grid">
+          {g.products.map((p) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              startDrag={startDrag}
+              themeId={null}
+              isSwapping={isSwapping}
+              isCurrent={currentItem?.productId === p.id}
+              onSwapClick={() => onSwapSelect(p.id)}
+            />
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  // ===== Normal: carousel ต่อ section =====
   return (
     <>
-      {/* ===== Section: ชุดโซนสำเร็จรูป ===== */}
       {!isSwapping && ZONES.length > 0 && (
-        <>
+        <section className="catalog-block" data-section-id="zone">
           <div className="catalog-section-head">
             <span className="csh-title">🏠 ชุดโซนสำเร็จรูป</span>
             <button
@@ -386,7 +500,7 @@ function AllGrid({
             </button>
           </div>
 
-          <ZoneRail>
+          <HScroll>
             {ZONES.map((z) => (
               <ZoneCard
                 key={z.id}
@@ -395,53 +509,46 @@ function AllGrid({
                 disabled={isSwapping}
               />
             ))}
-
-            {/* ⭐ ปุ่มดูทั้งหมดท้าย carousel */}
-            <button
-              type="button"
-              className="zone-rail-see-all"
-              onClick={onSeeAllZones}
-              aria-label="ดูโซนทั้งหมด"
-            >
-              <span className="zr-sa-circle" aria-hidden="true">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="22"
-                  height="22"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="13 6 19 12 13 18" />
-                </svg>
-              </span>
-              {/* <span className="zr-sa-label">ดูทั้งหมด</span> */}
-            </button>
-          </ZoneRail>
-        </>
+          </HScroll>
+        </section>
       )}
 
-      {/* ===== Section: เฟอร์นิเจอร์ทั้งหมด ===== */}
-      <div className="catalog-section-head">
-        <span className="csh-title">
-          🛋️ เฟอร์นิเจอร์
-        </span>
-          <span className="catalog-section-count">{PRODUCTS.length} ชิ้น</span>
-      </div>
+      {groups.map((g) => (
+        <section
+          key={g.cat.id}
+          className="catalog-block"
+          data-section-id={g.cat.id}
+        >
+          <div className="catalog-section-head">
+            <span className="csh-title">
+              {g.cat.label}{" "}
+              <span className="catalog-section-count">
+                {g.products.length}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="catalog-see-all"
+              onClick={() => handleExpand(g.cat.id)}
+            >
+              ดูทั้งหมด
+            </button>
+          </div>
 
-      {PRODUCTS.map((p) => (
-        <ProductCard
-          key={p.id}
-          product={p}
-          startDrag={startDrag}
-          themeId={null}
-          isSwapping={isSwapping}
-          isCurrent={currentItem?.productId === p.id}
-          onSwapClick={() => onSwapSelect(p.id)}
-        />
+          <HScroll>
+            {g.products.map((p) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                startDrag={startDrag}
+                themeId={null}
+                isSwapping={isSwapping}
+                isCurrent={currentItem?.productId === p.id}
+                onSwapClick={() => onSwapSelect(p.id)}
+              />
+            ))}
+          </HScroll>
+        </section>
       ))}
     </>
   );
