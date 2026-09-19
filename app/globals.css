@@ -393,6 +393,122 @@ aside {
   border-color: var(--ink);
 }
 
+/* ============================================================
+   ⭐ Pill — ปุ่มแคปซูล (header / chip / filter)
+   ============================================================ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
+}
+
+.pill:hover:not(:disabled):not(.is-active) {
+  border-color: #c9bea3;
+  background: #fbf8f2;
+}
+
+.pill:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+.pill:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ===== Active (toggle on) ===== */
+.pill.is-active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.pill.is-active:hover:not(:disabled) {
+  background: #1c1722;
+  border-color: #1c1722;
+}
+
+/* ===== Sizes ===== */
+.pill-sm {
+  height: 30px;
+  padding: 0 11px;
+  font-size: 12.5px;
+  gap: 5px;
+}
+
+.pill-md {
+  height: 34px;
+  padding: 0 13px;
+  font-size: 13px;
+}
+
+.pill-lg {
+  height: 38px;
+  padding: 0 15px;
+  font-size: 13.5px;
+  gap: 7px;
+}
+
+/* ===== Parts ===== */
+.pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.pill-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--ochre);
+  color: #fff;
+  font-family: var(--font-noto), var(--font-inter), sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.pill.is-active .pill-badge {
+  background: #fff;
+  color: var(--ink);
+}
+
 .catalog {
   flex: 1;
   overflow-y: auto;

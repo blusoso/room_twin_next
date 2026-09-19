@@ -8,6 +8,7 @@ import { useCatalogSearchShortcut } from "@/hooks/useCatalogSearchShortcut";
 import BuildPanel from "./BuildPanel";
 import RoomPanel from "./RoomPanel";
 import RoomStructurePanel from "@/components/panels/RoomStructurePanel";
+import Pill from "../ui/Pill";
 
 type SidebarTab = "setup" | "browse" | "room";
 
@@ -31,6 +32,7 @@ export default function Sidebar() {
    * ใช้ state แยกจาก activePanel เดิม
    * เพื่อไม่กระทบ logic ภายในระบบ catalog / room
    */
+  const room = useRoomTwin((s) => s.room);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("browse");
 
   /*
@@ -45,97 +47,78 @@ export default function Sidebar() {
     if (activePanel === "build" && sidebarTab === "room") {
       setSidebarTab("browse");
     }
-
     if (activePanel === "room" && sidebarTab === "browse") {
       setSidebarTab("room");
     }
   }, [activePanel, sidebarTab]);
 
-  /*
-   * Catalog shortcut
-   */
   useCatalogSearchShortcut();
 
-  /*
-   * ============================================================
-   * Room Setup Panel
-   * ============================================================
-   *
-   * RoomSetupPanel เดิมมีระบบ open/close ของตัวเอง
-   * เราจึงสั่งผ่าน CustomEvent ที่ component เดิมรองรับอยู่แล้ว
-   */
   useEffect(() => {
     if (sidebarTab === "setup") {
-      window.dispatchEvent(
-        new CustomEvent("roomtwin:openRoomSetup"),
-      );
+      window.dispatchEvent(new CustomEvent("roomtwin:openRoomSetup"));
     } else {
-      window.dispatchEvent(
-        new CustomEvent("roomtwin:closeRoomSetup"),
-      );
+      window.dispatchEvent(new CustomEvent("roomtwin:closeRoomSetup"));
     }
-
     return () => {
-      window.dispatchEvent(
-        new CustomEvent("roomtwin:closeRoomSetup"),
-      );
+      window.dispatchEvent(new CustomEvent("roomtwin:closeRoomSetup"));
     };
   }, [sidebarTab]);
 
-  /*
-   * ============================================================
-   * Tab handlers
-   * ============================================================
-   */
-
   const handleSetupTab = () => {
     closeItemPanel();
-
     setSidebarTab("setup");
-
-    // ไม่ต้องเปลี่ยน activePanel
-    // เพราะ setup เป็น panel ใหม่แยกจาก build/room
-    window.dispatchEvent(
-      new CustomEvent("roomtwin:openRoomSetup"),
-    );
+    window.dispatchEvent(new CustomEvent("roomtwin:openRoomSetup"));
   };
 
   const handleBrowseTab = () => {
-    window.dispatchEvent(
-      new CustomEvent("roomtwin:closeRoomSetup"),
-    );
-
+    window.dispatchEvent(new CustomEvent("roomtwin:closeRoomSetup"));
     closeItemPanel();
-
     setSidebarTab("browse");
     setActivePanel("build");
   };
 
   const handleRoomTab = () => {
-    window.dispatchEvent(
-      new CustomEvent("roomtwin:closeRoomSetup"),
-    );
-
+    window.dispatchEvent(new CustomEvent("roomtwin:closeRoomSetup"));
     setSidebarTab("room");
     setActivePanel("room");
   };
-
-  /*
-   * ============================================================
-   * Drawer
-   * ============================================================
-   */
 
   const handleDrawerToggle = () => {
     toggleDrawer();
     closeItemPanel();
   };
 
+  // ⭐ label ของขนาดห้อง (ทศนิยม 1 ตำแหน่ง)
+  const roomSizeLabel = `${room.w.toFixed(1)} × ${room.d.toFixed(1)} ม.`;
+
   return (
     <aside
       id="asideEl"
       className={`sidebar${drawerExpanded ? " expanded" : ""}`}
     >
+      <div className="flex px-4 pt-3">
+        <div className="brand flex items-center z-10">
+          <img
+            src="/assets/roomtwin_logo.png"
+            alt="RoomTwin Logo"
+            className="h-11 md:h-13 object-contain"
+          />
+        </div>
+        <div className="ml-auto flex items-center justify-content gap-2 z-10">
+          {/* ⭐ Pill แสดงขนาดจริง + กดไปแท็บ "สร้างห้อง" */}
+          <Pill
+            size="md"
+            icon="📐"
+            title="ปรับขนาดห้อง"
+            onClick={handleSetupTab}
+            aria-label={`ขนาดห้อง ${roomSizeLabel} — คลิกเพื่อแก้ไข`}
+          >
+            {roomSizeLabel}
+          </Pill>
+        </div>
+      </div>
+
       {/* ======================================================
           Mobile Drawer Handle
           ====================================================== */}
@@ -153,9 +136,7 @@ export default function Sidebar() {
       >
         <span>🛋️ ของแต่งห้อง</span>
 
-        <span className="chevron">
-          {drawerExpanded ? "▼" : "▲"}
-        </span>
+        <span className="chevron">{drawerExpanded ? "▼" : "▲"}</span>
       </div>
 
       {/* ======================================================
@@ -174,9 +155,7 @@ export default function Sidebar() {
           type="button"
           role="tab"
           aria-selected={sidebarTab === "setup"}
-          className={`panel-main-tab${
-            sidebarTab === "setup" ? " active" : ""
-          }`}
+          className={`panel-main-tab${sidebarTab === "setup" ? " active" : ""}`}
           onClick={handleSetupTab}
         >
           <span className="tab-icon">📐</span>
@@ -206,9 +185,7 @@ export default function Sidebar() {
           type="button"
           role="tab"
           aria-selected={sidebarTab === "room"}
-          className={`panel-main-tab${
-            sidebarTab === "room" ? " active" : ""
-          }`}
+          className={`panel-main-tab${sidebarTab === "room" ? " active" : ""}`}
           onClick={handleRoomTab}
         >
           <span className="tab-icon">📦</span>
@@ -225,7 +202,7 @@ export default function Sidebar() {
           id="setupPanel"
           role="tabpanel"
         >
-           <RoomStructurePanel embedded />
+          <RoomStructurePanel embedded />
         </div>
       )}
 
@@ -260,8 +237,8 @@ export default function Sidebar() {
           ====================================================== */}
       {sidebarTab === "browse" && (
         <div className="sidebar-hint">
-          💡 ลาก item ไปวางในโซนอื่นได้เลย • แตะ header โซนเพื่อโฟกัส
-          • คลิกโซนเพื่อเลือกธีม
+          💡 ลาก item ไปวางในโซนอื่นได้เลย • แตะ header โซนเพื่อโฟกัส •
+          คลิกโซนเพื่อเลือกธีม
         </div>
       )}
 

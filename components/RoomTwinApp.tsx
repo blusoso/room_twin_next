@@ -50,7 +50,7 @@ export default function RoomTwinApp({ shareId }: { shareId?: string }) {
 
   return (
     <>
-      <Header />
+      {/* <Header /> */}
       <ShareBanner />
       <div className="layout">
         <Sidebar />
