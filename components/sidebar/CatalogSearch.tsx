@@ -42,24 +42,34 @@ export default function CatalogSearch() {
   return (
     <div className="catalog-search" role="search">
       <div className="catalog-search-row">
-        <span className="catalog-search-icon" aria-hidden>
-          🔍
-        </span>
-
-        <input
-          id={CATALOG_SEARCH_INPUT_ID}
-          ref={inputRef}
-          className="catalog-search-input"
-          type="text"
-          inputMode="search"
-          enterKeyHint="search"
-          value={query}
-          maxLength={60}
-          autoComplete="off"
-          placeholder="ค้นหาสินค้า เช่น เตียง, โคมไฟ, โซฟา"
-          aria-label="ค้นหาสินค้า"
-          onChange={(e) => setCatalogQuery(e.target.value)}
-        />
+        <label className="sf">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="9" cy="9" r="6" />
+            <path d="M14 14l4 4" />
+          </svg>
+          <input
+            id={CATALOG_SEARCH_INPUT_ID}
+            ref={inputRef}
+            className="catalog-search-input"
+            type="text"
+            inputMode="search"
+            enterKeyHint="search"
+            value={query}
+            maxLength={60}
+            autoComplete="off"
+            placeholder="ค้นหาสินค้า เช่น เตียง, โคมไฟ"
+            aria-label="ค้นหาสินค้า"
+            onChange={(e) => setCatalogQuery(e.target.value)}
+          />
+        </label>
 
         {query !== "" && (
           <button
@@ -81,7 +91,7 @@ export default function CatalogSearch() {
           title="ตัวกรองสินค้า"
           onClick={toggleCatalogFilters}
         >
-          ⚙ ตัวกรอง
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h9M16 6h1M3 14h1M8 14h9"/><circle cx="14" cy="6" r="2"/><circle cx="6" cy="14" r="2"/></svg>
           {filterCount > 0 && <span className="count">{filterCount}</span>}
         </button>
       </div>

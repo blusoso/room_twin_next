@@ -4,11 +4,7 @@ import { useRoomTwin } from "@/lib/state/store";
 import { CATEGORIES } from "@/lib/data/constants";
 import { PRODUCTS, PRODUCT_BY_ID } from "@/lib/data/products";
 import { ZONES } from "@/lib/data/zones";
-import {
-  THEME_BY_ID,
-  ZONE_THEMES,
-  themeDisplayName,
-} from "@/lib/data/themes";
+import { THEME_BY_ID, ZONE_THEMES, themeDisplayName } from "@/lib/data/themes";
 import { categoryLabel } from "@/lib/data/productSearch";
 import { useCatalogSearchResult } from "@/hooks/useCatalogSearchResult";
 import { usePlacement } from "@/hooks/usePlacement";
@@ -81,6 +77,17 @@ export default function BuildPanel() {
 
       {/* ===== Smart search & filter ===== */}
       <CatalogSearch />
+
+      {/* ===== Tips ===== */}
+      <div className="tip">
+        <span aria-hidden="true">✋</span>
+        <span>
+          <b>ลาก</b>ของไปวางในห้อง หรือแตะ <b>＋</b>
+        </span>
+        <button data-act="tipx" aria-label="ปิดคำแนะนำ">
+          ✕
+        </button>
+      </div>
 
       {/* ===== Category tabs (แสดงเฉพาะโหมดเลือกดูปกติ) ===== */}
       {!searchMode && (
@@ -225,18 +232,18 @@ function ProductGrid({
       {/* Themed variants */}
       {!isSwapping &&
         products.flatMap((p) =>
-          ZONE_THEMES.filter((t) =>
-            themeDisplayName(p.id, t.id),
-          ).map((theme) => (
-            <ProductCard
-              key={`${p.id}-${theme.id}`}
-              product={p}
-              startDrag={startDrag}
-              themeId={theme.id}
-              isSwapping={false}
-              isCurrent={false}
-            />
-          )),
+          ZONE_THEMES.filter((t) => themeDisplayName(p.id, t.id)).map(
+            (theme) => (
+              <ProductCard
+                key={`${p.id}-${theme.id}`}
+                product={p}
+                startDrag={startDrag}
+                themeId={theme.id}
+                isSwapping={false}
+                isCurrent={false}
+              />
+            ),
+          ),
         )}
     </>
   );

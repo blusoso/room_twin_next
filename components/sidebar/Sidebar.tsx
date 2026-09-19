@@ -7,7 +7,7 @@ import { useCatalogSearchShortcut } from "@/hooks/useCatalogSearchShortcut";
 
 import BuildPanel from "./BuildPanel";
 import RoomPanel from "./RoomPanel";
-import RoomSetupPanel from "@/components/panels/RoomSetupPanel";
+import RoomStructurePanel from "@/components/panels/RoomStructurePanel";
 
 type SidebarTab = "setup" | "browse" | "room";
 
@@ -180,7 +180,7 @@ export default function Sidebar() {
           onClick={handleSetupTab}
         >
           <span className="tab-icon">📐</span>
-          <span className="tab-label">ตั้งค่าห้อง</span>
+          <span className="tab-label">สร้างห้อง</span>
         </button>
 
         {/* ----------------------------------------------------
@@ -225,7 +225,7 @@ export default function Sidebar() {
           id="setupPanel"
           role="tabpanel"
         >
-          <RoomSetupPanel />
+           <RoomStructurePanel embedded />
         </div>
       )}
 
