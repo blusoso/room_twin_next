@@ -25,6 +25,27 @@ interface Props {
   query?: string;
 }
 
+/**
+ * ⭐ แมพ emoji ตาม category
+ *    ใช้เป็น "ไอคอน" บน tile แทนสีทึบ monotone
+ */
+const CAT_EMOJI: Record<string, string> = {
+  structure: "🧱",
+  bed: "🛏️",
+  seating: "🛋️",
+  table: "🖥️",
+  cabinet: "🗄️",
+  shelf: "📚",
+  lamp: "💡",
+  decor: "🖼️",
+  curtain: "🪟",
+  air: "❄️",
+  fan: "🌀",
+  rug: "🧶",
+  misc: "📦",
+  ceiling: "⬜",
+};
+
 export default function ProductCard({
   product,
   startDrag,
@@ -47,8 +68,18 @@ export default function ProductCard({
       : product.color;
 
   // ⭐ สินค้านี้มีขนาดสำเร็จรูปให้เลือก (📐 บน toolbar / chip ในแผงปรับแต่ง) ไหม
-  //    ผู้ใช้จะได้รู้ตั้งแต่ก่อนวางว่ามีตัวเลือกขนาด
   const presetCount = sizePresetGroup(product.id)?.presets.length || 0;
+
+  // ⭐ emoji ของการ์ด — ใช้จาก cat
+  const emoji = CAT_EMOJI[product.cat] || "📦";
+
+  // ⭐ sub-list: ขนาด + badge ต่าง ๆ (ค้นหา / ธีม)
+  const subParts: string[] = [
+    `${product.dims.w}×${product.dims.d}×${product.dims.h} ซม.`,
+  ];
+  if (catBadge) subParts.push(catBadge);
+  if (isThemed && themeName) subParts.push(themeName);
+  const subText = subParts.join(" • ");
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isSwapping) return;
@@ -66,43 +97,59 @@ export default function ProductCard({
   };
 
   return (
-    <div
-      className={`item-card${isCurrent ? " swap-current" : ""}`}
+    <article
+      className={[
+        "item-card product-card card-b",
+        isThemed ? "is-themed" : "",
+        isCurrent ? "swap-current" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-id={product.id}
       data-theme-id={themeId || undefined}
-      style={isSwapping ? { cursor: "pointer" } : undefined}
+      data-kind="product"
+      data-key={product.id}
+      data-emojis={emoji}
+      data-tile={hexOf(swatchColor)}
+      data-count={presetCount > 0 ? presetCount : undefined}
+      role="button"
+      tabIndex={0}
+      aria-label={`${displayName} ${priceStr(product.price)}`}
+      style={
+        {
+          "--tile": hexOf(swatchColor),
+          cursor: isSwapping ? "pointer" : undefined,
+        } as React.CSSProperties
+      }
       onPointerDown={handlePointerDown}
       onClick={handleClick}
     >
-      <div
-        className="item-swatch"
-        style={{ background: hexOf(swatchColor) }}
-      />
+      {/* tile: emoji + grip + size preset badge */}
+      <div className="tile">
+        <i className="grip" aria-hidden="true">
+          ⠿
+        </i>
 
-      <div className="item-name">
-        <HighlightedText text={displayName} query={query} />
-        {isCurrent && isSwapping && " ✓"}
+        {presetCount > 0 && <span className="cnt">{presetCount} ขนาด</span>}
+
+        <span className="ems">
+          <span>{emoji}</span>
+        </span>
       </div>
 
-      <div className="item-price">{priceStr(product.price)}</div>
+      {/* content: name / sub / price */}
+      <div className="cb">
+        <h3>
+          <HighlightedText text={displayName} query={query} />
+          {isCurrent && isSwapping && " ✓"}
+        </h3>
 
-      <div className="item-dims">
-        {product.dims.w}×{product.dims.d}×{product.dims.h} ซม.
-      </div>
+        {subText && <p className="sub">{subText}</p>}
 
-      {(presetCount > 0 || catBadge || (isThemed && themeName)) && (
-        <div className="card-badges">
-          {presetCount > 0 && (
-            <span className="size-badge" title="มีขนาดสำเร็จรูปให้เลือก">
-              📐 {presetCount} ขนาด
-            </span>
-          )}
-          {catBadge && <span className="cat-badge">{catBadge}</span>}
-          {isThemed && themeName && (
-            <span className="theme-badge">{themeName}</span>
-          )}
+        <div className="row">
+          <span className="price">{priceStr(product.price)}</span>
         </div>
-      )}
-    </div>
+      </div>
+    </article>
   );
 }
