@@ -116,7 +116,7 @@ export default function BuildPanel() {
       <div className="tip">
         <span aria-hidden="true">✋</span>
         <span>
-          <b>ลาก</b>ของไปวางในห้อง หรือแตะ <b>＋</b>
+          <b>ลาก</b>ของไปวางในห้อง
         </span>
         <button data-act="tipx" aria-label="ปิดคำแนะนำ">
           ✕
