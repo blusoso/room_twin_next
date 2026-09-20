@@ -110,22 +110,17 @@ function parseBlockWallId(id: string): {
 function wallSideIdOf(
   id: string,
 ): "N" | "S" | "E" | "W" | null {
-  // Rect room domain ids
   if (id === "back") return "N";
   if (id === "front") return "S";
   if (id === "right") return "E";
   if (id === "side") return "W";
 
-  // Block wall domain id:
-  // bw_{i}_{j}_{NSEW}
   const parsed = parseBlockWallId(id);
 
   if (parsed) {
     return parsed.side as "N" | "S" | "E" | "W";
   }
 
-  // Merged wall:
-  // merged__bw_0_0_N__bw_1_0_N...
   if (id.startsWith("merged__")) {
     const memberIds = id
       .slice("merged__".length)
@@ -140,8 +135,6 @@ function wallSideIdOf(
     }
   }
 
-  // IMPORTANT:
-  // Never infer identity from geometry.
   return null;
 }
 
@@ -505,14 +498,7 @@ export function applySurface() {
   }
 
   // ============================================================
-  // Surface storage remains:
-  //
-  // back
-  // front
-  // side
-  // right
-  //
-  // These are semantic room facades.
+  // Semantic wall facades: back / front / side / right
   // ============================================================
   const wallColorOf =
     (facade: WallFacadeId): number => {
@@ -568,9 +554,6 @@ export function applySurface() {
   // Per facade
   // ============================================================
   else {
-    // ----------------------------------------------------------
-    // Rectangular room
-    // ----------------------------------------------------------
     setMaterialColor(
       wallMat,
       wallColorOf("back"),
@@ -591,29 +574,6 @@ export function applySurface() {
       wallColorOf("right"),
     );
 
-    // ----------------------------------------------------------
-    // Blocks room
-    //
-    // IMPORTANT:
-    //
-    // Do NOT do:
-    //
-    //   nx/nz -> N/S/E/W
-    //
-    // Instead:
-    //
-    //   bw id -> topology facade
-    //
-    // Example:
-    //
-    //   bw_0_0_N -> back
-    //   bw_1_0_N -> back
-    //   bw_2_0_W -> back   <-- still back!
-    //   bw_2_1_W -> back   <-- still back!
-    //
-    // if those segments belong to the same
-    // facade arc between the same outer corners.
-    // ----------------------------------------------------------
     polyWalls.forEach((wall) => {
       const facade =
         wallFacadeOf(
@@ -621,10 +581,6 @@ export function applySurface() {
         );
 
       if (!facade) {
-        // Unknown semantic wall.
-        //
-        // Do not guess from geometry.
-        // Safe fallback.
         setMaterialColor(
           wall.mat,
           surface.wallAll,
@@ -648,6 +604,11 @@ export function applySurface() {
     ceilingMat,
     surface.ceiling,
   );
+
+  // ============================================================
+  // ⭐ Baseboards — re-sync สีบัวทุกครั้งที่ surface เปลี่ยน
+  // ============================================================
+  rebuildBaseboards();
 
   // ============================================================
   // Partitions sync
@@ -738,8 +699,6 @@ export function updateWallVisibility() {
   const labels: string[] = [];
 
   if (showAllWalls) {
-    // ⭐ โหมด "ผนังรอบด้าน" — ผนังทุกด้านทึบพร้อมกัน
-    //    ปิดการซ่อนผนังที่บังกล้อง + ไม่จางตามมุมสูง (topFactor)
     Object.entries(WALLS).forEach(([, w]) => {
       if (!w.mesh.visible) return;
       w.mat.opacity = 1;
@@ -778,9 +737,6 @@ export function updateWallVisibility() {
 
   placedItems.forEach((item) => {
     if (!item.wallMount) return;
-    // ⭐ ของที่แขวนบนพื้ นผิวไอเทมอื่น (ประตู/หน้าต่าง/เสา/ฉากกั้น)
-    //    - host ติดผนัง (ประตู/หน้าต่าง) → จางตามผนังนั้น
-    //    - host วางพื้ น (เสา/ฉากกั้น) → ทึบตลอด
     let wo = 1;
     if (item.mountUid) {
       const host = placedItems.find((h) => h.uid === item.mountUid);
@@ -792,7 +748,6 @@ export function updateWallVisibility() {
       const wd = getWall(item.wallId!);
       wo = wd ? (wd as any).mat.opacity : 1;
     }
-    // ⭐ sync ตรง ๆ (เดิม dynamic import ทุก frame → Promise/GC garbage + ล่าหนึ่ง frame)
     const h = objectsByUid.get(item.uid);
     if (h) h.visible = wo > 0.04;
     const mats = wallItemMaterials.get(item.uid);
@@ -823,7 +778,7 @@ export function getWallStatusText() {
 }
 
 // ============================================================
-// findFloorYAt — raycast down onto floor + blocks
+// findFloorYAt
 // ============================================================
 
 const _floorRayOrigin = new THREE.Vector3();
@@ -851,11 +806,6 @@ export function findFloorYAt(x: number, z: number): number {
   return found ? bestY : 0;
 }
 
-/**
- * ⭐ floor Y จากทั้ง footprint (center + 4 มุม) — ใช้ค่า max
- * กันไม่ให้ item ฝังลงไปใน slab ที่ยกสูง เมื่อ center อยู่บน cell ต่ำ
- * แต่ตัว mesh เหลื่อมทับ raised region (bottom จะวางทับพื้นสูงสุดที่ footprint สัมผัส)
- */
 export function findFloorYAtFootprint(
   x: number,
   z: number,
@@ -878,7 +828,7 @@ export function findFloorYAtFootprint(
 }
 
 // ============================================================
-// Baseboards
+// ⭐ Baseboards — สีดึงจาก surface.baseboard
 // ============================================================
 
 export function rebuildBaseboards() {
@@ -889,9 +839,9 @@ export function rebuildBaseboards() {
     if ((child as any).material) (child as any).material.dispose();
   }
 
-  const { room, placedItems } = useRoomTwin.getState();
+  const { room, placedItems, surface } = useRoomTwin.getState();
   const mat = new THREE.MeshStandardMaterial({
-    color: 0xf7f3ea,
+    color: surface.baseboard ?? 0xfbf6ec, // ⭐ อ่านจาก store
     roughness: 0.6,
   });
 
@@ -982,11 +932,7 @@ export function rebuildBaseboards() {
 }
 
 // ============================================================
-// ⭐ Hook ให้ระบบแสง (lib/three/lighting.ts) re-apply envMapIntensity
-//    หลัง rebuild shell/baseboard ทุกครั้ง
-//
-//    roomShell อยู่ล่างสุดของ dependency graph — ผู้ที่อยู่ชั้นบนลงทะเบียน
-//    callback ได้ เพื่อไม่ให้เกิด import วนกลับ (roomShell → lighting → roomShell)
+// Hook
 // ============================================================
 
 let _shellRebuildListener: (() => void) | null = null;
@@ -1101,14 +1047,12 @@ export function clearGroup(g: THREE.Group) {
 }
 
 // ============================================================
-// ⭐ buildBlocksShell — voxel with levels (พื้นรวมเป็นสแลบเดียว)
+// buildBlocksShell
 // ============================================================
 
-const FLOOR_TILE = 1.4; // ลายพื้น 1 แผ่น ≈ 1.4 ม. (ตรงกับ applySurface)
-const BASE_SLAB = 0.02; // ความหนาสแลบพื้นระดับ 0
+const FLOOR_TILE = 1.4;
+const BASE_SLAB = 0.02;
 
-// ⭐ ศูนย์กลางบล็อก (bbox center ในหน่วย index) — ยึด origin (0,0) เหมือน rect mode
-//    ทำให้แก้โครงสร้าง/ระดับพื้นไม่ทำให้ห้องทั้งหลังเลื่อน
 let _blocksOriginI = 0;
 let _blocksOriginJ = 0;
 
@@ -1125,11 +1069,6 @@ function setBlocksOrigin(blocks: Set<string>): void {
   _blocksOriginJ = (minJ + maxJ) / 2;
 }
 
-/**
- * ⭐ origin ของผังบล็อก (bbox center ในหน่วย index) — คำนวณจาก room.blocks
- *    ตรงกับ _blocksOriginI/J ที่ใช้ render: cell (i,j) อยู่ที่ ((i-oi)*cs, (j-oj)*cs)
- *    ใช้แปลง world ↔ index ให้ placement clamp ตรงกับผังที่วาดจริง
- */
 export function getBlocksOrigin(): { oi: number; oj: number } {
   const { room } = useRoomTwin.getState();
   const blocks = room.blocks;
@@ -1169,7 +1108,6 @@ function cellLevelOf(levels: Record<string, number>, key: string): number {
   return levels[key] ?? 0;
 }
 
-// 4-connectivity flood fill: เซลล์ระดับเดียวกันที่ต่อเนื่องกัน → 1 region
 function floodFillRegions(cells: Set<string>): Set<string>[] {
   const visited = new Set<string>();
   const regions: Set<string>[] = [];
@@ -1206,7 +1144,6 @@ function cellBoundaryEdges(cell: string, region: Set<string>): GridEdge[] {
   const [i, j] = cell.split(",").map(Number);
   const has = (a: number, b: number) => region.has(`${a},${b}`);
   const out: GridEdge[] = [];
-  // เดินตามขอบเซลล์แบบทวนเข็ม (interior ของ region อยู่ซ้ายตลอด)
   if (!has(i, j - 1)) out.push({ x0: i, z0: j, x1: i + 1, z1: j });
   if (!has(i + 1, j)) out.push({ x0: i + 1, z0: j, x1: i + 1, z1: j + 1 });
   if (!has(i, j + 1)) out.push({ x0: i + 1, z0: j + 1, x1: i, z1: j + 1 });
@@ -1216,7 +1153,6 @@ function cellBoundaryEdges(cell: string, region: Set<string>): GridEdge[] {
 
 const edgeKey = (e: GridEdge) => `${e.x0},${e.z0}->${e.x1},${e.z1}`;
 
-// trace ขอบเขต region (index coords) → loops (outer + holes) ไม่มีขอบภายใน
 function traceRegionLoops(region: Set<string>): number[][][] {
   const remaining = new Map<string, GridEdge>();
   const byStart = new Map<string, GridEdge[]>();
@@ -1247,7 +1183,6 @@ function traceRegionLoops(region: Set<string>): number[][][] {
       if (cands.length === 0) break;
       let next = cands[0];
       if (cands.length > 1) {
-        // fallback: เลือกทางที่เลี้ยวซ้ายสุด (ปกติมีตัวเลือกเดียว)
         let best = -Infinity;
         const px = cur.x1 - cur.x0;
         const pz = cur.z1 - cur.z0;
@@ -1276,35 +1211,6 @@ type WallFacadeId =
   | "side"
   | "right";
 
-/**
- * Semantic facade ของ "ผนังด้านหนึ่งของห้อง"
- *
- * IMPORTANT:
- * - ไม่ใช่ normal
- * - ไม่ใช่ rotation
- * - ไม่ใช่ mesh position
- * - ไม่ใช่ THREE geometry orientation
- *
- * registry นี้สร้างจาก room.blocks ซึ่งเป็น domain data
- *
- * หลักการ:
- *   1. trace outer footprint เป็น polygon
- *   2. หา 4 convex corner หลักของ bounding box
- *   3. เดิน boundary ระหว่าง corner หลักเหล่านั้น
- *   4. concave/notch corner ไม่ทำให้เปลี่ยน facade
- *
- * ตัวอย่าง:
- *
- *   ┌──────────────┐
- *   │              │
- *   │              │
- *   │       ┌──────┘
- *   │       │
- *   └───────┘
- *
- * ผนังที่ถอยเข้าไปยังอยู่ใน facade เดิม
- * ไม่ถูกแบ่งเป็น N/W/E/S ตาม orientation ของแต่ละ mesh
- */
 const wallFacadeRegistry =
   new Map<string, WallFacadeId>();
 
@@ -1409,32 +1315,6 @@ function nearestUnusedConvexCorner(
   return bestIndex;
 }
 
-/**
- * สร้าง mapping:
- *
- *   bw_i_j_N
- *   bw_i_j_S
- *   bw_i_j_E
- *   bw_i_j_W
- *
- * -> semantic facade:
- *
- *   back / front / side / right
- *
- * โดย facade ไม่ได้หมายถึง orientation ของ segment
- *
- * ตัวอย่าง notch:
- *
- *       ┌──────────┐
- *       │          │
- *   ┌───┘          │
- *   │              │
- *   └──────────────┘
- *
- * segment ตรง notch อาจเปลี่ยน orientation
- * แต่ยังอยู่ใน facade เดิม เพราะอยู่ระหว่าง
- * outer convex corners ชุดเดียวกัน
- */
 function rebuildWallFacadeRegistry(
   blocks: Set<string>,
 ): void {
@@ -1451,10 +1331,6 @@ function rebuildWallFacadeRegistry(
     return;
   }
 
-  // ------------------------------------------------------------
-  // ใช้ outer loop ที่มีพื้นที่มากที่สุด
-  // inner hole ไม่ถือเป็นหนึ่งใน 4 facade หลัก
-  // ------------------------------------------------------------
   let outerLoop: number[][] | null = null;
   let outerArea = -Infinity;
 
@@ -1489,9 +1365,6 @@ function rebuildWallFacadeRegistry(
     return;
   }
 
-  // ------------------------------------------------------------
-  // Bounding box ของ footprint
-  // ------------------------------------------------------------
   let minX = Infinity;
   let maxX = -Infinity;
   let minZ = Infinity;
@@ -1504,17 +1377,6 @@ function rebuildWallFacadeRegistry(
     maxZ = Math.max(maxZ, z);
   }
 
-  // ------------------------------------------------------------
-  // หา convex corners
-  //
-  // polygon ของ traceRegionLoops() เดินแบบ CCW
-  //
-  // convex = left turn
-  // concave = right turn
-  //
-  // concave corner คือ notch corner
-  // และ "ห้าม" ใช้เป็น boundary ใหม่ของ facade
-  // ------------------------------------------------------------
   const convexIndices: number[] = [];
 
   for (
@@ -1553,15 +1415,6 @@ function rebuildWallFacadeRegistry(
     return;
   }
 
-  // ------------------------------------------------------------
-  // 4 "main corners" ของห้อง
-  //
-  // สำคัญ:
-  // เราไม่ได้เลือกทุก convex corner
-  // เพราะ notch ทำให้มี convex/concave corner เพิ่ม
-  //
-  // เลือก corner ที่ใกล้ 4 มุมของ room bounding box
-  // ------------------------------------------------------------
   const cornerTargets: Array<{
     x: number;
     z: number;
@@ -1625,9 +1478,6 @@ function rebuildWallFacadeRegistry(
     return;
   }
 
-  // ------------------------------------------------------------
-  // ตรวจว่า anchor ทั้ง 4 ไม่ซ้ำ
-  // ------------------------------------------------------------
   const anchorIndices =
     new Set(
       anchors.map((a) => a.index),
@@ -1640,9 +1490,6 @@ function rebuildWallFacadeRegistry(
     return;
   }
 
-  // ------------------------------------------------------------
-  // สร้าง edge -> wall id lookup
-  // ------------------------------------------------------------
   const edgeToWallId =
     new Map<string, string>();
 
@@ -1662,21 +1509,12 @@ function rebuildWallFacadeRegistry(
     return;
   }
 
-  // ------------------------------------------------------------
-  // เรียง anchors ตามลำดับที่ปรากฏบน boundary loop
-  // ------------------------------------------------------------
   const orderedAnchors =
     [...anchors].sort(
       (a, b) =>
         a.index - b.index,
     );
 
-  // ------------------------------------------------------------
-  // เดิน arc ระหว่าง main corners
-  //
-  // concave/notch corner จะถูกเดินผ่านเฉย ๆ
-  // และยังคง facade เดิม
-  // ------------------------------------------------------------
   for (
     let k = 0;
     k < orderedAnchors.length;
@@ -1726,21 +1564,6 @@ function rebuildWallFacadeRegistry(
   }
 }
 
-/**
- * Resolve semantic facade ของ wall
- *
- * Rect:
- *   back  -> back
- *   front -> front
- *   side  -> side
- *   right -> right
- *
- * Blocks:
- *   ใช้ topology-based registry
- *
- * IMPORTANT:
- * ไม่มี geometry fallback
- */
 function wallFacadeOf(
   wallId: string,
 ): WallFacadeId | null {
@@ -1767,7 +1590,6 @@ function wallFacadeOf(
   );
 }
 
-// loops (index coords) → THREE.Shape ในพื้นที่โลก (x, -z)
 function shapeFromLoops(loops: number[][][], cellSize: number): THREE.Shape | null {
   const polys: { pts: THREE.Vector2[]; area: number }[] = [];
   for (const loop of loops) {
@@ -1809,7 +1631,6 @@ function shapeFromLoops(loops: number[][][], cellSize: number): THREE.Shape | nu
   return shape;
 }
 
-// สแลบแผ่นเดียวทั้ง region ตั้งแต่ bottom ถึง top — ไม่มีหน้า coplanar ซ้อนกัน
 function addMergedFloorSlab(
   region: Set<string>,
   cellSize: number,
@@ -1828,7 +1649,6 @@ function addMergedFloorSlab(
   });
   geo.rotateX(-Math.PI / 2);
 
-  // UV = พิกัดจริงในโลก (เมตร) หาร FLOOR_TILE → ลายพื้นต่อเนื่อง anchor ที่ origin
   const uv = geo.attributes.uv as THREE.BufferAttribute | undefined;
   if (uv) {
     const s = 1 / FLOOR_TILE;
@@ -1853,9 +1673,6 @@ export function buildBlocksShell() {
 
   if (!room.blocks) return;
 
-  // ============================================================
-  // Clear old block walls
-  // ============================================================
   polyWalls.forEach((wall) => {
     roomGroup.remove(
       wall.mesh,
@@ -1878,9 +1695,6 @@ export function buildBlocksShell() {
   mergedWallRegistry.clear();
   wallFacadeRegistry.clear();
 
-  // ============================================================
-  // Hide rectangular walls
-  // ============================================================
   backWall.visible = false;
   sideWall.visible = false;
   rightWall.visible = false;
@@ -1889,18 +1703,12 @@ export function buildBlocksShell() {
   ceilingMesh.visible = true;
   ceilingCollider.visible = true;
 
-  // ============================================================
-  // Clear floor / ceiling
-  // ============================================================
   clearGroup(floorGroup);
   clearGroup(ceilingGroup);
   clearGroup(
     ceilingColliderGroup,
   );
 
-  // ============================================================
-  // Stable block origin
-  // ============================================================
   setBlocksOrigin(
     room.blocks,
   );
@@ -1917,9 +1725,6 @@ export function buildBlocksShell() {
   const levels =
     room.cellLevels || {};
 
-  // ============================================================
-  // Group cells by level
-  // ============================================================
   const byLevel =
     new Map<
       number,
@@ -1951,9 +1756,6 @@ export function buildBlocksShell() {
     },
   );
 
-  // ============================================================
-  // Flood fill same-level regions
-  // ============================================================
   const regionsByLevel =
     new Map<
       number,
@@ -1971,14 +1773,6 @@ export function buildBlocksShell() {
     },
   );
 
-  // ============================================================
-  // 1. Floor slabs
-  //
-  // ⭐ สแลบระดับ > 0 ยึดทึบจากพื้น 0 ถึงระดับ level เสมอ
-  //    (เดิมเริ่มที่ regionBottom = ระดับเพื่อนบ้านที่ต่ำกว่า เพื่อย่อหน้าข้าง
-  //     แต่เมื่อสแลบสูงซ้อนทับ/อยู่บนชั้นที่ต่ำกว่า จะเกิดโพรงว่างใต้สแลบ
-  //     ทำให้มองทะลุพื้น/บาง face หายไป)
-  // ============================================================
   regionsByLevel.forEach(
     (regions, level) => {
       regions.forEach(
@@ -1996,14 +1790,6 @@ export function buildBlocksShell() {
     },
   );
 
-  // ============================================================
-  // 2. Outer walls
-  //
-  // Keep N/S/E/W here!
-  //
-  // This is geometric construction identity,
-  // NOT color identity.
-  // ============================================================
   room.blocks.forEach(
     (key) => {
       const [i, j] =
@@ -2047,9 +1833,6 @@ export function buildBlocksShell() {
     },
   );
 
-  // ============================================================
-  // 3. Ceiling
-  // ============================================================
   room.blocks.forEach(
     (key) => {
       const [i, j] =
@@ -2110,29 +1893,12 @@ export function buildBlocksShell() {
     },
   );
 
-  // ============================================================
-  // IMPORTANT:
-  //
-  // Build semantic wall-facade mapping AFTER polyWalls exist.
-  //
-  // This is the key difference from the previous implementation.
-  // ============================================================
   rebuildWallFacadeRegistry(
     room.blocks,
   );
 
-  // ============================================================
-  // Geometry merging remains N/S/E/W based.
-  //
-  // This is OK:
-  //
-  // geometry direction != color identity
-  // ============================================================
   computeMergedWalls();
 
-  // ============================================================
-  // Apply colors using facade registry.
-  // ============================================================
   applySurface();
 }
 
@@ -2143,10 +1909,6 @@ const SIDE_DIRS: Array<[number, number, string]> = [
   [-1, 0, "W"],
 ];
 
-/**
- * ⭐ addBlockWall — supports both outer walls and risers
- * `isRiser = true` → short wall between different levels (no merged wall tracking)
- */
 export function addBlockWall(
   i: number,
   j: number,
@@ -2196,7 +1958,6 @@ export function addBlockWall(
   m.receiveShadow = true;
   roomGroup.add(m);
 
-  // ⭐ Risers ไม่นับเป็น merged wall (แค่ผนังสั้น)
   if (isRiser) return;
 
   const wid = `bw_${i}_${j}_${side}`;

@@ -25,6 +25,9 @@ import type { LightingMode } from "@/lib/data/lighting";
 
 const MAX_HISTORY = 60;
 
+/* ⭐ ค่า default ของบัว — ใช้ร่วมกันทั้ง init / reset */
+const DEFAULT_BASEBOARD = 0xfbf6ec;
+
 export interface RoomTwinState {
   room: RoomShape;
   setRoom: (patch: Partial<RoomShape>) => void;
@@ -79,18 +82,13 @@ export interface RoomTwinState {
   activeCat: string;
   setActiveCat: (c: string) => void;
 
-  // ⭐ ค้นหา/กรองสินค้าในแคตตาล็อก — transient ล้วน
-  //    ไม่เข้า serialize/history/localStorage และไม่กระทบ undo/redo
   catalogQuery: string;
   catalogFilters: CatalogFilters;
   catalogSearchFocusNonce: number;
-  /** ⭐ สถานะเปิด/ปิด floating filter panel (ข้าง sidebar) — transient */
   catalogFiltersOpen: boolean;
   setCatalogQuery: (q: string) => void;
   setCatalogFilters: (patch: Partial<CatalogFilters>) => void;
-  /** ล้างทั้งคำค้นและตัวกรอง (ใช้กับปุ่ม "ล้างการค้นหา" และ Escape ในช่องค้นหา) */
   clearCatalogSearch: () => void;
-  /** ขอโฟกัสช่องค้นหา (nonce — ใช้จาก keyboard shortcut ที่อยู่คนละ component) */
   requestCatalogSearchFocus: () => void;
   setCatalogFiltersOpen: (open: boolean) => void;
   toggleCatalogFilters: () => void;
@@ -123,39 +121,23 @@ export interface RoomTwinState {
   showLockBadges: boolean;
   toggleLockBadges: () => void;
 
-  // ⭐ โหมด "ผนังรอบด้าน" — แสดงผนังทุกด้านพร้อมกัน (ปิดการซ่อนผนังอัตโนมัติ)
-  //    เป็น view preference ชั่วคราว (ไม่เข้า serialize/history) แต่ persist แยก key
   showAllWalls: boolean;
   setShowAllWalls: (v: boolean) => void;
   toggleAllWalls: () => void;
 
-  // ⭐ โหมด "วัดขนาด" (📏 ไม้บรรทัดห้อง) — แสดงไม้บรรทัดบนพื้นห้อง
-  //    + ตีเส้นไกด์ระยะจากผนังตอนลาก object
-  //    เป็น view preference ชั่วคราว (ไม่เข้า serialize/history) แต่ persist แยก key
   showMeasure: boolean;
   setShowMeasure: (v: boolean) => void;
   toggleMeasure: () => void;
 
-  // ⭐ โหมดแสงในฉาก (☀️ วัน / 🌆 เย็น / 🌙 คืน) + สวิตช์ไฟโคม (💡)
-  //    เป็น view preference ชั่วคราว (ไม่เข้า serialize/history) แต่ persist แยก key
-  //    - ไฟของโคมแต่ละดวงเปิดเมื่อ lampsOn && params.lightOn !== false
-  //    - เลือกโหมด night แล้วเปิด lampsOn ให้อัตโนมัติ
   lightingMode: LightingMode;
   setLightingMode: (m: LightingMode) => void;
   lampsOn: boolean;
   setLampsOn: (v: boolean) => void;
   toggleLamps: () => void;
 
-  // ⭐ สถานะเปิด/ปิด Blocks Editor (transient — ไม่เข้า serialize/history)
   blocksEditorOpen: boolean;
   setBlocksEditorOpen: (open: boolean) => void;
 
-  // ============================================================
-  // ⭐ บันทึก / แชร์ห้อง (cloud) — transient ล้วน
-  //    ไม่เข้า serialize/history/localStorage และไม่กระทบ undo/redo
-  // ============================================================
-
-  /** true เมื่อ useRoomTwinInit โหลดห้องเดิมเสร็จ (ใช้ gate ตอนเปิดลิงก์แชร์) */
   storeReady: boolean;
   setStoreReady: (v: boolean) => void;
 
@@ -164,11 +146,9 @@ export interface RoomTwinState {
   setCloudRooms: (rooms: CloudRoomSummary[]) => void;
   setCloudLoading: (v: boolean) => void;
 
-  /** id ของไฟล์บนเซิร์ฟเวอร์ที่ผูกกับห้องปัจจุบัน (ไว้กด "บันทึกทับ") */
   activeCloudRoomId: string | null;
   setActiveCloudRoomId: (id: string | null) => void;
 
-  /** กำลังดูห้องที่คนอื่นแชร์มา → ระงับการเขียน localStorage จนกว่าจะบันทึกเป็นสำเนา */
   sharedRoomId: string | null;
   sharedRoomName: string | null;
   enterSharedRoom: (id: string, name: string) => void;
@@ -235,6 +215,7 @@ export const useRoomTwin = create<RoomTwinState>()(
       wallAll: WALL_COLORS[0],
       walls: {},
       ceiling: 0xf7f3ea,
+      baseboard: DEFAULT_BASEBOARD, // ⭐ เพิ่ม
     },
 
     setSurface: (patch) =>
@@ -319,7 +300,6 @@ export const useRoomTwin = create<RoomTwinState>()(
             .map((i) => i.uid),
         );
 
-        // ⭐ ของที่แขวนอยู่กับพื้ นผิวของ item ที่อยู่ในโซน ต้องถูกลบไปด้วยทั้งชุด
         let grew = true;
         while (grew) {
           grew = false;
@@ -378,13 +358,11 @@ export const useRoomTwin = create<RoomTwinState>()(
       get().placedItems.filter((i) => i.zoneUid === zuid),
 
     // ============================================================
-    // Selection / Placing / Zone meta / Swap / UI (เหมือนเดิม)
+    // Selection / Placing / Zone meta / Swap / UI
     // ============================================================
     selectedUid: null,
     selectedZoneUid: null,
 
-    // ⭐ เลือก object อื่น = ออกจากโหมด "เปลี่ยนสินค้า" ของ object เดิม
-    //    (คลิก object เดิมซ้ำไม่หลุดโหมด)
     selectItem: (uid) =>
       set((s) => ({
         selectedUid: uid,
@@ -399,13 +377,12 @@ export const useRoomTwin = create<RoomTwinState>()(
         swapTargetUid: null,
       }),
 
-    // ⭐ ย้ายบริบทไปโซน = ออกจากโหมด "เปลี่ยนสินค้า" (object ที่เปลี่ยนค้างอยู่)
     deselectZone: () =>
       set({
         selectedZoneUid: null,
         swapTargetUid: null,
       }),
-    // ⭐ ปิด item panel = ออกจากโหมด "เปลี่ยนสินค้า" ด้วย
+
     closeItemPanel: () =>
       set({ selectedUid: null, swapTargetUid: null }),
 
@@ -440,7 +417,6 @@ export const useRoomTwin = create<RoomTwinState>()(
       set((s) => {
         const m = new Map(s.zoneMeta);
         const next = { ...(m.get(zuid) || {}), ...meta };
-        // ⭐ ไม่มีข้อมูลเหลือเลย → ลบ entry (ไม่เก็บ definition ซ้ำเป็น entry เปล่า)
         const isEmpty = Object.values(next).every((v) => v === undefined);
         if (isEmpty) m.delete(zuid);
         else m.set(zuid, next);
@@ -457,8 +433,6 @@ export const useRoomTwin = create<RoomTwinState>()(
     swapTargetUid: null,
     customizeTargetUid: null,
 
-    // ⭐ เข้าโหมด "เปลี่ยนสินค้า" — เป็น transient UI ล้วน ๆ (ไม่เข้า serialize/history)
-    //    เคลียร์โหมด placing/ปรับแต่งที่ค้างอยู่ + พา sidebar ไปแท็บ "สร้างห้อง" ให้เห็น catalog
     setSwapTarget: (uid) =>
       set(
         uid
@@ -477,8 +451,6 @@ export const useRoomTwin = create<RoomTwinState>()(
       set({ customizeTargetUid: uid }),
 
     activePanel: "build",
-    // ⭐ ออกจากแท็บ "สร้างห้อง" → ปิด floating filter panel ด้วย
-    //    (กันแผงโผล่ซ้ำแบบไม่คาดคิดเมื่อกลับมา)
     setActivePanel: (p) =>
       set(
         p === "room"
@@ -490,7 +462,7 @@ export const useRoomTwin = create<RoomTwinState>()(
     setActiveCat: (c) => set({ activeCat: c }),
 
     // ============================================================
-    // Catalog search (transient — ไม่เข้า serialize/history)
+    // Catalog search (transient)
     // ============================================================
     catalogQuery: "",
     catalogFilters: makeDefaultCatalogFilters(),
@@ -604,9 +576,7 @@ export const useRoomTwin = create<RoomTwinState>()(
     setShowMeasure: (v) => set({ showMeasure: v }),
     toggleMeasure: () => set((s) => ({ showMeasure: !s.showMeasure })),
 
-    // ⭐ โหมดแสงในฉาก — transient view preference (persist แยก key ใน storage.ts)
     lightingMode: "day",
-    // ⭐ เข้าโหมดกลางคืน = เปิดไฟในห้องให้อัตโนมัติ (ผู้ใช้กดปิดเองได้)
     setLightingMode: (m) =>
       set(m === "night" ? { lightingMode: m, lampsOn: true } : { lightingMode: m }),
     lampsOn: false,
@@ -662,6 +632,7 @@ export const useRoomTwin = create<RoomTwinState>()(
           wallAll: WALL_COLORS[0],
           walls: {},
           ceiling: 0xf7f3ea,
+          baseboard: DEFAULT_BASEBOARD, // ⭐ เพิ่ม
         },
         room: {
           w: ROOM_DEFAULT.w,
@@ -679,7 +650,7 @@ export const useRoomTwin = create<RoomTwinState>()(
 );
 
 // ============================================================
-// Selectors (ไม่เปลี่ยน)
+// Selectors
 // ============================================================
 
 export const selectSelectedItem = (s: RoomTwinState) => {

@@ -58,6 +58,7 @@ export interface SurfaceState {
   wallAll: number;
   walls: Record<string, number>;
   ceiling: number;
+  baseboard: number;
 }
 
 export interface ZoneMeta {

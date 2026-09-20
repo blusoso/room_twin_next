@@ -186,10 +186,45 @@ export const CATALOG_SEARCH_INPUT_ID = "catalogSearchInput";
    Wall colors
    ============================================================ */
 
+/* ⭐ ผนัง — 12 สี จาก ref */
 export const WALL_COLOR_PALETTE = [
-  0xf2e9dc, 0xdce6dd, 0xe7d6cc, 0xd7dee6, 0xf5efe3, 0xc8d4c0,
-  0xe8d0c0, 0xc0cedc, 0xd4c4ac, 0xbfc9b4, 0xe6d0c6, 0xa8b4c0,
-];
+  0xfbf6ec, // ขาวนวล
+  0xf3e6cf, // ครีม
+  0xefd9bf, // ทราย
+  0xe8c9b8, // ชมพูอิฐ
+  0xddb5a8, // กุหลาบ
+  0xcfe0d0, // มิ้นต์
+  0xb8cdb3, // เขียวเสจ
+  0xd5e3ea, // ฟ้าหมอก
+  0xafc6d8, // ฟ้าใส
+  0xebd98f, // เหลืองเนย
+  0xc9b79f, // เทาน้ำตาล
+  0x8e9bb0, // เทาน้ำเงิน
+] as const;
+
+/* ⭐ เพดาน — 6 สี จาก ref */
+export const CEILING_COLOR_PALETTE = [
+  0xffffff, // ขาว
+  0xfbf6ec, // ขาวนวล
+  0xf3e6cf, // ครีม
+  0xe6eef3, // ฟ้าจาง
+  0xf4e3dc, // ชมพูจาง
+  0xe9e6f1, // ม่วงจาง
+] as const;
+
+/* ⭐ บัว — 8 สี คลาสสิก + ไม้ + เข้ม */
+export const BASEBOARD_COLOR_PALETTE = [
+  0xffffff, // ขาว
+  0xfbf6ec, // ขาวนวล
+  0xf3e6cf, // ครีม
+  0xd8b07a, // ไม้โอ๊ค
+  0x8b6f47, // วอลนัท
+  0xa8a29a, // เทา
+  0x4a4038, // น้ำตาลเข้ม
+  0x2a2333, // ดำ
+] as const;
+
+export type BaseboardColor = (typeof BASEBOARD_COLOR_PALETTE)[number];
 
 export const WALL_COLORS = WALL_COLOR_PALETTE.slice(0, 4);
 

@@ -14,6 +14,8 @@ import { useRoomTwin } from "@/lib/state/store";
 import {
   FLOOR_STYLES,
   WALL_COLOR_PALETTE,
+  CEILING_COLOR_PALETTE,
+  BASEBOARD_COLOR_PALETTE,   // ⭐ เพิ่ม
   WALL_LABEL_FULL,
   ROOM_LIMITS,
   ROOM_DEFAULT,
@@ -69,6 +71,18 @@ type RectSize = {
   h: number;
 };
 
+/** ⭐ คีย์ผนังทั้ง 4 ด้าน ใช้ทั้ง SurfacesTab + Wall Picker */
+const WALL_KEYS = ["back", "front", "side", "right"] as const;
+type WallKey = (typeof WALL_KEYS)[number];
+
+/** ⭐ ป้ายชื่อผนังแบบสั้น */
+const WALL_SHORT: Record<WallKey, string> = {
+  back: "หลัง",
+  front: "หน้า",
+  side: "ซ้าย",
+  right: "ขวา",
+};
+
 const LAST_RECT_KEY = "roomtwin_last_rect_size_v1";
 
 /* ⭐ ลำดับการ์ดที่แสดง (ตาม product data) */
@@ -86,7 +100,7 @@ const STRUCTURE_IDS = [
 ] as const;
 
 /* ============================================================
-   Slider progress — ส่งค่า % ไปให้ CSS var `--p`
+   Slider progress
    ============================================================ */
 
 function sliderProgressPct(value: number, min: number, max: number): string {
@@ -282,9 +296,7 @@ function updateWallItemPosition(
 
       obj.position.set(
         g.cx + g.dx * c.u - g.nx * outward,
-
         c.v,
-
         g.cz + g.dz * c.u - g.nz * outward,
       );
 
@@ -381,11 +393,8 @@ function RoomPreviewSvg() {
 
   rects.forEach((r) => {
     minX = Math.min(minX, r.x0);
-
     maxX = Math.max(maxX, r.x1);
-
     minZ = Math.min(minZ, r.z0);
-
     maxZ = Math.max(maxZ, r.z1);
   });
 
@@ -869,7 +878,7 @@ function SizeTab() {
 }
 
 /* ============================================================
-   Tab: Surfaces
+   Tab: Surfaces (Floor + Wall + Ceiling + Baseboard)
    ============================================================ */
 
 function SurfacesTab({ section }: { section: "floor" | "wall" }) {
@@ -879,9 +888,13 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
 
   const { saveState } = useSaveState();
 
+  /* ⭐ state: ผนังที่กำลังเลือกอยู่ */
+  const [wallSel, setWallSel] = useState<WallKey>("back");
+
   const commit = (patch: Partial<typeof surface>) => {
     setSurface(patch);
 
+    // ⭐ เปลี่ยนบัว → rebuild mesh ใหม่พร้อมสีใหม่ (applySurface จะเรียก rebuild อยู่แล้วด้วย)
     applySurfaceToThree();
 
     saveState();
@@ -890,10 +903,21 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
   const showFloor = section === "floor";
   const showWall = section === "wall";
 
+  /* ⭐ ค่าสีปัจจุบันของผนังที่เลือก */
+  const currentWallColor =
+    surface.walls[wallSel] !== undefined
+      ? surface.walls[wallSel]
+      : surface.wallAll;
+
+  /* ⭐ ค่าสีบัวปัจจุบัน */
+  const currentBaseboard = surface.baseboard ?? 0xfbf6ec;
+
   return (
     <div className="rsp-tab-panel active">
       {showFloor && (
         <div className="rsp-subsec">
+          <div className="rsp-subsec-title">🟫 วัสดุพื้น</div>
+
           <div className="floor-grid">
             {FLOOR_STYLES.map((st) => (
               <div
@@ -922,175 +946,212 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
 
       {showWall && (
         <>
+          {/* ═══════════ สีผนัง ═══════════ */}
           <div className="rsp-subsec">
-            <div className="rsp-subsec-title">🧱 สีผนัง</div>
+            <div
+              className="wall-uniform-seg"
+              role="group"
+              aria-label="โหมดทาสีผนัง"
+            >
+              <button
+                type="button"
+                className={surface.wallUniform ? "on" : ""}
+                onClick={() => {
+                  if (!surface.wallUniform) {
+                    commit({ wallUniform: true });
+                  }
+                }}
+                aria-pressed={surface.wallUniform}
+              >
+                🏠 ทุกผนังสีเดียว
+              </button>
 
-            <div className="wall-uniform-toggle">
-              <div>
-                <span className="wut-label">🎨 ใช้สีเดียวกันทุกผนัง</span>
+              <button
+                type="button"
+                className={!surface.wallUniform ? "on" : ""}
+                onClick={() => {
+                  if (surface.wallUniform) {
+                    const walls: Record<string, number> = {};
 
-                <span className="wut-sub">ปิดเพื่อกำหนดสีแยกแต่ละด้าน</span>
-              </div>
+                    WALL_KEYS.forEach((id) => {
+                      walls[id] = surface.wallAll;
+                    });
 
-              <label className="cz-toggle">
-                <input
-                  type="checkbox"
-                  checked={surface.wallUniform}
-                  onChange={(e) => {
-                    const uniform = e.target.checked;
-
-                    if (!uniform) {
-                      const walls: Record<string, number> = {};
-
-                      ["back", "front", "side", "right"].forEach((id) => {
-                        walls[id] = surface.wallAll;
-                      });
-
-                      commit({
-                        wallUniform: false,
-                        walls,
-                      });
-                    } else {
-                      commit({
-                        wallUniform: true,
-                      });
-                    }
-                  }}
-                />
-
-                <span className="cz-toggle-track" />
-              </label>
+                    commit({ wallUniform: false, walls });
+                  }
+                }}
+                aria-pressed={!surface.wallUniform}
+              >
+                🧱 แยกทีละผนัง
+              </button>
             </div>
 
-            {surface.wallUniform ? (
-              <>
-                <div className="wall-color-grid">
-                  {WALL_COLOR_PALETTE.map((c) => (
-                    <div
-                      key={c}
-                      className={`wall-color-chip${
-                        surface.wallAll === c ? " active" : ""
-                      }`}
-                      style={{
-                        background: hexOf(c),
-                      }}
-                      onClick={() =>
-                        commit({
-                          wallAll: c,
-                        })
-                      }
-                    />
-                  ))}
-                </div>
-
-                <div className="cz-row">
-                  <label className="cz-row-label">เลือกเอง</label>
-
-                  <div className="cz-row-control">
-                    <input
-                      type="color"
-                      className="cz-color-input"
-                      value={hexOf(surface.wallAll)}
-                      onChange={(e) =>
-                        commit({
-                          wallAll: numOf(e.target.value),
-                        })
-                      }
-                    />
-
-                    <span className="cz-color-hex">
-                      {hexOf(surface.wallAll).toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="wall-per-wall-list">
-                {(["back", "front", "side", "right"] as const).map((id) => {
-                  const cur =
+            {!surface.wallUniform && (
+              <div
+                className="wall-picker-row"
+                role="tablist"
+                aria-label="เลือกผนัง"
+              >
+                {WALL_KEYS.map((id) => {
+                  const c =
                     surface.walls[id] !== undefined
                       ? surface.walls[id]
                       : surface.wallAll;
 
                   return (
-                    <div key={id} className="wall-per-wall-row">
-                      <span className="wp-label">{WALL_LABEL_FULL[id]}</span>
-
-                      <div className="wall-per-wall-chips">
-                        {WALL_COLOR_PALETTE.map((c) => (
-                          <div
-                            key={c}
-                            className={`wall-color-chip wall-color-chip-sm${
-                              cur === c ? " active" : ""
-                            }`}
-                            style={{
-                              background: hexOf(c),
-                            }}
-                            onClick={() =>
-                              commit({
-                                walls: {
-                                  ...surface.walls,
-                                  [id]: c,
-                                },
-                              })
-                            }
-                          />
-                        ))}
-                      </div>
-
-                      <div className="cz-row wall-per-wall-custom">
-                        <span className="cz-row-label">เลือกเอง</span>
-
-                        <div className="cz-row-control">
-                          <input
-                            type="color"
-                            className="cz-color-input"
-                            value={hexOf(cur)}
-                            onChange={(e) =>
-                              commit({
-                                walls: {
-                                  ...surface.walls,
-                                  [id]: numOf(e.target.value),
-                                },
-                              })
-                            }
-                          />
-
-                          <span className="cz-color-hex">
-                            {hexOf(cur).toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={wallSel === id}
+                      className={`wall-pick${wallSel === id ? " on" : ""}`}
+                      onClick={() => setWallSel(id)}
+                    >
+                      <i
+                        className="wpv"
+                        style={{ background: hexOf(c) }}
+                        aria-hidden="true"
+                      />
+                      <span>{WALL_SHORT[id]}</span>
+                    </button>
                   );
                 })}
               </div>
             )}
+
+            <div className="rsp-subsec-title">
+              {surface.wallUniform
+                ? "🎨 สีทุกผนัง"
+                : `🎨 สีผนัง${WALL_SHORT[wallSel]}`}
+            </div>
+
+            <div className="wall-color-grid">
+              {WALL_COLOR_PALETTE.map((c) => {
+                const isActive = surface.wallUniform
+                  ? surface.wallAll === c
+                  : currentWallColor === c;
+
+                return (
+                  <div
+                    key={c}
+                    className={`wall-color-chip${isActive ? " active" : ""}`}
+                    style={{ background: hexOf(c) }}
+                    onClick={() => {
+                      if (surface.wallUniform) {
+                        commit({ wallAll: c });
+                      } else {
+                        commit({
+                          walls: { ...surface.walls, [wallSel]: c },
+                        });
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isActive}
+                  />
+                );
+              })}
+            </div>
+
+            <label className="cz-row">
+              <input
+                type="color"
+                className="cz-color-input"
+                value={hexOf(
+                  surface.wallUniform ? surface.wallAll : currentWallColor,
+                )}
+                onChange={(e) => {
+                  const v = numOf(e.target.value);
+
+                  if (surface.wallUniform) {
+                    commit({ wallAll: v });
+                  } else {
+                    commit({
+                      walls: { ...surface.walls, [wallSel]: v },
+                    });
+                  }
+                }}
+                aria-label="เลือกสีเอง"
+              />
+              <span className="cz-row-label">เลือกสีเอง</span>
+              <span className="cz-color-hex">
+                {hexOf(
+                  surface.wallUniform ? surface.wallAll : currentWallColor,
+                ).toUpperCase()}
+              </span>
+            </label>
           </div>
 
+          {/* ═══════════ สีเพดาน ═══════════ */}
           <div className="rsp-subsec">
-            <div className="rsp-subsec-title">⬜ เพดาน</div>
+            <div className="rsp-subsec-title">⬜ สีเพดาน</div>
 
-            <div className="cz-row">
-              <label className="cz-row-label">สีเพดาน</label>
-
-              <div className="cz-row-control">
-                <input
-                  type="color"
-                  className="cz-color-input"
-                  value={hexOf(surface.ceiling)}
-                  onChange={(e) =>
-                    commit({
-                      ceiling: numOf(e.target.value),
-                    })
-                  }
+            <div className="wall-color-grid">
+              {CEILING_COLOR_PALETTE.map((c) => (
+                <div
+                  key={c}
+                  className={`wall-color-chip${
+                    surface.ceiling === c ? " active" : ""
+                  }`}
+                  style={{ background: hexOf(c) }}
+                  onClick={() => commit({ ceiling: c })}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={surface.ceiling === c}
                 />
-
-                <span className="cz-color-hex">
-                  {hexOf(surface.ceiling).toUpperCase()}
-                </span>
-              </div>
+              ))}
             </div>
+
+            <label className="cz-row">
+              <input
+                type="color"
+                className="cz-color-input"
+                value={hexOf(surface.ceiling)}
+                onChange={(e) => commit({ ceiling: numOf(e.target.value) })}
+                aria-label="เลือกสีเพดานเอง"
+              />
+              <span className="cz-row-label">เลือกสีเอง</span>
+              <span className="cz-color-hex">
+                {hexOf(surface.ceiling).toUpperCase()}
+              </span>
+            </label>
+          </div>
+
+          {/* ═══════════ ⭐ สีบัว ═══════════ */}
+          <div className="rsp-subsec">
+            <div className="rsp-subsec-title">📏 สีบัว</div>
+
+            <div className="wall-color-grid is-4">
+              {BASEBOARD_COLOR_PALETTE.map((c) => (
+                <div
+                  key={c}
+                  className={`wall-color-chip${
+                    currentBaseboard === c ? " active" : ""
+                  }`}
+                  style={{ background: hexOf(c) }}
+                  onClick={() => commit({ baseboard: c })}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={currentBaseboard === c}
+                />
+              ))}
+            </div>
+
+            <label className="cz-row">
+              <input
+                type="color"
+                className="cz-color-input"
+                value={hexOf(currentBaseboard)}
+                onChange={(e) =>
+                  commit({ baseboard: numOf(e.target.value) })
+                }
+                aria-label="เลือกสีบัวเอง"
+              />
+              <span className="cz-row-label">เลือกสีเอง</span>
+              <span className="cz-color-hex">
+                {hexOf(currentBaseboard).toUpperCase()}
+              </span>
+            </label>
           </div>
         </>
       )}
@@ -1099,13 +1160,12 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
 }
 
 /* ============================================================
-   Structure Step — การ์ด 3 คอลัมน์ (แบบ ref file 1) + ลากวางได้
+   Structure Step
    ============================================================ */
 
 function OpeningsTab() {
   const placedItems = useRoomTwin((s) => s.placedItems);
 
-  /* ⭐ drag system เดียวกับ BuildPanel */
   const { placeProduct, placeThemedProduct, placeZone } = usePlacement();
   const { startDrag } = useCardDrag({
     placeProduct,
@@ -1113,7 +1173,6 @@ function OpeningsTab() {
     placeZone,
   });
 
-  /* ⭐ ดึงสินค้าตาม STRUCTURE_IDS (เรียงตามลำดับที่กำหนด) */
   const structureProducts = useMemo<ProductDef[]>(
     () =>
       STRUCTURE_IDS.map((id) => PRODUCT_BY_ID.get(id)).filter(
@@ -1122,7 +1181,6 @@ function OpeningsTab() {
     [],
   );
 
-  /* ⭐ นับจำนวนที่วางแล้วต่อ product */
   const countByProduct = useMemo(() => {
     const map = new Map<string, number>();
 
@@ -1134,7 +1192,6 @@ function OpeningsTab() {
     return map;
   }, [placedItems]);
 
-  /* ⭐ รายการที่วางแล้วทั้งหมด */
   const placedStructure = useMemo(
     () => placedItems.filter((i) => i.wallMount),
     [placedItems],
@@ -1142,7 +1199,6 @@ function OpeningsTab() {
 
   return (
     <div className="rsp-tab-panel active">
-      {/* ═══ Tip ═══ */}
       <div className="rsp-tip">
         <span aria-hidden="true">✋</span>
         <span>
@@ -1150,12 +1206,10 @@ function OpeningsTab() {
         </span>
       </div>
 
-      {/* ═══ การ์ด 3 คอลัมน์ ═══ */}
       <div className="rsp-pcs">
         {structureProducts.map((p) => {
           const count = countByProduct.get(p.id) ?? 0;
 
-          /* ⭐ ไอคอนเดียวกับที่อยู่ใน product data */
           const icon = getProductIcon(p);
 
           return (
@@ -1191,164 +1245,6 @@ function OpeningsTab() {
           );
         })}
       </div>
-    </div>
-  );
-}
-
-/* ============================================================
-   Opening Item (เก็บไว้ใช้กับ popup mode)
-   ============================================================ */
-
-function OpeningItem({
-  item,
-  isOpen,
-  onToggle,
-  roomShape,
-  onDelete,
-  onUpdate,
-}: {
-  item: PlacedItem;
-  isOpen: boolean;
-  onToggle: () => void;
-  roomShape: "rect" | "blocks";
-  onDelete: () => void;
-  onUpdate: () => void;
-}) {
-  const product = PRODUCT_BY_ID.get(item.productId);
-
-  if (!product) {
-    return null;
-  }
-
-  const wallLabel = WALL_LABEL_FULL[item.wallId!] || "ผนัง";
-
-  const offsetCm = Math.round((item.u || 0) * 100);
-
-  const heightCm = Math.round((item.v || 0) * 100);
-
-  const isGroundAnchor = !!product.groundAnchor;
-
-  const subLine = isGroundAnchor
-    ? `${wallLabel} • ${offsetCm >= 0 ? "+" : ""}${offsetCm} ซม.`
-    : `${wallLabel} • ${
-        offsetCm >= 0 ? "+" : ""
-      }${offsetCm} ซม. • สูง ${heightCm} ซม.`;
-
-  const half = wallFootprint(item.params, item.rotZ || 0);
-
-  const span = wallSpan(item.wallId!);
-
-  const minU = Math.round((-span / 2 + 0.05 + half.halfU) * 100);
-
-  const maxU = Math.round((span / 2 - 0.05 - half.halfU) * 100);
-
-  const minV = Math.round((0.55 + half.halfV) * 100);
-
-  const maxV = Math.round(
-    (useRoomTwin.getState().room.h - 0.15 - half.halfV) * 100,
-  );
-
-  return (
-    <div className={`opening-item${isOpen ? " open" : ""}`}>
-      <div className="opening-head" onClick={onToggle}>
-        <div className="oi-icon">{getProductIcon(product)}</div>
-
-        <div className="oi-main">
-          <div className="oi-name">{item.displayName || product.name}</div>
-
-          <div className="oi-sub">{subLine}</div>
-        </div>
-
-        <div className="oi-chev">▼</div>
-      </div>
-
-      {isOpen && (
-        <div className="opening-body">
-          {roomShape === "rect" && (
-            <div className="opening-field">
-              <div className="opening-field-label">
-                <span>ผนัง</span>
-              </div>
-
-              <div className="wall-side-row">
-                {(["back", "front", "side", "right"] as const).map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`wall-side-btn${
-                      item.wallId === id ? " active" : ""
-                    }`}
-                    onClick={() => {
-                      updateWallItemPosition(item.uid, {
-                        wallId: id,
-                        u: 0,
-                      });
-
-                      onUpdate();
-                    }}
-                  >
-                    {WALL_LABEL_FULL[id].replace("ผนัง", "")}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="opening-field">
-            <div className="opening-field-label">
-              <span>ตำแหน่งตามแนวผนัง</span>
-
-              <span className="val">{Math.round(item.u! * 100)} ซม.</span>
-            </div>
-
-            <input
-              type="range"
-              className="opening-slider"
-              min={minU}
-              max={maxU}
-              step={1}
-              value={Math.round(item.u! * 100)}
-              onChange={(e) => {
-                updateWallItemPosition(item.uid, {
-                  u: parseFloat(e.target.value) / 100,
-                });
-              }}
-              onMouseUp={onUpdate}
-              onTouchEnd={onUpdate}
-            />
-          </div>
-
-          {!isGroundAnchor && (
-            <div className="opening-field">
-              <div className="opening-field-label">
-                <span>สูงจากพื้น</span>
-
-                <span className="val">{Math.round(item.v! * 100)} ซม.</span>
-              </div>
-
-              <input
-                type="range"
-                className="opening-slider"
-                min={minV}
-                max={maxV}
-                step={1}
-                value={Math.round(item.v! * 100)}
-                onChange={(e) => {
-                  updateWallItemPosition(item.uid, {
-                    v: parseFloat(e.target.value) / 100,
-                  });
-                }}
-                onMouseUp={onUpdate}
-                onTouchEnd={onUpdate}
-              />
-            </div>
-          )}
-
-          <button type="button" className="opening-remove" onClick={onDelete}>
-            🗑 ลบช่องเปิดนี้
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -1432,10 +1328,6 @@ export default function RoomStructurePanel({
     panelRef.current.style.top = top + "px";
   }, []);
 
-  /* ==========================================================
-     Popup positioning
-     ========================================================== */
-
   useEffect(() => {
     if (embedded || !open) {
       return;
@@ -1447,10 +1339,6 @@ export default function RoomStructurePanel({
 
     return () => window.removeEventListener("resize", positionPanel);
   }, [embedded, open, positionPanel]);
-
-  /* ==========================================================
-     Escape
-     ========================================================== */
 
   useEffect(() => {
     if (embedded || !open) {
@@ -1469,10 +1357,6 @@ export default function RoomStructurePanel({
 
     return () => window.removeEventListener("keydown", onKey);
   }, [embedded, open, closePanel]);
-
-  /* ==========================================================
-     Popup Events
-     ========================================================== */
 
   useEffect(() => {
     if (embedded) {
@@ -1513,7 +1397,6 @@ export default function RoomStructurePanel({
 
     return (
       <div className="rsp-embedded-wrap" onClick={(e) => e.stopPropagation()}>
-        {/* ===== Progress Tracker ===== */}
         <nav className="rsp-tracker" aria-label="ขั้นตอนตั้งค่าห้อง">
           {ROOM_SETUP_STEPS.map((s) => {
             const isOn = tab === s.id;
@@ -1540,7 +1423,6 @@ export default function RoomStructurePanel({
           })}
         </nav>
 
-        {/* ===== Step header ===== */}
         <div className="rsp-step-head">
           <span
             className="rsp-sh-icon"
@@ -1557,7 +1439,6 @@ export default function RoomStructurePanel({
           </div>
         </div>
 
-        {/* ===== Body ===== */}
         <div className="rsp-body">
           {tab === "size" && <SizeTab />}
 
@@ -1568,7 +1449,6 @@ export default function RoomStructurePanel({
           {tab === "wall" && <SurfacesTab section="wall" />}
         </div>
 
-        {/* ===== Footer (prev + cta) ===== */}
         <div className="rsp-footer">
           <button
             type="button"

@@ -3535,9 +3535,15 @@ mark.hl {
   flex-direction: column;
   gap: 10px;
 
-  /* ⭐ padding 4px ทุกด้าน — shadow 3px จึงมีที่ให้ render ครบ */
-  padding: 4px 4px;
-  margin-top: -4px; /* ⭐ ดึงขึ้น 4px เพื่อไม่ให้ content ต่ำลง */
+  /* ⭐ 4px → 8px (ring 5.5px จึงมีที่พอดี) */
+  padding: 8px 8px;
+  margin-top: -8px; /* ⭐ -4 → -8 ชดเชย padding-top เท่าเดิม */
+}
+
+/* ─── popup mode ─── */
+.room-size-panel .rsp-body {
+  /* ⭐ เพิ่ม (เดิมไม่มี padding) */
+  padding: 8px 8px;
 }
 
 /* ⭐ Tab panel ใน embedded mode — ลบ border/พื้นซ้ำซ้อน */
@@ -3557,9 +3563,13 @@ mark.hl {
     padding: 0 8px 0; /* ⭐ 12 → 8 */
   }
 
+  .room-size-panel .rsp-body {
+    padding: 8px;
+  }
+
   .rsp-embedded-wrap .rsp-body {
-    padding: 4px;
-    margin-top: -4px;
+    padding: 8px;
+    margin-top: -8px;
   }
 
   .rsp-footer {
@@ -4231,199 +4241,375 @@ mark.hl {
   }
 }
 
-/* ============================================================
-   Floor Swatches — สไตล์การ์ดแบบ .rsp-pc (ref file 2)
-   ============================================================ */
-
+/* Floor / Wall / Ceiling */
 .floor-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 7px;
 }
 
 .floor-swatch {
+  aspect-ratio: 1.15;
+  border-radius: 9px;
+  border: 2px solid transparent;
+  cursor: pointer;
   position: relative;
-  height: 107px;              /* ⭐ เท่าความสูงการ์ด .rsp-pc */
-
-  /* ⭐ layout แนวตั้ง จัดกลางทั้ง 2 แกน */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;  /* ชื่อชิดล่าง (ทับ gradient) */
-  text-align: center;
-
-  border-radius: 16px;
-  border: 1.5px solid #d3c09b;
-  background-color: #fffdf9;
+  overflow: hidden;
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
-
-  cursor: pointer;
-  overflow: hidden;
-
-  box-shadow: inset 0 0 0 1px rgba(42, 35, 48, 0.06);
-
   transition:
-    transform 0.15s,
-    box-shadow 0.15s,
-    border-color 0.15s,
-    border-style 0.15s;
+    transform 0.12s,
+    box-shadow 0.12s,
+    border-color 0.12s;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
-/* hover */
 .floor-swatch:hover {
   transform: translateY(-2px);
-  border-style: solid;
+}
+
+.floor-swatch.active {
   border-color: var(--ochre);
   box-shadow:
-    inset 0 0 0 1px rgba(42, 35, 48, 0.06),
-    0 10px 22px -12px rgba(90, 60, 20, 0.45);
+    0 0 0 2px rgba(184, 117, 46, 0.18),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
-/* active */
-.floor-swatch.active {
-  border-style: solid;
-  border-color: #a5631f;
-  box-shadow:
-    inset 0 0 0 1px rgba(42, 35, 48, 0.06),
-    0 0 0 3px rgba(165, 99, 31, 0.3),
-    0 10px 22px -12px rgba(90, 60, 20, 0.45);
-}
-
-/* badge ติ๊กถูกมุมขวาบน */
 .floor-swatch.active::after {
   content: "✓";
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #a5631f;
-  color: #fff8ee;
-  font-size: 13px;
+  background: var(--ochre);
+  color: #fff;
+  font-size: 10px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
-  box-shadow: 0 2px 6px rgba(42, 35, 48, 0.25);
-  z-index: 2;
 }
 
-/* ⭐ ชื่อวัสดุ — อยู่กลาง 100% กว้าง, ชิดล่าง */
 .floor-swatch .fl-name {
-  position: relative;         /* ⭐ เปลี่ยนจาก absolute → flex child */
-  width: 100%;
-  margin-top: auto;
-
-  background: linear-gradient(
-    to top,
-    rgba(42, 35, 48, 0.82) 0%,
-    rgba(42, 35, 48, 0.5) 55%,
-    transparent 100%
-  );
-  color: #fffdf9;
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  line-height: 1.25;
-  padding: 18px 6px 8px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 8px 4px 3px;
   text-align: center;
-  z-index: 1;
 }
 
-.wall-uniform-toggle {
+/* ============================================================
+   ⭐ Wall / Ceiling Tab — ตาม ref
+   scope: .rsp-subsec เพื่อไม่กระทบ CustomizePanel
+   ============================================================ */
+
+/* ─── Toggle แบบ segmented (ทุกผนังสีเดียว / แยกทีละผนัง) ─── */
+.rsp-subsec .wall-uniform-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  background: var(--tab);
+  border-radius: 18px;
+}
+
+.rsp-subsec .wall-uniform-seg button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: #fbf8f2;
-  border: 1px solid var(--panel-line);
-  margin-bottom: 10px;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
 }
 
-.wall-uniform-toggle .wut-label {
-  font-size: 12px;
-  font-weight: 600;
+.rsp-subsec .wall-uniform-seg button:hover:not(.on) {
   color: var(--ink);
 }
 
-.wall-uniform-toggle .wut-sub {
-  font-size: 10px;
-  color: var(--ink-soft);
-  font-weight: 400;
-  display: block;
-  margin-top: 1px;
+.rsp-subsec .wall-uniform-seg button.on {
+  background: #fffdf9;
+  color: var(--ink);
+  box-shadow:
+    0 1px 3px rgba(42, 35, 48, 0.14),
+    0 0 0 1px rgba(42, 35, 48, 0.04);
 }
 
-.wall-color-grid {
+/* ─── Wall Picker Row (โหมดแยกทีละผนัง) — 4 การ์ด ─── */
+.rsp-subsec .wall-picker-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.rsp-subsec .wall-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 4px 9px;
+  border-radius: 16px;
+  border: 1.5px dashed #d3c09b;
+  background: #fffdf9;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    border-color 0.15s,
+    border-style 0.15s,
+    background 0.15s,
+    box-shadow 0.15s,
+    transform 0.12s;
+}
+
+.rsp-subsec .wall-pick:hover {
+  transform: translateY(-1px);
+  border-style: solid;
+  border-color: #d3c09b;
+}
+
+.rsp-subsec .wall-pick.on {
+  border-style: solid;
+  border-color: var(--ochre);
+  background: #fbf1df;
+  box-shadow: 0 0 0 3px rgba(165, 99, 31, 0.18);
+}
+
+/* ─── สวอตช์สีผนังในการ์ด ─── */
+.rsp-subsec .wall-pick .wpv {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  border: 1.5px solid rgba(42, 35, 48, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+
+.rsp-subsec .wall-pick.on .wpv {
+  border-color: rgba(165, 99, 31, 0.45);
+}
+
+.rsp-subsec .wall-pick .wpv + span {
+  line-height: 1.1;
+}
+
+/* ─── Palette grid (ใช้ทั้งผนังและเพดาน) ─── */
+.rsp-subsec .wall-color-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 9px;
+  margin-bottom: 0;
 }
 
-.wall-color-chip {
+/* ─── Chip — squircle + ring copper + checkmark ─── */
+.rsp-subsec .wall-color-chip {
+  position: relative;
   aspect-ratio: 1;
-  border-radius: 8px;
-  border: 2px solid transparent;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  border: 1.5px solid rgba(42, 35, 48, 0.25);
   cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
   transition:
     transform 0.12s,
-    border-color 0.12s;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+    box-shadow 0.15s,
+    border-color 0.15s;
 }
 
-.wall-color-chip:hover {
-  transform: translateY(-2px);
+.rsp-subsec .wall-color-chip:hover {
+  transform: scale(1.06);
+  border-color: rgba(42, 35, 48, 0.4);
 }
 
-.wall-color-chip.active {
-  border-color: var(--ink);
+.rsp-subsec .wall-color-chip.active {
+  border-color: transparent;
+  box-shadow:
+    0 0 0 3px #fffdf9,
+    0 0 0 5.5px var(--ochre);
 }
 
-.wall-per-wall-list {
+.rsp-subsec .wall-color-chip.active::after {
+  content: "✓";
+  color: #2a2333;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
+}
+
+.rsp-subsec .wall-color-chip:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 3px;
+}
+
+/* ─── Custom color — dashed row ─── */
+.rsp-subsec .cz-row {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 8px 12px 8px 8px;
+  border-radius: 16px;
+  border: 1.5px dashed #d3c09b;
+  background: #fffdf9;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    border-style 0.15s,
+    background 0.15s;
 }
 
-.wall-per-wall-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: #fbf8f2;
-  border: 1px solid var(--panel-line);
+.rsp-subsec .cz-row:hover {
+  border-style: solid;
+  border-color: var(--ochre);
 }
 
-.wall-per-wall-row .wp-label {
-  font-size: 12px;
+.rsp-subsec .cz-row-label {
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--ink);
+  flex-shrink: 0;
 }
 
-.wall-per-wall-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+.rsp-subsec .cz-color-input {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 2px solid var(--panel-line);
+  border-radius: 12px;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.12s;
 }
 
-.wall-color-chip-sm {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
+.rsp-subsec .cz-color-input:hover {
+  border-color: var(--ochre);
 }
 
-.wall-per-wall-custom {
-  margin-bottom: 0;
-  padding-top: 2px;
+.rsp-subsec .cz-color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.rsp-subsec .cz-color-input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 9px;
+}
+.rsp-subsec .cz-color-input::-moz-color-swatch {
+  border: 0;
+  border-radius: 9px;
+}
+
+.rsp-subsec .cz-color-hex {
+  margin-left: auto;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  letter-spacing: 0.5px;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Mobile
+   ============================================================ */
+@media (max-width: 820px) {
+  .rsp-subsec .wall-uniform-seg button {
+    font-size: 12.5px;
+    min-height: 36px;
+    gap: 4px;
+  }
+
+  .rsp-subsec .wall-picker-row {
+    gap: 6px;
+  }
+
+  .rsp-subsec .wall-pick {
+    padding: 8px 3px 7px;
+    border-radius: 14px;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .rsp-subsec .wall-pick .wpv {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .rsp-subsec .wall-color-grid {
+    gap: 7px;
+  }
+
+  .rsp-subsec .wall-color-chip {
+    border-radius: 12px;
+  }
+
+  .rsp-subsec .wall-color-chip.active {
+    box-shadow:
+      0 0 0 2px #fffdf9,
+      0 0 0 4.5px var(--ochre);
+  }
+
+  .rsp-subsec .wall-color-chip.active::after {
+    font-size: 14px;
+  }
+
+  /* ⭐ Palette 8 สี → 4 คอลัมน์ (สำหรับสีบัว) */
+.rsp-subsec .wall-color-grid.is-4 {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 820px) {
+  .rsp-subsec .wall-color-grid.is-4 {
+    gap: 8px;
+  }
+}
+
+  .rsp-subsec .cz-row {
+    padding: 6px 10px 6px 6px;
+    gap: 10px;
+  }
+
+  .rsp-subsec .cz-color-input {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
 }
 
 .wall-per-wall-custom .cz-row-label {
