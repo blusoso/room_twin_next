@@ -457,6 +457,9 @@ export function applySurface() {
   // ============================================================
   // Floor
   // ============================================================
+    // ============================================================
+  // Floor
+  // ============================================================
   if (
     floorMat.map &&
     floorMat.map.dispose
@@ -477,6 +480,11 @@ export function applySurface() {
     room.d / 1.4,
   );
 
+  // ⭐ Tint — คูณกับ map (0xffffff = ไม่แต้ม)
+  floorMat.color.setHex(
+    (surface.floorTint ?? 0xffffff) as number,
+  );
+
   floorMat.needsUpdate = true;
 
   // ============================================================
@@ -488,6 +496,11 @@ export function applySurface() {
 
     blockFloorMat.map =
       makeBlockFloorTexture();
+
+    // ⭐ Tint ให้ block floor ด้วย
+    blockFloorMat.color.setHex(
+      (surface.floorTint ?? 0xffffff) as number,
+    );
 
     blockFloorMat.needsUpdate =
       true;

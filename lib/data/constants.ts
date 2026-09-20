@@ -226,6 +226,24 @@ export const BASEBOARD_COLOR_PALETTE = [
 
 export type BaseboardColor = (typeof BASEBOARD_COLOR_PALETTE)[number];
 
+/* ⭐ สีพื้น — tint คูณกับลายวัสดุ (12 สี) */
+export const FLOOR_TINT_PALETTE = [
+  0xffffff, // ขาว (ไม่แต้ม — วัสดุเดิม)
+  0xfdf4e3, // ครีม
+  0xf5e0b8, // น้ำผึ้งอ่อน
+  0xe8c896, // น้ำผึ้ง
+  0xd4a574, // ไม้สัก
+  0xb98860, // โอ๊คกลาง
+  0x8b6547, // วอลนัท
+  0x5c3f2a, // มะฮอกกานี
+  0xd9d2c5, // เทาอ่อน
+  0xa8a29a, // เทากลาง
+  0x6b7a6b, // เขียวเสจ
+  0x2f2a26, // ดำอุ่น
+] as const;
+
+export type FloorTintColor = (typeof FLOOR_TINT_PALETTE)[number];
+
 export const WALL_COLORS = WALL_COLOR_PALETTE.slice(0, 4);
 
 /* ============================================================

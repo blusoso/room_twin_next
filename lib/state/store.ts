@@ -211,6 +211,7 @@ export const useRoomTwin = create<RoomTwinState>()(
     // ============================================================
     surface: {
       floor: "wood",
+      floorTint: 0xffffff,
       wallUniform: true,
       wallAll: WALL_COLORS[0],
       walls: {},
@@ -628,6 +629,7 @@ export const useRoomTwin = create<RoomTwinState>()(
         blocksEditorOpen: false,
         surface: {
           floor: "wood",
+          floorTint: 0xffffff,
           wallUniform: true,
           wallAll: WALL_COLORS[0],
           walls: {},

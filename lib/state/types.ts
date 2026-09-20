@@ -54,6 +54,7 @@ export interface RoomShape {
 
 export interface SurfaceState {
   floor: string;
+  floorTint: number;
   wallUniform: boolean;
   wallAll: number;
   walls: Record<string, number>;
