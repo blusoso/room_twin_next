@@ -3567,7 +3567,7 @@ mark.hl {
     padding: 10px 12px 12px;
     gap: 8px;
   }
-  
+
   .rsp-embedded-title {
     font-size: 17px;
   }
@@ -9790,5 +9790,447 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   .rsp-cta-hint {
     font-size: 11.5px;
     padding-bottom: 12px;
+  }
+}
+
+/* ============================================================
+   ⭐ Structure Step — Card Grid (adapt จาก reference .pcs / .pc)
+   ============================================================ */
+
+.rsp-pcs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rsp-pc {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 14px 4px 11px;
+  border-radius: 16px;
+  border: 1.5px dashed #d3c09b;
+  background: linear-gradient(165deg, #fffdf9 50%, #fbf1df);
+  text-align: center;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.25;
+  color: #2a2333;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+
+.rsp-pc:hover {
+  transform: translateY(-2px);
+  border-style: solid;
+  box-shadow: 0 10px 22px -12px rgba(90, 60, 20, 0.45);
+}
+
+/* ─── กำลัง drag — การ์ดต้นทางจาง ─── */
+.rsp-pc.is-dragging {
+  opacity: 0.35;
+  transform: none;
+  box-shadow: none;
+  border-style: dashed;
+  border-color: #d3c09b;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.rsp-pc.is-dragging .rsp-ic2 {
+  filter: grayscale(0.25) brightness(0.95);
+}
+
+/* ─── ไอคอน ─── */
+.rsp-pc .rsp-ic2 {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 27px;
+  line-height: 1;
+  margin-bottom: 3px;
+  background: color-mix(in srgb, var(--tile, #c8a06e) 32%, #fffdf9);
+}
+
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .rsp-pc .rsp-ic2 {
+    background: #f3ead9;
+  }
+}
+
+/* ─── ชื่อ ─── */
+.rsp-pc > span:not(.rsp-ic2) {
+  display: block;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #2a2333;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── ขนาด ─── */
+.rsp-pc small {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: #6b6256;
+  line-height: 1.25;
+}
+
+/* ─── badge ×N ─── */
+.rsp-pc .rsp-n {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #a5631f;
+  color: #fff8ee;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+
+/* ─── ปุ่ม + ─── */
+.rsp-pc .rsp-add {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #2a2333;
+  color: #fff;
+  border: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  z-index: 1;
+  transition: transform 0.12s, background 0.15s;
+}
+
+.rsp-pc .rsp-add:hover {
+  background: #a5631f;
+  transform: scale(1.1);
+}
+
+.rsp-pc .rsp-add:active {
+  transform: scale(0.94);
+}
+
+.rsp-pc .rsp-add:focus-visible {
+  outline: 2px solid #a5631f;
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   ⭐ Structure Step — Tip + Placed chips
+   ============================================================ */
+
+.rsp-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 4px;
+  padding: 9px 14px;
+  border: 1.5px dashed #a5631f;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2a2333;
+}
+
+.rsp-tip b {
+  font-weight: 600;
+}
+
+/* ─── chips ของที่วางแล้ว ─── */
+.rsp-plc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rsp-pch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 13px 0 9px;
+  border-radius: 18px;
+  border: 1.5px dashed #d3c09b;
+  background: #fffdf9;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2a2333;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.rsp-pch:hover {
+  border-style: solid;
+}
+
+.rsp-pch.on {
+  border-style: solid;
+  border-color: #a5631f;
+  background: #fbf1df;
+}
+
+.rsp-pch .e {
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+}
+
+.rsp-pch small {
+  color: #6b6256;
+  font-weight: 500;
+}
+
+/* ─── mobile ─── */
+@media (max-width: 820px) {
+  .rsp-pcs {
+    gap: 6px;
+  }
+
+  .rsp-pc {
+    padding: 11px 3px 9px;
+    font-size: 12px;
+    border-radius: 14px;
+  }
+
+  .rsp-pc .rsp-ic2 {
+    width: 40px;
+    height: 40px;
+    font-size: 23px;
+    border-radius: 12px;
+  }
+
+  .rsp-pc small {
+    font-size: 10.5px;
+  }
+
+  .rsp-pch {
+    height: 32px;
+    padding: 0 11px 0 8px;
+    font-size: 12px;
+  }
+}
+
+/* ============================================================
+   ⭐ Structure Step — Card 3 คอลัมน์ (แบบ ref file 1)
+   ============================================================ */
+
+.rsp-pcs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rsp-pc {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 14px 4px 11px;
+  border-radius: 16px;
+
+  border: 1.5px dashed #d3c09b;
+  background: linear-gradient(165deg, #fffdf9 50%, #fbf1df);
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #2a2333;
+  text-align: center;
+
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+
+.rsp-pc:hover {
+  transform: translateY(-2px);
+  border-style: solid;
+  box-shadow: 0 10px 22px -12px rgba(90, 60, 20, 0.45);
+}
+
+.rsp-pc:active {
+  cursor: grabbing;
+}
+
+/* ─── ไอคอน ─── */
+.rsp-pc .rsp-ic2 {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 27px;
+  line-height: 1;
+  margin-bottom: 3px;
+  background: color-mix(in srgb, var(--tile, #c8a06e) 32%, #fffdf9);
+}
+
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .rsp-pc .rsp-ic2 {
+    background: #f3ead9;
+  }
+}
+
+/* ─── ชื่อ ─── */
+.rsp-pc > span:not(.rsp-ic2) {
+  display: block;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #2a2333;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── ขนาด ─── */
+.rsp-pc small {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: #6b6256;
+  line-height: 1.25;
+}
+
+/* ─── badge ×N ─── */
+.rsp-pc .rsp-n {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #a5631f;
+  color: #fff8ee;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(42, 35, 48, 0.18);
+  pointer-events: none;
+}
+
+/* ============================================================
+   ⭐ Structure Step — Tip / Placed chips
+   ============================================================ */
+
+.rsp-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 4px;
+  padding: 9px 14px;
+  border: 1.5px dashed #a5631f;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2a2333;
+}
+
+.rsp-tip b {
+  font-weight: 600;
+}
+
+.rsp-plc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rsp-pch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 13px 0 9px;
+  border-radius: 18px;
+  border: 1.5px dashed #d3c09b;
+  background: #fffdf9;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2a2333;
+}
+
+.rsp-pch .e {
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+}
+
+.rsp-pch small {
+  color: #6b6256;
+  font-weight: 500;
+}
+
+.rsp-mute {
+  font-size: 12.5px;
+  color: #6b6256;
+  padding: 2px 2px 0;
+}
+
+/* ─── mobile ─── */
+@media (max-width: 820px) {
+  .rsp-pcs {
+    gap: 6px;
+  }
+
+  .rsp-pc {
+    padding: 11px 3px 9px;
+    font-size: 12px;
+    border-radius: 14px;
+  }
+
+  .rsp-pc .rsp-ic2 {
+    width: 40px;
+    height: 40px;
+    font-size: 23px;
+    border-radius: 12px;
+  }
+
+  .rsp-pc small {
+    font-size: 10.5px;
+  }
+
+  .rsp-pch {
+    height: 32px;
+    padding: 0 11px 0 8px;
+    font-size: 12px;
   }
 }

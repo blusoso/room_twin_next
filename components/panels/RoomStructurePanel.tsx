@@ -1,7 +1,13 @@
 // components/panels/RoomStructurePanel.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useRoomTwin } from "@/lib/state/store";
 
@@ -14,6 +20,7 @@ import {
   ROOM_SETUP_STEPS,
   ROOM_SETUP_STEP_META,
   ROOM_SETUP_CTA_LABEL,
+  MAIN_CATEGORIES,
   type RoomSetupTab,
 } from "@/lib/data/constants";
 
@@ -37,7 +44,11 @@ import { deleteItemTree } from "@/lib/three/itemTree";
 
 import { resolveWallPlacement, wallFootprint } from "@/lib/three/wallPlacement";
 
-import { PRODUCT_BY_ID, defaultParamsFor } from "@/lib/data/products";
+import { PRODUCT_BY_ID, defaultParamsFor, PRODUCTS } from "@/lib/data/products";
+
+import { getProductIcon } from "@/lib/data/icons";
+
+import type { ProductDef } from "@/lib/data/types";
 
 import { useSaveState } from "@/hooks/useSaveState";
 
@@ -46,6 +57,9 @@ import { objectsByUid } from "@/lib/three/scene";
 import { structurePlanItems, blocksOrigin } from "@/lib/three/structurePlan";
 
 import type { PlacedItem } from "@/lib/state/types";
+
+import { usePlacement } from "@/hooks/usePlacement";
+import { useCardDrag } from "@/hooks/useCardDrag";
 
 type Tab = RoomSetupTab;
 
@@ -57,9 +71,22 @@ type RectSize = {
 
 const LAST_RECT_KEY = "roomtwin_last_rect_size_v1";
 
+/* ⭐ ลำดับการ์ดที่แสดง (ตาม product data) */
+const STRUCTURE_IDS = [
+  "door",
+  "slidingdoor",
+  "window",
+  "curtain",
+  "ac",
+  "ceilingfan",
+  "pendantlamp",
+  "downlight",
+  "column",
+  "partition",
+] as const;
+
 /* ============================================================
    Slider progress — ส่งค่า % ไปให้ CSS var `--p`
-   เพื่อ paint track ด้านซ้ายเป็นสี copper ตามค่าปัจจุบัน
    ============================================================ */
 
 function sliderProgressPct(value: number, min: number, max: number): string {
@@ -657,7 +684,6 @@ function SizeTab() {
             aria-pressed={room.shape === "blocks"}
           >
             <span className="rsp-shi" aria-hidden="true">
-              {/* ⭐ SVG grid icon — เหมือนไฟล์ mockup */}
               <svg
                 viewBox="0 0 20 20"
                 width="22"
@@ -727,7 +753,6 @@ function SizeTab() {
                 onClick={() => handlePresetClick(p.w, p.d, p.h)}
                 aria-pressed={isActive}
               >
-                {/* ⭐ กล่องพรีวิวสัดส่วน: กว้าง = w×8px, สูง = d×8px */}
                 <span className="rsp-pvw" aria-hidden="true">
                   <i style={{ width: p.w * 8, height: p.d * 8 }} />
                 </span>
@@ -743,7 +768,6 @@ function SizeTab() {
       )}
 
       <div className="rsp-card">
-        {/* ===== Section head + chip พื้นที่ ===== */}
         <div className="rsp-size-head">
           <h2>📏 ปรับเอง</h2>
           <span className="area">
@@ -774,7 +798,6 @@ function SizeTab() {
             <div key={key} className={`rsp-dim${disabled ? " in-blocks" : ""}`}>
               <span className="rsp-dim-sub-label">{label}</span>
 
-              {/* ⭐ แคปซูล − [ค่า ม.] + */}
               <div className="rsp-stepper">
                 <button
                   type="button"
@@ -818,7 +841,6 @@ function SizeTab() {
                 </button>
               </div>
 
-              {/* ⭐ slider — track ซ้ายเป็น copper ตามค่า */}
               <input
                 type="range"
                 className="rsp-slider"
@@ -847,7 +869,7 @@ function SizeTab() {
 }
 
 /* ============================================================
-   Tab: Surfaces (ใช้ทั้ง floor และ wall ผ่าน prop section)
+   Tab: Surfaces
    ============================================================ */
 
 function SurfacesTab({ section }: { section: "floor" | "wall" }) {
@@ -1077,102 +1099,106 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
     </div>
   );
 }
+
 /* ============================================================
-   Tab 3 : Openings
+   Structure Step — การ์ด 3 คอลัมน์ (แบบ ref file 1) + ลากวางได้
    ============================================================ */
 
 function OpeningsTab() {
-  const room = useRoomTwin((s) => s.room);
-
   const placedItems = useRoomTwin((s) => s.placedItems);
 
-  const { saveState } = useSaveState();
+  /* ⭐ drag system เดียวกับ BuildPanel */
+  const { placeProduct, placeThemedProduct, placeZone } = usePlacement();
+  const { startDrag } = useCardDrag({
+    placeProduct,
+    placeThemedProduct,
+    placeZone,
+  });
 
-  const [openUid, setOpenUid] = useState<string | null>(null);
+  /* ⭐ ดึงสินค้าตาม STRUCTURE_IDS (เรียงตามลำดับที่กำหนด) */
+  const structureProducts = useMemo<ProductDef[]>(
+    () =>
+      STRUCTURE_IDS.map((id) => PRODUCT_BY_ID.get(id)).filter(
+        (p): p is ProductDef => !!p,
+      ),
+    [],
+  );
 
-  const openings = placedItems.filter(
-    (i) =>
-      i.wallMount &&
-      (i.productId === "door" ||
-        i.productId === "window" ||
-        i.productId === "slidingdoor"),
+  /* ⭐ นับจำนวนที่วางแล้วต่อ product */
+  const countByProduct = useMemo(() => {
+    const map = new Map<string, number>();
+
+    placedItems.forEach((i) => {
+      if (!i.wallMount) return;
+      map.set(i.productId, (map.get(i.productId) ?? 0) + 1);
+    });
+
+    return map;
+  }, [placedItems]);
+
+  /* ⭐ รายการที่วางแล้วทั้งหมด */
+  const placedStructure = useMemo(
+    () => placedItems.filter((i) => i.wallMount),
+    [placedItems],
   );
 
   return (
     <div className="rsp-tab-panel active">
-      <div className="opening-actions">
-        <button
-          type="button"
-          className="opening-add-btn"
-          onClick={() => {
-            addOpeningOfType("door");
-
-            saveState();
-          }}
-        >
-          🚪 + ประตู
-        </button>
-
-        <button
-          type="button"
-          className="opening-add-btn"
-          onClick={() => {
-            addOpeningOfType("slidingdoor");
-
-            saveState();
-          }}
-        >
-          🚪 + ประตูระเบียง
-        </button>
-
-        <button
-          type="button"
-          className="opening-add-btn"
-          onClick={() => {
-            addOpeningOfType("window");
-
-            saveState();
-          }}
-        >
-          🪟 + หน้าต่าง
-        </button>
+      {/* ═══ Tip ═══ */}
+      <div className="rsp-tip">
+        <span aria-hidden="true">✋</span>
+        <span>
+          <b>ลาก</b>การ์ดไปวางบนผนังในห้อง
+        </span>
       </div>
 
-      <div className="opening-list">
-        {openings.length === 0 ? (
-          <div className="opening-empty">
-            ยังไม่มีประตู/หน้าต่าง
-            <br />
-            <small>กดปุ่มด้านบนเพื่อเพิ่ม</small>
-          </div>
-        ) : (
-          openings.map((o) => (
-            <OpeningItem
-              key={o.uid}
-              item={o}
-              isOpen={openUid === o.uid}
-              onToggle={() =>
-                setOpenUid((cur) => (cur === o.uid ? null : o.uid))
+      {/* ═══ การ์ด 3 คอลัมน์ ═══ */}
+      <div className="rsp-pcs">
+        {structureProducts.map((p) => {
+          const count = countByProduct.get(p.id) ?? 0;
+
+          /* ⭐ ไอคอนเดียวกับที่อยู่ใน product data */
+          const icon = getProductIcon(p);
+
+          return (
+            <div
+              key={p.id}
+              className="rsp-pc"
+              role="button"
+              tabIndex={0}
+              aria-label={`${p.name} — ลากไปวางบนผนัง`}
+              data-id={p.id}
+              data-kind="product"
+              data-key={p.id}
+              data-emojis={icon}
+              data-tile={hexOf(p.color)}
+              data-count={count > 0 ? count : undefined}
+              style={
+                {
+                  "--tile": hexOf(p.color),
+                } as React.CSSProperties
               }
-              roomShape={room.shape}
-              onDelete={() => {
-                deleteItemTree(o.uid);
+              onPointerDown={(e) =>
+                startDrag(e, p.id, e.currentTarget, "product", null)
+              }
+            >
+              {count > 0 && <i className="rsp-n">×{count}</i>}
 
-                setOpenUid(null);
-
-                saveState();
-              }}
-              onUpdate={saveState}
-            />
-          ))
-        )}
+              <span className="rsp-ic2">{icon}</span>
+              <span>{p.name}</span>
+              <small>
+                {p.dims.w}×{p.dims.h} ซม.
+              </small>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 /* ============================================================
-   Opening Item
+   Opening Item (เก็บไว้ใช้กับ popup mode)
    ============================================================ */
 
 function OpeningItem({
@@ -1224,17 +1250,10 @@ function OpeningItem({
     (useRoomTwin.getState().room.h - 0.15 - half.halfV) * 100,
   );
 
-  const icon =
-    item.productId === "door"
-      ? "🚪"
-      : item.productId === "slidingdoor"
-        ? "🚪"
-        : "🪟";
-
   return (
     <div className={`opening-item${isOpen ? " open" : ""}`}>
       <div className="opening-head" onClick={onToggle}>
-        <div className="oi-icon">{icon}</div>
+        <div className="oi-icon">{getProductIcon(product)}</div>
 
         <div className="oi-main">
           <div className="oi-name">{item.displayName || product.name}</div>
@@ -1351,21 +1370,22 @@ export default function RoomStructurePanel({
 
   const [tab, setTab] = useState<Tab>("size");
 
-  // ⭐ เพิ่ม 2 บล็อกนี้ — เริ่มต้นนับ step 1 ว่า "เห็นแล้ว"
-  // แต่เพราะมันเป็น step ปัจจุบัน → ยังไม่ติ๊กถูก
   const [visited, setVisited] = useState<Set<Tab>>(() => new Set(["size"]));
 
   const handleTabClick = useCallback((t: Tab) => {
     setTab(t);
+
     setVisited((prev) => {
       if (prev.has(t)) return prev;
+
       const next = new Set(prev);
+
       next.add(t);
+
       return next;
     });
   }, []);
 
-  // ⭐ ดัชนี step ปัจจุบัน (0..3)
   const stepIdx = ROOM_SETUP_STEPS.findIndex((s) => s.id === tab);
 
   const handlePrev = useCallback(() => {
@@ -1376,7 +1396,6 @@ export default function RoomStructurePanel({
     if (stepIdx < ROOM_SETUP_STEPS.length - 1) {
       handleTabClick(ROOM_SETUP_STEPS[stepIdx + 1].id);
     } else {
-      // step 4 (ผนัง) → เสร็จ
       onDone?.();
     }
   }, [stepIdx, handleTabClick, onDone]);
@@ -1489,7 +1508,9 @@ export default function RoomStructurePanel({
 
   if (embedded) {
     const meta = ROOM_SETUP_STEP_META[tab];
+
     const isFirst = stepIdx === 0;
+
     const isLast = stepIdx === ROOM_SETUP_STEPS.length - 1;
 
     return (
@@ -1498,7 +1519,9 @@ export default function RoomStructurePanel({
         <nav className="rsp-tracker" aria-label="ขั้นตอนตั้งค่าห้อง">
           {ROOM_SETUP_STEPS.map((s) => {
             const isOn = tab === s.id;
+
             const isSeen = visited.has(s.id);
+
             const isDone = isSeen && !isOn;
 
             return (
@@ -1512,6 +1535,7 @@ export default function RoomStructurePanel({
                 aria-current={isOn ? "step" : undefined}
               >
                 <span className="rsp-tn">{isDone ? "✓" : s.num}</span>
+
                 <span className="rsp-tl">{s.label}</span>
               </button>
             );
@@ -1527,8 +1551,10 @@ export default function RoomStructurePanel({
           >
             {meta.icon}
           </span>
+
           <div className="rsp-sh-body">
             <h1 className="rsp-sh-title">{meta.title}</h1>
+
             <p className="rsp-sh-desc">{meta.desc}</p>
           </div>
         </div>
@@ -1536,8 +1562,11 @@ export default function RoomStructurePanel({
         {/* ===== Body ===== */}
         <div className="rsp-body">
           {tab === "size" && <SizeTab />}
+
           {tab === "structure" && <OpeningsTab />}
+
           {tab === "floor" && <SurfacesTab section="floor" />}
+
           {tab === "wall" && <SurfacesTab section="wall" />}
         </div>
 
@@ -1584,12 +1613,12 @@ export default function RoomStructurePanel({
       <div
         ref={panelRef}
         className={`room-size-panel${open ? " show" : ""}`}
-        aria-hidden={!open}
         style={{
           position: "fixed",
           visibility: open ? "visible" : "hidden",
           pointerEvents: open ? "auto" : "none",
         }}
+        aria-hidden={!open}
         inert={!open}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1637,8 +1666,11 @@ export default function RoomStructurePanel({
 
         <div className="rsp-body">
           {tab === "size" && <SizeTab />}
+
           {tab === "structure" && <OpeningsTab />}
+
           {tab === "floor" && <SurfacesTab section="floor" />}
+
           {tab === "wall" && <SurfacesTab section="wall" />}
         </div>
       </div>
