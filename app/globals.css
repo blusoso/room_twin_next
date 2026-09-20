@@ -85,6 +85,12 @@ h3,
   font-family: var(--font-fraunces), var(--font-noto), serif;
 }
 
+p {
+  font-size: 14px;
+  color: var(--ink-soft);
+  font-family: var(--font-noto), var(--font-inter), sans-serif;
+}
+
 /* ============================================================
    Header
    ============================================================ */
@@ -400,7 +406,7 @@ aside {
 .main-cat-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: 1fr;          /* ⭐ บังคับให้ทุกแถวสูงเท่ากัน */
+  grid-auto-rows: 1fr; /* ⭐ บังคับให้ทุกแถวสูงเท่ากัน */
   gap: 8px;
   padding: 8px 14px 10px 14px;
   flex-shrink: 0;
@@ -416,7 +422,7 @@ aside {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 100%;                 /* ⭐ ให้การ์ดสูงเต็ม cell ของ grid */
+  height: 100%; /* ⭐ ให้การ์ดสูงเต็ม cell ของ grid */
   padding: 12px 8px 10px;
   border-radius: 14px;
   border: 1.5px solid var(--panel-line);
@@ -456,8 +462,7 @@ aside {
 }
 
 .main-cat-card:hover {
-  border-color: #c9bea3;
-  background: #fbf8f2;
+  border-color: var(--ochre);
   color: var(--ink);
 }
 
@@ -704,14 +709,14 @@ aside {
 .catalog {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;      /* ⭐ กัน card ดันขอบขวา */
+  overflow-x: hidden; /* ⭐ กัน card ดันขอบขวา */
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-content: start;
   -webkit-overflow-scrolling: touch;
-  min-width: 0;            /* ⭐ กัน overflow ที่ parent flex */
+  min-width: 0; /* ⭐ กัน overflow ที่ parent flex */
   position: relative;
 }
 
@@ -1263,7 +1268,9 @@ aside {
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 6px;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   touch-action: manipulation;
 }
 
@@ -3299,11 +3306,14 @@ mark.hl {
 }
 
 .rsp-body {
-  padding: 16px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-
 .rsp-tabs {
   display: flex;
   gap: 3px;
@@ -3350,10 +3360,227 @@ mark.hl {
 
 .rsp-tab-panel {
   display: none;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .rsp-tab-panel.active {
-  display: block;
+  display: flex;
+}
+
+/* ============================================================
+   ⭐ RoomStructurePanel — Embedded Mode (สไตล์ main-cat-card)
+   ============================================================ */
+
+.rsp-embedded-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0 10px 0;   /* ⭐ 14 → 10 (ลดลง 4px เพื่อชดเชย body padding) */
+  gap: 0;
+}
+
+/* ===== Title / Subtitle ===== */
+.rsp-embedded-head {
+  padding: 4px 2px 10px;
+  flex-shrink: 0;
+}
+
+.rsp-embedded-title {
+  font-family: var(--font-fraunces), var(--font-noto), serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 2px;
+  letter-spacing: 0.1px;
+}
+
+.rsp-embedded-sub {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ===== Main Tabs Row (3 การ์ดเท่ากัน) ===== */
+.rsp-main-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.rsp-main-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 78px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  border: 1.5px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.15;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: center;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    transform 0.12s,
+    box-shadow 0.15s;
+}
+
+.rsp-main-tab .rsp-mt-icon {
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.rsp-main-tab .rsp-mt-label {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.rsp-main-tab:hover {
+  border-color: var(--ochre);
+  background: #fff;
+  color: var(--ink);
+}
+
+.rsp-main-tab.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  box-shadow: 0 4px 12px -4px rgba(42, 35, 48, 0.35);
+}
+
+.rsp-main-tab.active .rsp-mt-icon {
+  filter: brightness(1.2);
+}
+
+.rsp-main-tab:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   ⭐ Main Tab — เลข 1 2 3
+   ============================================================ */
+
+.rsp-main-tab .rsp-mt-num {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-fraunces), var(--font-noto), serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+
+  transition:
+    background 0.15s,
+    color 0.15s;
+  z-index: 1;
+}
+
+/* ⭐ ตอน active — กลับสี (ขาวบนพื้นดำ) */
+.rsp-main-tab.active .rsp-mt-num {
+  background: #fff;
+  color: var(--ink);
+}
+
+/* ⭐ มือถือ — ย่อลง */
+@media (max-width: 820px) {
+  .rsp-main-tab .rsp-mt-num {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    top: 5px;
+    left: 5px;
+  }
+}
+
+/* ⭐ ปรับ .rsp-body ให้ scroll เฉพาะใน embedded mode */
+.rsp-embedded-wrap .rsp-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  /* ⭐ เพิ่ม inner padding → clip boundary อยู่ห่างจาก content 4px
+     ทำให้ box-shadow 0 0 0 3px ของปุ่ม render ได้ครบ */
+  padding: 0 4px;
+}
+
+/* ⭐ Tab panel ใน embedded mode — ลบ border/พื้นซ้ำซ้อน */
+.rsp-embedded-wrap .rsp-tab-panel {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rsp-embedded-wrap .rsp-tab-panel.active {
+  display: flex;
+}
+
+/* ===== มือถือ ===== */
+@media (max-width: 820px) {
+  .rsp-embedded-wrap {
+    padding: 0 8px 0;   /* ⭐ 12 → 8 */
+  }
+
+  .rsp-embedded-wrap .rsp-body {
+    padding: 0 4px;      /* ⭐ คงเดิม — ให้ shadow มีที่ */
+  }
+
+  .rsp-footer {
+    margin: 0 -8px;      /* ⭐ -12 → -8 */
+    padding: 10px 12px 12px;
+    gap: 8px;
+  }
+  .rsp-embedded-title {
+    font-size: 17px;
+  }
+  .rsp-main-tab {
+    height: 68px;
+    font-size: 11px;
+    border-radius: 12px;
+  }
+  .rsp-main-tab .rsp-mt-icon {
+    font-size: 20px;
+    height: 22px;
+  }
+  .rsp-main-tab .rsp-mt-label {
+    font-size: 11px;
+  }
 }
 
 .rsp-subsec {
@@ -3454,8 +3681,15 @@ mark.hl {
   pointer-events: none;
 }
 
+.rsp-card {
+  background: linear-gradient(165deg, #fff 50%, #f7ecd9);
+  padding: 1rem;
+  border: 1.5px dashed #d6c196;
+  border-radius: 18px;
+}
+
 .rsp-dim {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .rsp-dim.in-blocks {
@@ -3464,79 +3698,131 @@ mark.hl {
 }
 
 .rsp-dim-label {
-  font-size: 11.5px;
-  color: var(--ink-soft);
-  font-weight: 600;
-  margin-bottom: 7px;
   display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--ink);
 }
 
+/* ============================================================
+   ⭐ Stepper ขนาดห้อง — สไตล์เดียวกับ mockup .sc
+   −  [ 4.2 ม. ]  +   ในกรอบแคปซูลเดียว
+   ============================================================ */
+
+/* ─── label เหนือแคปซูล ─── */
+.rsp-dim-sub-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 7px;
+}
+
+/* ─── ตัวแคปซูล (mockup: .sc) ─── */
 .rsp-stepper {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-bottom: 7px;
+  justify-content: space-between;
+
+  height: 52px;
+  padding: 0 7px;
+
+  border-radius: 26px;
+  background: var(--panel);
+  border: 1.5px solid var(--panel-line);
+
+  transition: border-color 0.15s;
 }
 
+.rsp-stepper:focus-within {
+  border-color: var(--ochre);
+}
+
+/* ─── ปุ่มกลม − / + (mockup: .sc button) ─── */
 .rsp-step-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  border: 1px solid var(--panel-line);
-  background: #fbf8f2;
-  color: var(--ink);
-  font-size: 16px;
-  cursor: pointer;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+
+  background: #fff;
+  border: 1px solid var(--panel-line);
+  color: var(--ink);
+
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+
   transition:
     background 0.12s,
-    border-color 0.12s,
-    transform 0.1s;
-  font-family: inherit;
+    color 0.12s,
+    border-color 0.12s;
 }
 
-.rsp-step-btn:hover {
-  background: #f0ead9;
-  border-color: #cbbc9e;
+.rsp-step-btn:hover:not(:disabled) {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
 }
 
-.rsp-step-btn:active {
-  transform: scale(0.92);
+.rsp-step-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
+.rsp-step-btn:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* ─── ค่ากลาง (mockup: .sc b) ─── */
 .rsp-input-wrap {
   flex: 1;
+  min-width: 0;
+
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 4px;
-  border: 1.5px solid var(--panel-line);
-  border-radius: 10px;
-  padding: 6px 10px;
-  background: #fff;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  gap: 3px;
+
+  border: none;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
 
 .rsp-input-wrap:focus-within {
-  border-color: var(--ochre);
-  box-shadow: 0 0 0 3px rgba(184, 117, 46, 0.14);
+  border: none;
+  box-shadow: none;
 }
 
 .rsp-input-wrap input {
+  width: 88px;
+  max-width: 100%;
+  padding: 0;
   border: none;
   outline: none;
-  font-size: 14.5px;
-  font-weight: 700;
-  color: var(--ink);
-  width: 100%;
-  font-family: inherit;
-  text-align: center;
   background: transparent;
+
+  font-family: inherit;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  text-align: center;
+
+  font-variant-numeric: tabular-nums;
 }
 
 .rsp-input-wrap input::-webkit-inner-spin-button,
@@ -3544,66 +3830,275 @@ mark.hl {
   -webkit-appearance: none;
   margin: 0;
 }
+.rsp-input-wrap input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
 
 .rsp-unit {
-  font-size: 11px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+/* ─── slider (mockup: .rng) — track ซ้ายเป็น copper ตามค่า ─── */
+.rsp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin: 1rem 0 !important; 
+  background: transparent;
+  cursor: pointer;
+
+  /* ⭐ JS set --p = % ที่เลือกไว้ (0–100) */
+  --p: 50%;
+}
+
+/* track (WebKit) */
+.rsp-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--ochre) var(--p),
+    var(--panel-line) var(--p)
+  );
+}
+
+/* track (Firefox) */
+.rsp-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--panel-line);
+}
+.rsp-slider::-moz-range-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--ochre);
+}
+
+/* thumb (WebKit) */
+.rsp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -9px; /* (26-8)/2 = 9 → center */
+  border-radius: 50%;
+  background: var(--ochre);
+  border: 4px solid #fff;
+  box-shadow: 0 2px 7px rgba(60, 40, 20, 0.45);
+  cursor: grab;
+}
+
+.rsp-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+}
+
+/* thumb (Firefox) */
+.rsp-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ochre);
+  border: 4px solid #fff;
+  box-shadow: 0 2px 7px rgba(60, 40, 20, 0.45);
+  cursor: grab;
+}
+
+.rsp-slider:disabled {
+  opacity: 0.4;
+}
+
+.rsp-slider:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.rsp-input-wrap {
+  flex: 1;
+  min-width: 0;
+
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+
+  /* ⭐ ยกเลิกกรอบ/พื้นเดิม ให้กลืนเป็นเนื้อเดียวกับแคปซูล */
+  border: none;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.rsp-input-wrap:focus-within {
+  /* ⭐ โฟกัสจะถูกย้ายไปที่ระดับ .rsp-stepper แทน */
+  border: none;
+  box-shadow: none;
+}
+
+.rsp-input-wrap input {
+  border: none;
+  outline: none;
+  background: transparent;
+
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+
+  width: 100%;
+  max-width: 72px;
+  padding: 0;
+  text-align: center;
+
+  font-variant-numeric: tabular-nums; /* ⭐ เลขไม่ขยับตอนเปลี่ยนค่า */
+}
+
+/* ซ่อน spinner ของ input[type=number] */
+.rsp-input-wrap input::-webkit-inner-spin-button,
+.rsp-input-wrap input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.rsp-input-wrap input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.rsp-unit {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-soft);
   flex-shrink: 0;
 }
 
 .rsp-slider {
   width: 100%;
-  accent-color: var(--ochre);
   height: 4px;
+  accent-color: var(--ochre);
   display: block;
+  margin-top: -2px; /* ⭐ ดึงให้ชิดแคปซูลขึ้น */
+  cursor: pointer;
 }
 
+.rsp-slider:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   ⭐ Size Presets (mockup: .presets / .ps)
+   — กล่องพรีวิวสัดส่วน + ชื่อห้อง + ขนาด
+   ============================================================ */
+
 .rsp-presets {
-  display: flex;
-  gap: 7px;
-  margin: 18px 0 4px 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .rsp-preset-card {
-  flex: 1;
-  border: 1.5px solid var(--panel-line);
-  background: #fbf8f2;
-  border-radius: 12px;
-  padding: 9px 4px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 10px 4px 9px;
+  border-radius: 16px;
+  border: 1.5px dashed #d3c09b; /* mockup --dash */
+  background: #fffdf9; /* mockup --surface */
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  color: #2a2333; /* mockup --ink */
   cursor: pointer;
   text-align: center;
   transition:
+    transform 0.15s,
     border-color 0.15s,
     background 0.15s,
     box-shadow 0.15s;
 }
 
 .rsp-preset-card:hover {
-  background: #f0ead9;
+  transform: translateY(-2px);
+  border-style: solid;
 }
 
-.rsp-preset-card.active {
-  border-color: var(--ochre);
-  background: #fff;
-  box-shadow: 0 0 0 2px rgba(184, 117, 46, 0.16);
+/* ─── กล่องพรีวิวสัดส่วนห้อง ─── */
+.rsp-preset-card .rsp-pvw {
+  width: 48px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 2px;
 }
 
-.rsp-preset-card .pc-icon {
-  font-size: 15px;
-  margin-bottom: 3px;
-  line-height: 1;
+.rsp-preset-card .rsp-pvw i {
+  display: block;
+  border: 2px solid #2a2333;
+  border-radius: 3px;
+  background: #fbf1df; /* mockup --surface-2 */
 }
 
-.rsp-preset-card .pc-name {
-  font-size: 11px;
+/* ─── ชื่อห้อง ─── */
+.rsp-preset-card .rsp-ps-name {
+  font-size: 13px;
   font-weight: 700;
-  color: var(--ink);
+  color: #2a2333;
+  line-height: 1.2;
 }
 
-.rsp-preset-card .pc-dims {
-  font-size: 9.5px;
-  color: var(--ink-soft);
-  margin-top: 1px;
+/* ─── ขนาด (mockup: .ps small) ─── */
+.rsp-preset-card .rsp-ps-dims {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #6b6256; /* mockup --muted */
+  line-height: 1.2;
+  margin-top: 0;
+}
+
+/* ─── active (mockup: .ps.on) ─── */
+.rsp-preset-card.active {
+  border-style: solid;
+  border-color: #2a2333;
+  background: #fbf1df;
+  box-shadow: 0 0 0 3px rgba(165, 99, 31, 0.3);
+  /*                        ↑ color-mix(copper 30%) */
+
+  transform: none; /* ยกเลิก translateY ตอน active */
+}
+
+/* ─── mobile: ย่อลงเล็กน้อย ─── */
+@media (max-width: 820px) {
+  .rsp-presets {
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .rsp-preset-card {
+    padding: 8px 3px 7px;
+    border-radius: 14px;
+    font-size: 12px;
+  }
+
+  .rsp-preset-card .rsp-pvw {
+    width: 42px;
+    height: 36px;
+  }
+
+  .rsp-preset-card .rsp-ps-name {
+    font-size: 12px;
+  }
+
+  .rsp-preset-card .rsp-ps-dims {
+    font-size: 10.5px;
+  }
 }
 
 .rsp-note {
@@ -3615,59 +4110,123 @@ mark.hl {
   border-top: 1px solid var(--panel-line);
 }
 
-.rsp-shape-row {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
+/* ============================================================
+   ⭐ Shape Picker — สี่เหลี่ยม / วาดบล็อก (mockup: .shps / .shp)
+   ============================================================ */
+
+.rsp-shps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
-.rsp-shape-btn {
-  flex: 1;
-  padding: 10px 8px;
-  border: 1.5px solid var(--panel-line);
-  background: #fbf8f2;
-  border-radius: 11px;
-  cursor: pointer;
+/* ─── การ์ดเลือกทรง ─── */
+.rsp-shp {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-family: inherit;
-  transition: all 0.15s;
+  gap: 10px;
+  padding: 11px 10px;
+  border-radius: 16px;
+
+  border: 1.5px dashed #d3c09b; /* mockup --dash */
+  background: #fffdf9; /* mockup --surface */
   text-align: left;
+  font-family: inherit;
+  color: #2a2333;
+  cursor: pointer;
+
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
 }
 
-.rsp-shape-btn:hover {
-  background: #f0ead9;
+.rsp-shp:hover {
+  transform: translateY(-1px);
+  border-style: solid;
 }
 
-.rsp-shape-btn.active {
-  border-color: var(--ochre);
-  background: #fff;
-  box-shadow: 0 0 0 2px rgba(184, 117, 46, 0.16);
+/* ─── กล่องไอคอน ─── */
+.rsp-shp .rsp-shi {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: #fbf1df; /* mockup --surface-2 */
+  color: #2a2333;
 }
 
-.rsp-shape-btn .sc-icon {
-  font-size: 22px;
-  line-height: 1;
-  flex-shrink: 0;
+/* ─── สี่เหลี่ยม ─── */
+.rsp-shp .rsp-rct {
+  display: block;
+  width: 20px;
+  height: 14px;
+  border: 2px solid #2a2333;
+  border-radius: 2px;
 }
 
-.rsp-shape-btn .sc-text {
-  display: flex;
-  flex-direction: column;
+/* ─── ข้อความ ─── */
+.rsp-shp .rsp-shx {
   min-width: 0;
 }
 
-.rsp-shape-btn .sc-name {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--ink);
+.rsp-shp b {
+  display: block;
+  font-size: 14.5px;
+  line-height: 1.2;
+  color: #2a2333;
 }
 
-.rsp-shape-btn .sc-desc {
-  font-size: 10px;
-  color: var(--ink-soft);
+.rsp-shp small {
+  display: block;
+  color: #6b6256; /* mockup --muted */
+  font-size: 12px;
+  line-height: 1.3;
   margin-top: 1px;
+}
+
+/* ─── active ─── */
+.rsp-shp.active {
+  border-style: solid;
+  border-color: #a5631f; /* mockup --copper */
+  background: #fbf1df;
+  box-shadow: 0 0 0 3px rgba(165, 99, 31, 0.24);
+  transform: none;
+}
+
+.rsp-shp:focus-visible {
+  outline: 2px solid #a5631f;
+  outline-offset: 2px;
+}
+
+/* ─── mobile: ย่อลง ─── */
+@media (max-width: 820px) {
+  .rsp-shps {
+    gap: 8px;
+  }
+
+  .rsp-shp {
+    padding: 9px 8px;
+    border-radius: 14px;
+    gap: 8px;
+  }
+
+  .rsp-shp .rsp-shi {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .rsp-shp b {
+    font-size: 13px;
+  }
+
+  .rsp-shp small {
+    font-size: 11px;
+  }
 }
 
 /* Floor / Wall / Ceiling */
@@ -7617,7 +8176,7 @@ mark.hl {
   display: flex;
   flex-direction: column;
   gap: 0;
-  min-width: 0;            /* ⭐ มีอยู่แล้ว — คงไว้ */
+  min-width: 0; /* ⭐ มีอยู่แล้ว — คงไว้ */
   width: 100%;
   margin-bottom: 6px;
 }
@@ -8010,16 +8569,15 @@ mark.hl {
   backdrop-filter: blur(6px);
 }
 
-
 .item-card.zone-card.card-b .cb {
   padding: 9px 4px 0;
-  min-width: 0;            /* ⭐ มีอยู่แล้ว — คงไว้ */
+  min-width: 0; /* ⭐ มีอยู่แล้ว — คงไว้ */
   width: 100%;
 }
 
 /* ⭐ ปุ่ม + ห้ามบีบตัว */
 .item-card.zone-card.card-b .add {
-  flex-shrink: 0;          /* ⭐ มีอยู่แล้ว */
+  flex-shrink: 0; /* ⭐ มีอยู่แล้ว */
 }
 
 .item-card.zone-card.card-b .cb h3 {
@@ -8048,15 +8606,15 @@ mark.hl {
   justify-content: space-between;
   gap: 6px;
   margin-top: 6px;
-  min-width: 0;            /* ⭐ เพิ่ม */
+  min-width: 0; /* ⭐ เพิ่ม */
 }
 
 .item-card.zone-card.card-b .price {
   display: inline-flex;
   align-items: baseline;
   gap: 3px;
-  min-width: 0;            /* ⭐ เพิ่ม — ให้ ellipsis ทำงาน */
-  flex: 1;                 /* ⭐ กินพื้นที่ที่เหลือ */
+  min-width: 0; /* ⭐ เพิ่ม — ให้ ellipsis ทำงาน */
+  flex: 1; /* ⭐ กินพื้นที่ที่เหลือ */
   font-family: var(--font-fraunces), var(--font-noto), serif;
   font-weight: 600;
   font-size: 13.5px;
@@ -8208,7 +8766,7 @@ mark.hl {
   filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.14));
 }
 
-.item-card.zone-card.card-b .tile .grip{
+.item-card.zone-card.card-b .tile .grip {
   position: absolute;
   left: 7px;
   top: 3px;
@@ -8259,8 +8817,8 @@ mark.hl {
   position: absolute;
   left: 6px;
   bottom: 6px;
-  right: auto;   /* ⭐ กันค่าจาก zone-card ที่ตั้ง right ไว้ */
-  top: auto;     /* ⭐ กันค่าจาก zone-card ที่ตั้ง top ไว้ */
+  right: auto; /* ⭐ กันค่าจาก zone-card ที่ตั้ง right ไว้ */
+  top: auto; /* ⭐ กันค่าจาก zone-card ที่ตั้ง top ไว้ */
   background: rgba(255, 255, 255, 0.96);
   color: var(--ink);
   font-weight: 700;
@@ -8717,6 +9275,40 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
    ============================================================ */
 
 @media (max-width: 820px) {
+  .rsp-stepper {
+    height: 46px;
+    padding: 0 6px;
+    border-radius: 23px;
+  }
+
+  .rsp-step-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 20px;
+  }
+
+  .rsp-input-wrap input {
+    font-size: 19px;
+    width: 78px;
+  }
+
+  .rsp-unit {
+    font-size: 12px;
+  }
+
+  .rsp-slider {
+    height: 24px;
+  }
+
+  .rsp-slider::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+    margin-top: -7px;
+  }
+  .rsp-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
   .zone-rail {
     --mask-size: 18px;
     padding: 2px 40px 6px 2px;
@@ -8809,5 +9401,392 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
     width: 130px;
     min-width: 130px;
     max-width: 130px;
+  }
+}
+
+/* ─── section head (mockup: .bh2) ─── */
+.rsp-size-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.rsp-size-head h2 {
+  font-size: 15.5px;
+  font-weight: 700;
+  font-family: var(--font-fraunces), var(--font-noto), serif;
+  margin: 0;
+  color: var(--ink);
+}
+
+.rsp-size-head .area {
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 3px 11px;
+  border-radius: 13px;
+  background: #fbf1df;
+  border: 1px solid var(--panel-line);
+  color: var(--ink);
+}
+
+/* ─── dim row (mockup: .dc) ─── */
+.rsp-dim {
+  margin-bottom: 0; /* ลบ margin เดิม */
+}
+
+.rsp-size-head + .rsp-dim {
+  border-top: 0;
+  padding-top: 8px;
+}
+
+.rsp-dim:last-child {
+  padding-bottom: 0;
+}
+
+/* ─── preset cards (mockup: .ps) ─── */
+.rsp-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rsp-preset-card {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 10px 4px 9px;
+  border-radius: 16px;
+  border: 1.5px dashed #d3c09b;
+  background: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.rsp-preset-card:hover {
+  transform: translateY(-2px);
+  border-style: solid;
+}
+
+.rsp-preset-card.active {
+  border-style: solid;
+  border-color: var(--ink);
+  background: #fbf1df;
+  box-shadow: 0 0 0 3px rgba(184, 117, 46, 0.3);
+}
+
+.rsp-preset-card .pc-icon {
+  font-size: 15px;
+  margin: 0;
+  line-height: 1;
+}
+
+.rsp-preset-card .pc-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rsp-preset-card .pc-dims {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-top: 0;
+}
+
+/* ============================================================
+   ⭐ RoomSetup — Progress Tracker
+   สีตาม mockup: ok=#4E8B62 · dash=#D3C09B · ink=#2A2333 · ring=rgba(165,99,31,.32)
+   ============================================================ */
+
+.rsp-tracker {
+  display: flex;
+  margin: 0 -2px 14px;
+  padding: 4px 0 6px;
+  flex-shrink: 0;
+}
+
+.rsp-trk {
+  position: relative;
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 5px;
+  padding: 0 2px;
+  min-width: 0;
+
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6b6256; /* mockup --muted */
+  background: none;
+  border: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color 0.15s;
+}
+
+/* เส้นเชื่อมระหว่าง step */
+.rsp-trk::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  right: 50%;
+  width: 100%;
+  border-top: 2px dashed #d3c09b; /* mockup --dash */
+  pointer-events: none;
+}
+
+.rsp-trk:first-child::before {
+  display: none;
+}
+
+/* ผ่านมาแล้ว → เส้นทึบเขียว */
+.rsp-trk.seen::before {
+  border-top: 2px solid #4e8b62; /* mockup --ok */
+}
+
+.rsp-trk:hover:not(.on) {
+  color: #2a2333; /* mockup --ink */
+}
+
+/* ─── วงกลมหมายเลข ─── */
+.rsp-tn {
+  position: relative;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+
+  font-weight: 700;
+  font-size: 14px;
+  background: #fffdf9; /* mockup --surface */
+  border: 1.5px dashed #d3c09b;
+  color: #6b6256;
+
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+}
+
+/* step ที่ "เคยผ่าน" แล้ว (ไม่ใช่ปัจจุบัน) — ติ๊กถูกเขียว */
+.rsp-trk.done .rsp-tn {
+  background: #4e8b62;
+  border: 1.5px solid #4e8b62;
+  color: #fff;
+}
+
+/* step ปัจจุบัน — ดำ + ring copper */
+.rsp-trk.on {
+  color: #2a2333;
+}
+
+.rsp-trk.on .rsp-tn {
+  background: #2a2333;
+  border: 1.5px solid #2a2333;
+  color: #fbf7ef;
+  box-shadow: 0 0 0 4px rgba(165, 99, 31, 0.32); /* color-mix(copper 32%) */
+}
+
+.rsp-trk:focus-visible .rsp-tn {
+  outline: 2px solid #a5631f;
+  outline-offset: 3px;
+}
+
+.rsp-tl {
+  font-size: 12.5px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   ⭐ RoomSetup — Step header
+   ============================================================ */
+
+.rsp-step-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 4px 2px 12px;
+  flex-shrink: 0;
+}
+
+.rsp-sh-icon {
+  flex: none;
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  line-height: 1;
+
+  /* สีพื้นจาก --tile × 34% ผสมกับ --surface (mockup --surface #FFFDF9) */
+  background: color-mix(in srgb, var(--tile, #c8a06e) 34%, #fffdf9);
+  border: 1.5px dashed #d3c09b;
+}
+
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .rsp-sh-icon {
+    background: #f3ead9;
+  }
+}
+
+.rsp-sh-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.rsp-sh-title {
+  font-family: var(--font-fraunces), var(--font-noto), serif;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #2a2333;
+  margin: 0;
+  letter-spacing: 0.1px;
+}
+
+.rsp-sh-desc {
+  font-size: 13.5px;
+  color: #6b6256;
+  margin: 2px 0 0;
+  line-height: 1.35;
+}
+
+/* ============================================================
+   ⭐ RoomSetup — Footer (prev + CTA) — mockup .nav / .bk / .cta
+   ============================================================ */
+
+/* ปรับ wrap ให้ footer อยู่ล่างแบบ full-bleed */
+.rsp-embedded-wrap {
+  padding-bottom: 0; /* เดิม 14px → 0 (footer มี padding เอง) */
+}
+
+.rsp-footer {
+  display: flex;
+  gap: 10px;
+  margin: 0 -10px;    /* ⭐ -14 → -10 (ให้ตรงกับ wrap padding ใหม่) */
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--panel-line);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+/* ─── ปุ่มย้อนกลับ (mockup: .bk) ─── */
+.rsp-fb {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+
+  background: #fffdf9; /* mockup --surface */
+  border: 1.5px solid var(--panel-line);
+  color: #2a2333;
+
+  font-family: inherit;
+  font-size: 24px;
+  line-height: 1;
+
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+
+  transition: border-color 0.15s;
+}
+
+.rsp-fb:hover:not(:disabled) {
+  border-color: #d3c09b; /* mockup --dash */
+}
+
+.rsp-fb:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rsp-fb:focus-visible {
+  outline: 2px solid #a5631f;
+  outline-offset: 2px;
+}
+
+/* ─── ปุ่ม CTA (mockup: .cta) ─── */
+.rsp-cta {
+  flex: 1;
+  height: 52px;
+  border-radius: 26px;
+
+  background: #2a2333; /* mockup --ink */
+  color: #fbf7ef; /* mockup --ink-inv */
+  border: 0;
+
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.1px;
+  cursor: pointer;
+
+  box-shadow: 0 10px 20px -10px rgba(42, 35, 51, 0.6);
+  transition: transform 0.12s;
+}
+
+.rsp-cta:hover {
+  transform: translateY(-1px);
+}
+
+.rsp-cta:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.rsp-cta:focus-visible {
+  outline: 2px solid #a5631f;
+  outline-offset: 2px;
+}
+
+/* ─── ข้อความ hint ใต้ CTA (mockup: .ctahint) ─── */
+.rsp-cta-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #6b6256; /* mockup --muted */
+  margin: 7px 0 0;
+  padding-bottom: 14px;
+  flex-shrink: 0;
+}
+
+/* ─── mobile ─── */
+@media (max-width: 820px) {
+  .rsp-footer {
+    padding: 10px 12px 12px;
+    margin: 0 -12px;
+    gap: 8px;
+  }
+
+  .rsp-fb {
+    width: 46px;
+    height: 46px;
+    font-size: 22px;
+  }
+
+  .rsp-cta {
+    height: 46px;
+    border-radius: 23px;
+    font-size: 15px;
+  }
+
+  .rsp-cta-hint {
+    font-size: 11.5px;
+    padding-bottom: 12px;
   }
 }

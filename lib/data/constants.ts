@@ -325,3 +325,68 @@ export const LEVEL_PRESETS = [
 export const LEVEL_MIN = 0.0;
 export const LEVEL_MAX = 1.5;
 export const LEVEL_STEP = 0.05;
+
+/* ============================================================
+   Room Setup — Progress Tracker (ใช้ใน RoomStructurePanel)
+   ============================================================ */
+
+export const ROOM_SETUP_TABS = [
+  "size",
+  "structure",
+  "floor",
+  "wall",
+] as const;
+
+export type RoomSetupTab = (typeof ROOM_SETUP_TABS)[number];
+
+export interface RoomSetupStepDef {
+  id: RoomSetupTab;
+  num: number;
+  label: string;
+}
+
+export const ROOM_SETUP_STEPS: RoomSetupStepDef[] = [
+  { id: "size",      num: 1, label: "ขนาด" },
+  { id: "structure", num: 2, label: "โครงสร้าง" },
+  { id: "floor",     num: 3, label: "พื้น" },
+  { id: "wall",      num: 4, label: "ผนัง" },
+];
+
+/** meta ของแต่ละ step — icon / title / desc / tint */
+export const ROOM_SETUP_STEP_META: Record<
+  RoomSetupTab,
+  { icon: string; title: string; desc: string; tint: string }
+> = {
+  size: {
+    icon: "📐",
+    title: "ปรับขนาดห้อง",
+    desc: "ทำผังห้อง Layout ได้ตามต้องการ",
+    tint: "#C8A06E",
+  },
+  structure: {
+    icon: "🚪",
+    title: "วางโครงสร้างห้อง",
+    desc: "ประตู หน้าต่าง ม่าน แอร์ — ลากไปวางบนผัง",
+    tint: "#B4702B",
+  },
+  floor: {
+    icon: "🟫",
+    title: "เลือกวัสดุพื้น",
+    desc: "แตะเพื่อเปลี่ยน ห้องจะอัปเดตทันที",
+    tint: "#A5B58A",
+  },
+  wall: {
+    icon: "🎨",
+    title: "ทาสีผนัง",
+    desc: "เลือกสี แล้วดูผลบนผนังในผัง",
+    tint: "#E0A7C4",
+  },
+};
+
+/** label ปุ่ม CTA ของแต่ละ step (index = step ที่ 0..3) */
+export const ROOM_SETUP_CTA_LABEL = [
+  "ต่อไป: วางโครงสร้าง ›",
+  "ต่อไป: เลือกพื้น ›",
+  "ต่อไป: ทาสีผนัง ›",
+  "เสร็จแล้ว ไปเลือกของ ✓",
+] as const;

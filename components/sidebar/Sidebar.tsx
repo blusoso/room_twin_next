@@ -202,7 +202,9 @@ export default function Sidebar() {
           id="setupPanel"
           role="tabpanel"
         >
-          <RoomStructurePanel embedded />
+          {/* ⭐ ส่ง onDone → กด "เสร็จแล้ว ไปเลือกของ" ที่ step 4
+              → สลับไปแท็บ "เลือกของ" ทันที */}
+          <RoomStructurePanel embedded onDone={handleBrowseTab} />
         </div>
       )}
 
