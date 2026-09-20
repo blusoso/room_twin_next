@@ -4231,69 +4231,107 @@ mark.hl {
   }
 }
 
-/* Floor / Wall / Ceiling */
+/* ============================================================
+   Floor Swatches — สไตล์การ์ดแบบ .rsp-pc (ref file 2)
+   ============================================================ */
+
 .floor-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 7px;
+  gap: 8px;
 }
 
 .floor-swatch {
-  aspect-ratio: 1.15;
-  border-radius: 9px;
-  border: 2px solid transparent;
-  cursor: pointer;
   position: relative;
-  overflow: hidden;
+  height: 107px;              /* ⭐ เท่าความสูงการ์ด .rsp-pc */
+
+  /* ⭐ layout แนวตั้ง จัดกลางทั้ง 2 แกน */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;  /* ชื่อชิดล่าง (ทับ gradient) */
+  text-align: center;
+
+  border-radius: 16px;
+  border: 1.5px solid #d3c09b;
+  background-color: #fffdf9;
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
+
+  cursor: pointer;
+  overflow: hidden;
+
+  box-shadow: inset 0 0 0 1px rgba(42, 35, 48, 0.06);
+
   transition:
-    transform 0.12s,
-    box-shadow 0.12s,
-    border-color 0.12s;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s,
+    border-style 0.15s;
 }
 
+/* hover */
 .floor-swatch:hover {
   transform: translateY(-2px);
-}
-
-.floor-swatch.active {
+  border-style: solid;
   border-color: var(--ochre);
   box-shadow:
-    0 0 0 2px rgba(184, 117, 46, 0.18),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    inset 0 0 0 1px rgba(42, 35, 48, 0.06),
+    0 10px 22px -12px rgba(90, 60, 20, 0.45);
 }
 
+/* active */
+.floor-swatch.active {
+  border-style: solid;
+  border-color: #a5631f;
+  box-shadow:
+    inset 0 0 0 1px rgba(42, 35, 48, 0.06),
+    0 0 0 3px rgba(165, 99, 31, 0.3),
+    0 10px 22px -12px rgba(90, 60, 20, 0.45);
+}
+
+/* badge ติ๊กถูกมุมขวาบน */
 .floor-swatch.active::after {
   content: "✓";
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: var(--ochre);
-  color: #fff;
-  font-size: 10px;
+  background: #a5631f;
+  color: #fff8ee;
+  font-size: 13px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+  box-shadow: 0 2px 6px rgba(42, 35, 48, 0.25);
+  z-index: 2;
 }
 
+/* ⭐ ชื่อวัสดุ — อยู่กลาง 100% กว้าง, ชิดล่าง */
 .floor-swatch .fl-name {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
-  color: #fff;
-  font-size: 9.5px;
-  font-weight: 600;
-  padding: 8px 4px 3px;
+  position: relative;         /* ⭐ เปลี่ยนจาก absolute → flex child */
+  width: 100%;
+  margin-top: auto;
+
+  background: linear-gradient(
+    to top,
+    rgba(42, 35, 48, 0.82) 0%,
+    rgba(42, 35, 48, 0.5) 55%,
+    transparent 100%
+  );
+  color: #fffdf9;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.25;
+  padding: 18px 6px 8px;
   text-align: center;
+  z-index: 1;
 }
 
 .wall-uniform-toggle {

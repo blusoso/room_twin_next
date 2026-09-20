@@ -894,8 +894,6 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
     <div className="rsp-tab-panel active">
       {showFloor && (
         <div className="rsp-subsec">
-          <div className="rsp-subsec-title">🟫 วัสดุพื้น</div>
-
           <div className="floor-grid">
             {FLOOR_STYLES.map((st) => (
               <div
