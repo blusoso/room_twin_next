@@ -28,6 +28,119 @@ export const CATEGORIES = [
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
 
+/* ============================================================
+   ⭐ Main Categories (2 ชั้น) — ใช้กับการ์ดหมวดในแถวบน
+   ============================================================ */
+
+export interface SubCategoryDef {
+  id: string;
+  label: string;
+  /** product cats ที่จะดึงมาแสดง (union กับ ids ถ้ามีทั้งคู่) */
+  cats?: string[];
+  /** product ids เจาะจง (ใช้กับโครงสร้าง/ของที่ต้องแยกชิ้น) */
+  ids?: string[];
+  /** zone ids (ใช้กับ "ชุดโซน" เท่านั้น) */
+  zoneIds?: string[];
+}
+
+export interface MainCategoryDef {
+  id: string;
+  label: string;
+  icon: string;
+  subs?: SubCategoryDef[];
+}
+
+export const MAIN_CATEGORIES: MainCategoryDef[] = [
+  /* ── 1. ทั้งหมด ────────────────────────────── */
+  {
+    id: "all",
+    label: "ทั้งหมด",
+    icon: "▦",
+  },
+
+  /* ── 2. ชุดโซน ─────────────────────────────── */
+  {
+    id: "zone",
+    label: "ชุดโซน",
+    icon: "🏠",
+    // ⭐ ไม่มี subs — เลือกแล้วเห็นโซนทั้งหมดทันที
+  },
+
+  /* ── 3. เฟอร์นิเจอร์ ─────────────────────────── */
+  {
+    id: "furniture",
+    label: "เฟอร์นิเจอร์",
+    icon: "🛋️",
+    subs: [
+      { id: "all",     label: "ทั้งหมด" },
+      { id: "bed",     label: "เตียง",       cats: ["bed"] },
+      { id: "seating", label: "ที่นั่ง",     cats: ["seating"] },
+      { id: "table",   label: "โต๊ะ",         cats: ["table"] },
+      { id: "storage", label: "ที่เก็บของ",  cats: ["cabinet", "shelf"] },
+    ],
+  },
+
+  /* ── 4. ไฟ & เครื่องใช้ไฟฟ้า ─────────────────── */
+  {
+    id: "electric",
+    label: "ไฟ & เครื่องใช้ไฟฟ้า",
+    icon: "💡",
+    subs: [
+      { id: "all",  label: "ทั้งหมด" },
+      {
+        id: "lamp",
+        label: "โคมไฟ",
+        cats: ["lamp"],
+        ids: ["pendantlamp", "downlight"],
+      },
+      { id: "air", label: "แอร์",  cats: ["air"] },
+      { id: "fan", label: "พัดลม", ids: ["ceilingfan"] },
+      { id: "tv",  label: "จอและทีวี", ids: [] },
+    ],
+  },
+
+  /* ── 5. ตกแต่ง ───────────────────────────────── */
+  {
+    id: "decor",
+    label: "ตกแต่ง",
+    icon: "🖼️",
+    subs: [
+      { id: "all",     label: "ทั้งหมด" },
+      { id: "curtain", label: "ม่าน",           cats: ["curtain"] },
+      { id: "rug",     label: "พรม",             cats: ["rug"] },
+      { id: "art",     label: "ภาพ & ของตกแต่ง", cats: ["decor"] },
+      { id: "plant",   label: "ต้นไม้",          ids: ["plant", "hangingplant"] },
+    ],
+  },
+
+  /* ── 6. โครงสร้าง ───────────────────────────── */
+  {
+    id: "structure",
+    label: "โครงสร้าง",
+    icon: "🧱",
+    subs: [
+      { id: "all",     label: "ทั้งหมด" },
+      { id: "door",    label: "ประตู",    ids: ["door", "slidingdoor"] },
+      { id: "window",  label: "หน้าต่าง",  ids: ["window"] },
+      { id: "wall",    label: "ผนัง",      ids: ["column", "partition"] },
+      { id: "ceiling", label: "เพดาน",    cats: ["ceiling"] },
+    ],
+  },
+];
+
+/* ⭐ helper: ดึงสินค้าตาม sub */
+export function productsForSub(sub: SubCategoryDef): string[] {
+  const set = new Set<string>();
+  sub.cats?.forEach((c) => {
+    PRODUCTS_LIST.filter((p) => p.cat === c).forEach((p) => set.add(p.id));
+  });
+  sub.ids?.forEach((id) => set.add(id));
+  return Array.from(set);
+}
+
+/* ⭐ ต้อง import PRODUCTS เข้ามาเพื่อใช้ใน helper — หรือย้าย helper ไปไว้ที่อื่น */
+import { PRODUCTS as PRODUCTS_LIST } from "./products";
+
 /* ⭐ หมวดที่จะไม่โชว์เป็น section ในแท็บ "ทั้งหมด"
    (เพราะถูกจัดการแยกไปแล้ว เช่น zone มี ZONES ของตัวเอง) */
 export const HIDDEN_IN_ALL_TAB: CategoryId[] = ["zone", "ceiling"];

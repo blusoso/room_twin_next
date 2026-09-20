@@ -8,6 +8,7 @@
 //    ทุก token ต้อง match อย่างน้อย 1 ฟิลด์ (AND) — กันคำค้นหลายคำได้ผลลัพธ์มั่ว
 import { CATEGORIES } from "./constants";
 import { PRODUCTS, type ProductDef } from "./products";
+import type { SubCategoryDef } from "./constants";
 import { ZONES, type ZoneDef } from "./zones";
 import { THEME_BY_ID, ZONE_THEMES, themeDisplayName } from "./themes";
 import { priceStr } from "@/lib/utils/format";
@@ -410,4 +411,13 @@ function compare(
     a.c.order - b.c.order ||
     a.c.themeOrder - b.c.themeOrder
   );
+}
+
+export function productsForSub(sub: SubCategoryDef): string[] {
+  const set = new Set<string>();
+  sub.cats?.forEach((c) => {
+    PRODUCTS.filter((p) => p.cat === c).forEach((p) => set.add(p.id));
+  });
+  sub.ids?.forEach((id) => set.add(id));
+  return Array.from(set);
 }
