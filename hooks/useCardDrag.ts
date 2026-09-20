@@ -100,6 +100,11 @@ export function useCardDrag({
         document.body.classList.add("rt-dragging");
         callbacks?.onDragStart?.();
 
+        // ⭐ เพิ่ม class is-dragging ให้การ์ดต้นทาง
+        if (state.cardEl) {
+          state.cardEl.classList.add("is-dragging");
+        }
+
         state.ghostEl = makeGhost(state);
         document.body.style.userSelect = "none";
 
@@ -158,7 +163,12 @@ export function useCardDrag({
           .getElementById("viewportWrap")
           ?.classList.remove("drag-over");
         state.ghostEl?.remove();
-        if (state.cardEl) state.cardEl.classList.remove("is-dragging");
+
+        // ⭐ ลบ class is-dragging เสมอ (ทั้ง drop, cancel, tap)
+        if (state.cardEl) {
+          state.cardEl.classList.remove("is-dragging");
+        }
+
         callbacks?.onDragEnd?.();
       };
 
@@ -268,7 +278,6 @@ function highlightCard(cardEl: HTMLElement) {
 
 /* ============================================================
    ⭐ makeGhost — dispatch ตาม kind
-   ทุก kind ใช้ ghost สไตล์เดียวกัน (.gh) แค่ต่างที่ badge
    ============================================================ */
 
 function makeGhost(state: DragState): HTMLElement {
@@ -278,9 +287,6 @@ function makeGhost(state: DragState): HTMLElement {
 
 /* ============================================================
    ⭐ Ghost ของ Product / Themed
-   - tile สีเดียวกับ swatch
-   - emoji เดียว (จาก data-emojis)
-   - badge: "N ขนาด" (ถ้ามี) — ตรงกับที่เห็นบนการ์ด
    ============================================================ */
 
 function makeProductGhost(state: DragState): HTMLElement {
@@ -293,23 +299,19 @@ function makeProductGhost(state: DragState): HTMLElement {
   const dataCount = card?.dataset?.count;
   const dataTile = card?.dataset?.tile;
 
-  // ── หา product def + theme (สำหรับ fallback) ──
   const product = PRODUCT_BY_ID.get(state.id);
   const theme = state.themeId ? THEME_BY_ID.get(state.themeId) : null;
 
-  // ── emoji: data ก่อน → fallback เป็น "📦" ──
   const fallbackEmoji = "📦";
   const emojis = (dataEmojis && dataEmojis.length ? dataEmojis : fallbackEmoji)
     .split("|")
     .filter(Boolean);
 
-  // ── tile color: data ก่อน → fallback จาก product/theme ──
   const fallbackColor = state.themeId
     ? themedSwatchColor(state.id, state.themeId)
     : product?.color ?? 0xcccccc;
   const tile = dataTile || hexOf(fallbackColor);
 
-  // ── badge: "N ขนาด" ถ้ามี; themed → "ธีม: ชื่อธีม" (optional) ──
   let badgeText = "";
   if (dataCount) {
     badgeText = `${dataCount} ขนาด`;
@@ -317,7 +319,6 @@ function makeProductGhost(state: DragState): HTMLElement {
     badgeText = theme.name;
   }
 
-  // ── ประกอบ DOM ──
   const gh = document.createElement("div");
   gh.className = "gh";
   gh.style.setProperty("--gh-tile", tile);
@@ -335,7 +336,6 @@ function makeProductGhost(state: DragState): HTMLElement {
 
   wrap.appendChild(gh);
 
-  // title สำหรับ debug/a11y
   const name =
     (state.themeId && themeDisplayName(state.id, state.themeId)) ||
     product?.name ||
@@ -347,7 +347,7 @@ function makeProductGhost(state: DragState): HTMLElement {
 }
 
 /* ============================================================
-   ⭐ Ghost ของ Zone (เดิม)
+   ⭐ Ghost ของ Zone
    ============================================================ */
 
 function makeZoneGhost(state: DragState): HTMLElement {

@@ -154,9 +154,7 @@ export default function BuildPanel() {
             {hits.length > 0 && (
               <section className="catalog-block">
                 <div className="catalog-section-head">
-                  <span className="csh-title">
-                    🛋️ สินค้า ({hits.length})
-                  </span>
+                  <span className="csh-title">🛋️ สินค้า ({hits.length})</span>
                 </div>
                 <HScroll>
                   {hits.map((h) => (
@@ -170,9 +168,7 @@ export default function BuildPanel() {
                       onSwapClick={() => handleSwapSelect(h.product.id)}
                       catBadge={categoryLabel(h.product.cat)}
                       themeName={
-                        h.themeId
-                          ? THEME_BY_ID.get(h.themeId)?.name
-                          : undefined
+                        h.themeId ? THEME_BY_ID.get(h.themeId)?.name : undefined
                       }
                       query={catalogQuery}
                     />
@@ -452,11 +448,7 @@ function AllGrid({
     return (
       <>
         <div className="catalog-section-head expanded">
-          <button
-            type="button"
-            className="catalog-back"
-            onClick={handleBack}
-          >
+          <button type="button" className="catalog-back" onClick={handleBack}>
             ‹ ย้อนกลับ
           </button>
           <span className="csh-title">
@@ -522,9 +514,7 @@ function AllGrid({
           <div className="catalog-section-head">
             <span className="csh-title">
               {g.cat.label}{" "}
-              <span className="catalog-section-count">
-                {g.products.length}
-              </span>
+              <span className="catalog-section-count">{g.products.length}</span>
             </span>
             <button
               type="button"
@@ -545,6 +535,7 @@ function AllGrid({
                 isSwapping={isSwapping}
                 isCurrent={currentItem?.productId === p.id}
                 onSwapClick={() => onSwapSelect(p.id)}
+                externalUrl={p.externalUrl} // ⭐ ดึงจาก ProductDef
               />
             ))}
           </HScroll>

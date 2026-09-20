@@ -7774,6 +7774,7 @@ mark.hl {
   backdrop-filter: blur(6px);
 }
 
+
 .item-card.zone-card.card-b .cb {
   padding: 9px 4px 0;
   min-width: 0;            /* ⭐ มีอยู่แล้ว — คงไว้ */
@@ -8103,6 +8104,159 @@ mark.hl {
   color: var(--ink-soft);
   margin-right: 2px;
   letter-spacing: 0;
+}
+
+/* ============================================================
+   ⭐ ProductCard — ปุ่มลิงก์ภายนอก (มุมล่างขวา)
+   ============================================================ */
+
+/* ============================================================
+   ⭐ ProductCard — ปุ่มลิงก์ภายนอก (มุมล่างขวา)
+   — hover แล้วโชว์ tooltip "ไปที่ร้านค้า" สไตล์ Pill
+   ============================================================ */
+
+.item-card.product-card.card-b .card-link {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--panel);
+  color: var(--ink-soft);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 2;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.14s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.15s;
+}
+
+.item-card.product-card.card-b .card-link:hover {
+  background: var(--ink);
+  color: #fff;
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(42, 35, 48, 0.28);
+}
+
+.item-card.product-card.card-b .card-link:active {
+  transform: scale(0.94);
+}
+
+.item-card.product-card.card-b .card-link:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+.item-card.product-card.card-b .card-link svg {
+  display: block;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.item-card.product-card.card-b .card-link:hover svg {
+  transform: translate(1.5px, -1.5px);
+}
+
+/* ============================================================
+   ⭐ Tooltip — สไตล์เดียวกับ .pill (ขอบมน ขาว ขอบ line)
+   ============================================================ */
+
+.item-card.product-card.card-b .card-link-tip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 12px;
+
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.1px;
+
+  box-shadow: 0 6px 16px -4px rgba(42, 35, 48, 0.18);
+
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  z-index: 10;
+}
+
+/* ⭐ ลูกศรชี้ลง — เป็น diamond หมุน 45° พร้อมขอบ */
+.item-card.product-card.card-b .card-link-tip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 11px;
+  width: 8px;
+  height: 8px;
+  margin-top: -5px;
+  background: #fff;
+  border-right: 1px solid var(--panel-line);
+  border-bottom: 1px solid var(--panel-line);
+  transform: rotate(45deg);
+}
+
+/* ⭐ โผล่ตอน hover / focus-visible */
+.item-card.product-card.card-b .card-link:hover .card-link-tip,
+.item-card.product-card.card-b .card-link:focus-visible .card-link-tip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ⭐ sub-icon (dimension) — ของเดิม */
+.item-card.product-card.card-b .sub .sub-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #a39a89;
+  margin-right: 3px;
+  vertical-align: -1px;
+}
+
+/* ===== มือถือ ===== */
+@media (max-width: 820px) {
+  .item-card.product-card.card-b .card-link {
+    width: 28px;
+    height: 28px;
+  }
+
+  .item-card.product-card.card-b .card-link svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .item-card.product-card.card-b .card-link-tip {
+    height: 26px;
+    padding: 0 10px;
+    font-size: 11.5px;
+  }
+}
+
+/* ⭐ sub-icon (dimension) — จัด spacing ในบรรทัด sub */
+.item-card.product-card.card-b .sub .sub-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #a39a89;
+  margin-right: 3px;
+  vertical-align: -1px;
 }
 
 /* ===== ปุ่ม + (เฉพาะ zone — product ไม่มี) ===== */

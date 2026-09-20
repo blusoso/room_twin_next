@@ -26,6 +26,7 @@ export interface ProductDef {
   /** ⭐ แขวนกับพื้นผิวของไอเทมอื่นได้ */
   attachToSurface?: boolean;
   extraDefaults?: Record<string, any>;
+  externalUrl?: string;
 }
 
 export const PRODUCTS: ProductDef[] = [
@@ -68,7 +69,13 @@ export const PRODUCTS: ProductDef[] = [
     id: "slidingdoor",
     name: "ประตูระเบียงบานเลื่อน",
     cat: "structure",
-    tags: ["ประตูเลื่อน", "ประตูบานเลื่อน", "ประตูระเบียง", "ประตู", "sliding door"],
+    tags: [
+      "ประตูเลื่อน",
+      "ประตูบานเลื่อน",
+      "ประตูระเบียง",
+      "ประตู",
+      "sliding door",
+    ],
     dims: { w: 180, d: 8, h: 210 },
     price: 15900,
     color: 0xb9a88f,
@@ -131,9 +138,22 @@ export const PRODUCTS: ProductDef[] = [
     name: "เตียงนอน",
     cat: "bed",
     tags: [
-      "เตียง", "เตียงนอน", "ที่นอน", "bed", "นอน", "ห้องนอน",
-      "เตียงเดี่ยว", "3 ฟุต", "3.5 ฟุต", "5 ฟุต", "6 ฟุต",
-      "ควีน", "คิง", "single", "queen", "king",
+      "เตียง",
+      "เตียงนอน",
+      "ที่นอน",
+      "bed",
+      "นอน",
+      "ห้องนอน",
+      "เตียงเดี่ยว",
+      "3 ฟุต",
+      "3.5 ฟุต",
+      "5 ฟุต",
+      "6 ฟุต",
+      "ควีน",
+      "คิง",
+      "single",
+      "queen",
+      "king",
     ],
     dims: { w: 150, d: 200, h: 95 },
     price: 8990,
@@ -256,7 +276,14 @@ export const PRODUCTS: ProductDef[] = [
     id: "wardrobe",
     name: "ตู้เสื้อผ้าบานเลื่อน",
     cat: "cabinet",
-    tags: ["ตู้เสื้อผ้า", "ตู้", "wardrobe", "เสื้อผ้า", "บานเลื่อน", "เก็บของ"],
+    tags: [
+      "ตู้เสื้อผ้า",
+      "ตู้",
+      "wardrobe",
+      "เสื้อผ้า",
+      "บานเลื่อน",
+      "เก็บของ",
+    ],
     dims: { w: 150, d: 60, h: 200 },
     price: 12900,
     color: 0xb9a88f,
@@ -272,7 +299,14 @@ export const PRODUCTS: ProductDef[] = [
     id: "bookshelf",
     name: "ชั้นวางหนังสือ 4 ชั้น",
     cat: "shelf",
-    tags: ["ชั้นวางหนังสือ", "ชั้น", "หนังสือ", "bookshelf", "shelf", "จัดเก็บ"],
+    tags: [
+      "ชั้นวางหนังสือ",
+      "ชั้น",
+      "หนังสือ",
+      "bookshelf",
+      "shelf",
+      "จัดเก็บ",
+    ],
     dims: { w: 80, d: 30, h: 180 },
     price: 3290,
     color: 0x8a6a4f,
@@ -288,7 +322,15 @@ export const PRODUCTS: ProductDef[] = [
     id: "floorlamp",
     name: "โคมไฟตั้งพื้นทรงกลม",
     cat: "lamp",
-    tags: ["โคมไฟ", "โคมไฟตั้งพื้น", "โคม", "lamp", "floor lamp", "ไฟ", "แสงสว่าง"],
+    tags: [
+      "โคมไฟ",
+      "โคมไฟตั้งพื้น",
+      "โคม",
+      "lamp",
+      "floor lamp",
+      "ไฟ",
+      "แสงสว่าง",
+    ],
     dims: { w: 35, d: 35, h: 150 },
     price: 1590,
     color: 0xc9a15a,
@@ -299,7 +341,15 @@ export const PRODUCTS: ProductDef[] = [
     id: "tablelamp",
     name: "โคมไฟตั้งโต๊ะเซรามิก",
     cat: "lamp",
-    tags: ["โคมไฟ", "โคมไฟตั้งโต๊ะ", "โคม", "lamp", "table lamp", "ไฟ", "แสงสว่าง"],
+    tags: [
+      "โคมไฟ",
+      "โคมไฟตั้งโต๊ะ",
+      "โคม",
+      "lamp",
+      "table lamp",
+      "ไฟ",
+      "แสงสว่าง",
+    ],
     dims: { w: 20, d: 20, h: 40 },
     price: 890,
     color: 0xe8dcc4,
@@ -371,7 +421,14 @@ export const PRODUCTS: ProductDef[] = [
     id: "ac",
     name: "แอร์ติดผนัง",
     cat: "air",
-    tags: ["แอร์", "เครื่องปรับอากาศ", "air conditioner", "ac", "ติดผนัง", "เย็น"],
+    tags: [
+      "แอร์",
+      "เครื่องปรับอากาศ",
+      "air conditioner",
+      "ac",
+      "ติดผนัง",
+      "เย็น",
+    ],
     dims: { w: 80, d: 22, h: 30 },
     price: 12900,
     color: 0xe8e8e8,
@@ -450,7 +507,14 @@ export const PRODUCTS: ProductDef[] = [
     id: "hangingplant",
     name: "กระถางไม้แขวนเพดาน",
     cat: "ceiling",
-    tags: ["กระถางแขวน", "ไม้แขวน", "hanging plant", "ต้นไม้", "เพดาน", "ตกแต่ง"],
+    tags: [
+      "กระถางแขวน",
+      "ไม้แขวน",
+      "hanging plant",
+      "ต้นไม้",
+      "เพดาน",
+      "ตกแต่ง",
+    ],
     dims: { w: 28, d: 28, h: 48 },
     price: 790,
     color: 0x8a6a4f,
@@ -463,11 +527,7 @@ export const PRODUCTS: ProductDef[] = [
 export const PRODUCT_BY_ID = new Map(PRODUCTS.map((p) => [p.id, p]));
 
 /** ⭐ หมวดที่ห้ามจัดเข้าโซนอัตโนมัติ (โครงสร้าง + ม่าน + แอร์) */
-export const AUTO_ZONE_EXCLUDED_CATS = new Set([
-  "structure",
-  "curtain",
-  "air",
-]);
+export const AUTO_ZONE_EXCLUDED_CATS = new Set(["structure", "curtain", "air"]);
 
 /**
  * ⭐ ไอเทมกลุ่มโครงสร้าง / ม่าน / แอร์ ต้องไม่ถูกจัดเข้าโซนอัตโนมัติเมื่อวางบนพื้น

@@ -3,7 +3,8 @@
 import type { ProductDef } from "@/lib/data/types";
 import { sizePresetGroup } from "@/lib/data/sizePresets";
 import { themeDisplayName, themedSwatchColor } from "@/lib/data/themes";
-import { hexOf, priceStr } from "@/lib/utils/format";
+import { hexOf, priceStr, affiliateUrl } from "@/lib/utils/format";
+import { trackAffiliateClick } from "@/lib/state/storage";
 import HighlightedText from "./HighlightedText";
 
 interface Props {
@@ -19,16 +20,11 @@ interface Props {
   isSwapping: boolean;
   isCurrent: boolean;
   onSwapClick?: () => void;
-  // ⭐ ใช้เฉพาะตอนแสดงผลการค้นหา (ข้ามหมวด/ข้ามธีม)
   catBadge?: string;
   themeName?: string;
   query?: string;
 }
 
-/**
- * ⭐ แมพ emoji ตาม category
- *    ใช้เป็น "ไอคอน" บน tile แทนสีทึบ monotone
- */
 const CAT_EMOJI: Record<string, string> = {
   structure: "🧱",
   bed: "🛏️",
@@ -67,13 +63,9 @@ export default function ProductCard({
       ? themedSwatchColor(product.id, themeId)
       : product.color;
 
-  // ⭐ สินค้านี้มีขนาดสำเร็จรูปให้เลือก (📐 บน toolbar / chip ในแผงปรับแต่ง) ไหม
   const presetCount = sizePresetGroup(product.id)?.presets.length || 0;
-
-  // ⭐ emoji ของการ์ด — ใช้จาก cat
   const emoji = CAT_EMOJI[product.cat] || "📦";
 
-  // ⭐ sub-list: ขนาด + badge ต่าง ๆ (ค้นหา / ธีม)
   const subParts: string[] = [
     `${product.dims.w}×${product.dims.d}×${product.dims.h} ซม.`,
   ];
@@ -94,6 +86,24 @@ export default function ProductCard({
 
   const handleClick = () => {
     if (isSwapping && onSwapClick) onSwapClick();
+  };
+
+  const handleOpenStore = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    trackAffiliateClick();
+    const url = affiliateUrl(product);
+    const win = window.open(url, "_blank", "noopener");
+    if (!win) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
   };
 
   return (
@@ -144,12 +154,63 @@ export default function ProductCard({
           {isCurrent && isSwapping && " ✓"}
         </h3>
 
-        {subText && <p className="sub">{subText}</p>}
+        {subText && (
+          <p className="sub">
+            <span className="sub-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 12 12"
+                width="8"
+                height="8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="2.5" y="2.5" width="7" height="7" rx="1.5" />
+                <path d="M1 3 L1 1 L3 1" />
+                <path d="M9 1 L11 1 L11 3" />
+                <path d="M11 9 L11 11 L9 11" />
+                <path d="M3 11 L1 11 L1 9" />
+              </svg>
+            </span>
+            {subText}
+          </p>
+        )}
 
         <div className="row">
           <span className="price">{priceStr(product.price)}</span>
         </div>
       </div>
+
+      {/* ⭐ ปุ่มลิงก์ + tooltip "ไปที่ร้านค้า" (โผล่ข้างล่างตอน hover) */}
+      <button
+        type="button"
+        className="card-link"
+        aria-label={`เปิดดู ${displayName} ที่ร้านค้า`}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={handleOpenStore}
+      >
+        <svg
+          viewBox="0 0 16 16"
+          width="15"
+          height="15"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M5 11 L11 5" />
+          <path d="M6 5 H11 V10" />
+        </svg>
+
+        {/* ⭐ tooltip — span นี้ต้องมี ไม่งั้น CSS ไม่ทำงาน */}
+        <span className="card-link-tip" aria-hidden="true">
+          ไปที่ร้านค้า
+        </span>
+      </button>
     </article>
   );
 }
