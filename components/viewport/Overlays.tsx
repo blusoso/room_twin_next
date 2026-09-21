@@ -15,8 +15,23 @@ import {
   LIGHTING_MODE_TITLES,
   type LightingMode,
 } from "@/lib/data/lighting";
-import { objectsByUid, camera, renderer } from "@/lib/three/scene";
+import { objectsByUid, camera, renderer, roomGroup } from "@/lib/three/scene";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
+import { useSaveState } from "@/hooks/useSaveState";
+import { openConfirm, openSaveShareDialog } from "@/components/modals";
+
+/* ⭐ Theme — persist + sync <html data-theme> */
+const THEME_KEY = "roomtwin_theme";
+type Theme = "light" | "dark";
+
+function readInitialTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === "light" || stored === "dark") return stored;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
 
 export default function Overlays() {
   const placingProductId = useRoomTwin((s) => s.placingProductId);
@@ -32,6 +47,55 @@ export default function Overlays() {
   const setLightingMode = useRoomTwin((s) => s.setLightingMode);
   const lampsOn = useRoomTwin((s) => s.lampsOn);
   const toggleLamps = useRoomTwin((s) => s.toggleLamps);
+
+  /* ⭐ Toolbar (ย้ายมาจาก Header) */
+  const history = useRoomTwin((s) => s.history);
+  const historyIndex = useRoomTwin((s) => s.historyIndex);
+  const { saveState } = useSaveState();
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  /* ⭐ Theme — state + sync ตอน mount + sync 3D lighting */
+  const [theme, setTheme] = useState<Theme>("light");
+
+  useEffect(() => {
+    const initial = readInitialTheme();
+    setTheme(initial);
+    document.documentElement.dataset.theme = initial;
+
+    /* ⭐ sync 3D lighting ตาม theme ตอนบูต
+     - dark → night
+     - light → day
+     (เฉพาะกรณีที่ lightingMode เป็นค่า default "day" อยู่
+      เพื่อไม่ให้ทับ pref ที่ user ตั้งไว้เอง) */
+    const s = useRoomTwin.getState();
+    const wantNight = initial === "dark";
+    if (wantNight && s.lightingMode === "day") {
+      setLightingMode("night");
+      saveLightingPref({ mode: "night", lampsOn: s.lampsOn });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleTheme = () => {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {}
+
+    /* ⭐ sync 3D lighting ตาม theme
+     - เข้า dark → ตั้ง lightingMode = "night" (3D จะเป็นกลางคืน มืดๆ อบอุ่น)
+     - ออก dark → ตั้ง lightingMode = "day"   (3D จะเป็นกลางวัน สว่าง) */
+    const nextLighting: LightingMode = next === "dark" ? "night" : "day";
+    setLightingMode(nextLighting);
+
+    // ⭐ persist lighting pref ให้สอดคล้องกัน
+    const s = useRoomTwin.getState();
+    saveLightingPref({ mode: nextLighting, lampsOn: s.lampsOn });
+  };
 
   const [wallStatus, setWallStatus] = useState("");
   const [toast, setToast] = useState<{ msg: string; show: boolean }>({
@@ -58,21 +122,18 @@ export default function Overlays() {
 
   const showHint = !!placingProductId || !!placingZoneId;
 
-  // ⭐ สลับโหมด "ผนังรอบด้าน" + persist view preference
   const handleToggleAllWalls = () => {
     const next = !showAllWalls;
     toggleAllWalls();
     saveShowAllWallsPref(next);
   };
 
-  // ⭐ สลับโหมด "วัดขนาด" + persist view preference
   const handleToggleMeasure = () => {
     const next = !showMeasure;
     toggleMeasure();
     saveMeasurePref(next);
   };
 
-  // ⭐ โหมดแสง (วัน/เย็น/คืน) + สวิตช์ไฟโคม — persist แยก key
   const persistLighting = () => {
     const s = useRoomTwin.getState();
     saveLightingPref({ mode: s.lightingMode, lampsOn: s.lampsOn });
@@ -88,6 +149,104 @@ export default function Overlays() {
     persistLighting();
   };
 
+  /* ⭐ Handlers — ย้ายมาจาก Header */
+
+  const handleUndo = () => {
+    const store = useRoomTwin.getState();
+    const snapshot = store.undo();
+    if (snapshot) {
+      window.dispatchEvent(
+        new CustomEvent("roomtwin:restore", { detail: snapshot }),
+      );
+    }
+  };
+
+  const handleRedo = () => {
+    const store = useRoomTwin.getState();
+    const snapshot = store.redo();
+    if (snapshot) {
+      window.dispatchEvent(
+        new CustomEvent("roomtwin:restore", { detail: snapshot }),
+      );
+    }
+  };
+
+  const handleReset = () => {
+    openConfirm(
+      "ลบเฟอร์นิเจอร์และของแต่งทั้งหมดออก? " +
+        "(ขนาดห้อง สี และประตู/หน้าต่างจะคงอยู่)",
+      async () => {
+        const store = useRoomTwin.getState();
+
+        const openings: typeof store.placedItems = [];
+        const toRemove: typeof store.placedItems = [];
+
+        store.placedItems.forEach((item) => {
+          if (item.productId === "door" || item.productId === "window") {
+            openings.push(item);
+          } else {
+            toRemove.push(item);
+          }
+        });
+
+        toRemove.forEach((item) => {
+          const obj = objectsByUid.get(item.uid);
+          if (obj) {
+            roomGroup.remove(obj);
+            obj.traverse((child: any) => {
+              child.geometry?.dispose?.();
+              if (child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach((m: any) => m?.dispose?.());
+                } else {
+                  child.material.dispose?.();
+                }
+              }
+            });
+          }
+          objectsByUid.delete(item.uid);
+        });
+
+        const keptRoom = store.room;
+        const keptSurface = store.surface;
+
+        store.resetAll();
+
+        useRoomTwin.setState({
+          room: keptRoom,
+          surface: keptSurface,
+          placedItems: openings,
+        });
+
+        await new Promise((r) => setTimeout(r, 0));
+
+        const {
+          rebuildRoomShell,
+          applySurface: apply,
+          rebuildBaseboards,
+        } = await import("@/lib/three/roomShell");
+        rebuildRoomShell();
+        apply();
+
+        const { instantiate } = await import("@/lib/three/instantiate");
+        const { objectsByUid: objMap } = await import("@/lib/three/scene");
+
+        openings.forEach((item) => {
+          if (!objMap.has(item.uid)) {
+            instantiate(item);
+          }
+        });
+
+        rebuildBaseboards();
+        saveState();
+      },
+    );
+  };
+
+  const handleSave = () => {
+    openSaveShareDialog();
+  };
+
   let hintText = "";
   if (placingZoneId) hintText = "แตะจุดบนพื้นเพื่อวางโซนนี้";
   else if (placingProductId) {
@@ -96,13 +255,79 @@ export default function Overlays() {
       hintText = p.attachToSurface
         ? "แตะบนผนัง/เสา/ฉากกั้น/ประตู/หน้าต่างเพื่อแขวนไอเทมนี้"
         : "แตะบนผนังเพื่อติดไอเทมนี้";
-    } else if (p?.ceilingMount)
-      hintText = "แตะจุดบนเพดานเพื่อแขวนไอเทมนี้";
+    } else if (p?.ceilingMount) hintText = "แตะจุดบนเพดานเพื่อแขวนไอเทมนี้";
     else hintText = "แตะจุดในห้องเพื่อวางไอเทมนี้";
   }
 
   return (
     <>
+      {/* ═══════════════════════════════════════════════════════
+    ⭐ Viewport Toolbar
+    - ซ้ายบน: undo / redo / reset
+    - ขวาบน: theme / save
+    ═══════════════════════════════════════════════════════ */}
+
+      <div className="viewport-toolbar viewport-toolbar-left">
+        <button
+          type="button"
+          className="vpt-btn vpt-btn-reset"
+          onClick={handleReset}
+          title="ลบเฟอร์นิเจอร์และของแต่งทั้งหมดออก"
+        >
+          🔄 <span className="vpt-btn-label">รีเซ็ต</span>
+        </button>
+        <button
+          type="button"
+          className="vpt-btn"
+          title="ย้อนกลับ (Ctrl+Z)"
+          disabled={!canUndo}
+          onClick={handleUndo}
+          aria-label="ย้อนกลับ"
+        >
+          ↩
+        </button>
+        <button
+          type="button"
+          className="vpt-btn"
+          title="ทำซ้ำ (Ctrl+Shift+Z)"
+          disabled={!canRedo}
+          onClick={handleRedo}
+          aria-label="ทำซ้ำ"
+        >
+          ↪
+        </button>
+        
+      </div>
+
+      <div className="viewport-toolbar viewport-toolbar-right">
+        {/* ⭐ ปุ่ม toggle dark mode */}
+        <button
+          type="button"
+          className="vpt-btn vpt-btn-theme"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด"}
+          aria-label={
+            theme === "dark" ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด"
+          }
+          aria-pressed={theme === "dark"}
+        >
+          🌓
+        </button>
+
+        {/* ⭐ ปุ่ม save */}
+        <button
+          type="button"
+          className="vpt-btn vpt-btn-save"
+          onClick={handleSave}
+          title="บันทึก / แชร์ลิงก์"
+        >
+          💾 <span className="vpt-btn-label">บันทึก</span>
+        </button>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════
+          🕐 ของเดิม — comment ไว้ทั้งหมด รอ redesign ทีหลัง
+          ═══════════════════════════════════════════════════════
       {showHint && (
         <div className="floating-hint show" id="placeHint">
           {hintText}
@@ -164,7 +389,6 @@ export default function Overlays() {
         📏 วัดขนาด
       </button>
 
-      {/* ⭐ โหมดแสงในฉาก + สวิตช์ไฟโคม — อยู่ใต้ปุ่มวัดขนาด */}
       <div className="lighting-control" id="lightingControl">
         {LIGHTING_MODES.map((m) => (
           <button
@@ -220,13 +444,13 @@ export default function Overlays() {
           ⚠️ {toast.msg}
         </div>
       )}
-      {/* ⭐ ลบ scaleBadge ออก */}
+      */}
     </>
   );
 }
 
 // ============================================================
-// LockBadges — centered on object
+// LockBadges — คงไว้เหมือนเดิม
 // ============================================================
 
 function LockBadges() {
@@ -253,7 +477,6 @@ function LockBadges() {
         const obj = objectsByUid.get(item.uid);
         if (!obj || obj.visible === false) return;
 
-        // Skip if hidden by parent (e.g., faded wall)
         let p: THREE.Object3D | null = obj.parent;
         let hidden = false;
         while (p) {
@@ -279,18 +502,15 @@ function LockBadges() {
 
         seen.add(item.uid);
 
-        // ⭐ Center of bounding box
         box.getCenter(center);
         ndc.copy(center).project(camera);
 
-        // ⭐ Hide object behind/off the frustum edge
         if (Math.abs(ndc.x) > 1 || ndc.y > 1 || ndc.z > 1) {
           const el = els.get(item.uid);
           if (el) el.style.display = "none";
           return;
         }
 
-        // ⭐ Clamp — badge (30px) อยู่ภายใน viewport เสมอ ไม่ล้นไปทับ sidebar/ขอบจอ
         const MARGIN = 18;
         const sx = Math.min(
           rect.width - MARGIN,

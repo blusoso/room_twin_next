@@ -26,6 +26,22 @@ import {
 import { useAnimationLoop } from "@/hooks/useAnimationLoop";
 import { useRoomTwin } from "@/lib/state/store";
 import { initLighting, disposeLighting } from "@/lib/three/lighting";
+import { saveLightingPref } from "@/lib/state/storage";
+import type { LightingMode } from "@/lib/data/lighting";
+
+/**
+ * ⭐ อ่าน theme ปัจจุบันจาก <html data-theme="...">
+ * - ถ้ามี data-theme → ใช้ค่านั้น (user เลือกเอง)
+ * - ถ้าไม่มี        → ตาม system preference
+ */
+function readThemeFromDom(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  const t = document.documentElement.dataset.theme;
+  if (t === "light" || t === "dark") return t;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
 
 export default function Canvas3D() {
   const holderRef = useRef<HTMLDivElement>(null);
@@ -52,7 +68,6 @@ export default function Canvas3D() {
     }
     initScene(holderRef.current);
     initRoomShell();
-    // ⭐ ระบบแสง (IBL + โหมดแสง) — ต้องหลัง initScene/initRoomShell
     initLighting();
     setSceneReady(true);
 
@@ -67,12 +82,75 @@ export default function Canvas3D() {
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
-      // ⭐ คืน env map / ไฟของโคม ก่อน dispose scene
       disposeLighting();
       disposeScene();
       setSceneReady(false);
     };
   }, []);
+
+  // ============================================================
+  // ⭐ 1.5 Theme → 3D lighting sync (single source of truth)
+  //   - เฝ้า <html data-theme="dark|light"> ด้วย MutationObserver
+  //   - dark  → lightingMode = "night"  (แสงมืด + เปิดไฟโคม)
+  //   - light → lightingMode = "day"    (แสงสว่าง)
+  //   - sync ครั้งแรกตอน mount ด้วย (รองรับ restore จาก localStorage
+  //     + system preference + FOUC script)
+  // ============================================================
+  useEffect(() => {
+    if (!sceneReady) return;
+
+    const applyThemeToLighting = (fromTheme?: "light" | "dark") => {
+      const t = fromTheme ?? readThemeFromDom();
+      const target: LightingMode = t === "dark" ? "night" : "day";
+
+      const s = useRoomTwin.getState();
+      if (s.lightingMode !== target) {
+        // ⭐ setLightingMode("night") จะเปิด lampsOn ให้อัตโนมัติ (ตาม store logic)
+        s.setLightingMode(target);
+
+        // persist lighting pref ให้ตรงกับ theme ใหม่
+        const after = useRoomTwin.getState();
+        saveLightingPref({ mode: after.lightingMode, lampsOn: after.lampsOn });
+      }
+    };
+
+    // ─── sync ครั้งแรก ───
+    applyThemeToLighting();
+
+    // ─── เฝ้า attribute changes ───
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === "attributes" && m.attributeName === "data-theme") {
+          const t = document.documentElement.dataset.theme as
+            | "light"
+            | "dark"
+            | undefined;
+          if (t === "light" || t === "dark") {
+            applyThemeToLighting(t);
+          }
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    // ─── เฝ้า system preference ตอน user ยังไม่ได้เลือก theme ───
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const onSystemChange = () => {
+      if (!document.documentElement.dataset.theme) {
+        applyThemeToLighting();
+      }
+    };
+    mql.addEventListener("change", onSystemChange);
+
+    return () => {
+      observer.disconnect();
+      mql.removeEventListener("change", onSystemChange);
+    };
+  }, [sceneReady]);
 
   // ===== 2. Rebuild + Capture/Restore openings =====
   useEffect(() => {
@@ -81,7 +159,6 @@ export default function Canvas3D() {
     const prev = prevRoomRef.current;
     const curr = { w: room.w, d: room.d, h: room.h, shape: room.shape };
 
-    // ตรวจว่ามีการเปลี่ยนหรือไม่
     let capture = false;
     if (prev) {
       const sizeChanged =
@@ -92,20 +169,17 @@ export default function Canvas3D() {
       if (sizeChanged || shapeChanged) capture = true;
     }
 
-    // ⭐ Capture snapshot ก่อน
     let snapshots: ReturnType<typeof captureOpeningsRelative> = [];
     if (capture) {
       snapshots = captureOpeningsRelative();
     }
 
-    // ⭐ Rebuild shell
     console.log(
       "[Canvas3D] Effect 2: rebuild shell",
       prev ? "(changed)" : "(init)",
     );
     rebuildRoomShell();
 
-    // ⭐ Restore openings หลัง rebuild
     if (snapshots.length > 0) {
       restoreOpeningsRelative(snapshots);
     }
@@ -118,7 +192,6 @@ export default function Canvas3D() {
     room.d,
     room.h,
     room.blocks?.size,
-    // ⭐ Detect cellLevels change by size + JSON-stringified check
     Object.keys(room.cellLevels || {}).length,
     JSON.stringify(room.cellLevels),
   ]);
@@ -143,7 +216,6 @@ export default function Canvas3D() {
     room.d,
     room.h,
     room.blocks?.size,
-    // ⭐ Detect cellLevels change by size + JSON-stringified check
     Object.keys(room.cellLevels || {}).length,
     JSON.stringify(room.cellLevels),
   ]);
