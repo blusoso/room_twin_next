@@ -9,6 +9,7 @@ import {
   JetBrains_Mono,
 } from "next/font/google";
 import "./globals.css";
+import "./roomtwin.css";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
