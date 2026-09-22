@@ -27,7 +27,7 @@ import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
-import { FloatingToolbarBtn } from "./FloatingToolbarBtn";
+import { FloatingToolbarBtn } from "@/components/ui";
 
 export default function FloatingToolbar() {
   const [pos, setPos] = useState({ x: 0, y: 0, show: false });

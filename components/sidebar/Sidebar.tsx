@@ -9,6 +9,7 @@ import BuildPanel from "./BuildPanel";
 import RoomPanel from "./RoomPanel";
 import RoomStructurePanel from "@/components/panels/RoomStructurePanel";
 import Pill from "../ui/Pill";
+import { SegmentedControl, type SegmentOption } from "@/components/ui";
 
 type SidebarTab = "setup" | "browse" | "room";
 
@@ -142,56 +143,46 @@ export default function Sidebar() {
       {/* ======================================================
           Main 3 Tabs
           ====================================================== */}
-      <div
-        className="panel-main-tabs"
-        id="panelMainTabs"
-        role="tablist"
-        aria-label="เมนูห้อง"
-      >
-        {/* ----------------------------------------------------
-            Tab 1: ตั้งค่าห้อง
-            ---------------------------------------------------- */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={sidebarTab === "setup"}
-          className={`panel-main-tab${sidebarTab === "setup" ? " active" : ""}`}
-          onClick={handleSetupTab}
-        >
-          <span className="tab-icon">📐</span>
-          <span className="tab-label">สร้างห้อง</span>
-        </button>
-
-        {/* ----------------------------------------------------
-            Tab 2: เลือกของ
-            ---------------------------------------------------- */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={sidebarTab === "browse"}
-          className={`panel-main-tab${
-            sidebarTab === "browse" ? " active" : ""
-          }`}
-          onClick={handleBrowseTab}
-        >
-          <span className="tab-icon">🛋️</span>
-          <span className="tab-label">เลือกของ</span>
-        </button>
-
-        {/* ----------------------------------------------------
-            Tab 3: ของในห้อง
-            ---------------------------------------------------- */}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={sidebarTab === "room"}
-          className={`panel-main-tab${sidebarTab === "room" ? " active" : ""}`}
-          onClick={handleRoomTab}
-        >
-          <span className="tab-icon">📦</span>
-          <span className="tab-label">ของในห้อง</span>
-        </button>
-      </div>
+      <SegmentedControl
+        containerClass="panel-main-tabs"
+        optionClass="panel-main-tab"
+        ariaLabel="เมนูห้อง"
+        value={sidebarTab}
+        onChange={(v) => {
+          if (v === "setup") handleSetupTab();
+          else if (v === "browse") handleBrowseTab();
+          else handleRoomTab();
+        }}
+        options={[
+          {
+            value: "setup",
+            label: (
+              <>
+                <span className="tab-icon">📐</span>
+                <span className="tab-label">สร้างห้อง</span>
+              </>
+            ),
+          },
+          {
+            value: "browse",
+            label: (
+              <>
+                <span className="tab-icon">🛋️</span>
+                <span className="tab-label">เลือกของ</span>
+              </>
+            ),
+          },
+          {
+            value: "room",
+            label: (
+              <>
+                <span className="tab-icon">📦</span>
+                <span className="tab-label">ของในห้อง</span>
+              </>
+            ),
+          },
+        ]}
+      />
 
       {/* ======================================================
           SETUP TAB
@@ -239,7 +230,8 @@ export default function Sidebar() {
           ====================================================== */}
       {sidebarTab === "browse" && (
         <div className="sidebar-hint">
-          💡 เลือกชุดโซนเพื่อความสะดวกและรวดเร็ว • คลิกโซนเพื่อเลือกธีม • กดเลือกสิ่งของและเปลี่ยนได้ด้วยกดปุ่ม replace
+          💡 เลือกชุดโซนเพื่อความสะดวกและรวดเร็ว • คลิกโซนเพื่อเลือกธีม •
+          กดเลือกสิ่งของและเปลี่ยนได้ด้วยกดปุ่ม replace
         </div>
       )}
 

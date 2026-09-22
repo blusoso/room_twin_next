@@ -5,8 +5,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useRoomTwin } from "@/lib/state/store";
 
-import { Button, IconButton, SectionLabel } from "@/components/ui";
-
+import {
+  Button,
+  IconButton,
+  Panel,
+  SectionLabel,
+  SegmentedControl,
+} from "@/components/ui";
 import {
   FLOOR_STYLES,
   FLOOR_TINT_PALETTE,
@@ -1063,7 +1068,7 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
                 ? "สีทุกผนัง"
                 : `สีผนัง${WALL_SHORT[wallSel]}`}
             </SectionLabel>
-            
+
             <div className="wall-color-grid">
               {WALL_COLOR_PALETTE.map((c) => {
                 const isActive = surface.wallUniform
@@ -1487,18 +1492,17 @@ export default function RoomStructurePanel({
         </div>
 
         <div className="rsp-footer">
-          <button
-            type="button"
-            className="rsp-fb"
+          <IconButton
+            label="ย้อนกลับ"
+            size="lg"
             onClick={handlePrev}
             disabled={isFirst}
-            aria-label="ย้อนกลับ"
           >
             ‹
-          </button>
-          <button type="button" className="rsp-cta" onClick={handleNext}>
+          </IconButton>
+          <Button variant="primary" size="lg" block onClick={handleNext}>
             {ROOM_SETUP_CTA_LABEL[stepIdx]}
-          </button>
+          </Button>
         </div>
 
         {isLast && (
@@ -1543,39 +1547,18 @@ export default function RoomStructurePanel({
           </IconButton>
         </div>
 
-        <div className="rsp-tabs">
-          <button
-            type="button"
-            className={`rsp-tab${tab === "size" ? " active" : ""}`}
-            onClick={() => setTab("size")}
-          >
-            📐 ขนาด
-          </button>
-
-          <button
-            type="button"
-            className={`rsp-tab${tab === "structure" ? " active" : ""}`}
-            onClick={() => setTab("structure")}
-          >
-            🚪 ช่องเปิด
-          </button>
-
-          <button
-            type="button"
-            className={`rsp-tab${tab === "floor" ? " active" : ""}`}
-            onClick={() => setTab("floor")}
-          >
-            🟫 พื้น
-          </button>
-
-          <button
-            type="button"
-            className={`rsp-tab${tab === "wall" ? " active" : ""}`}
-            onClick={() => setTab("wall")}
-          >
-            🎨 ผนัง
-          </button>
-        </div>
+        <SegmentedControl
+          containerClass="rsp-tabs"
+          optionClass="rsp-tab"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "size", label: "📐 ขนาด" },
+            { value: "structure", label: "🚪 ช่องเปิด" },
+            { value: "floor", label: "🟫 พื้น" },
+            { value: "wall", label: "🎨 ผนัง" },
+          ]}
+        />
 
         <div className="rsp-body">
           {tab === "size" && <SizeTab />}

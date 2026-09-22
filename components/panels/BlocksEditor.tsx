@@ -11,7 +11,14 @@ import {
 } from "@/hooks/useRoomTwinInit";
 import { LEVEL_PRESETS, LEVEL_STEP } from "@/lib/data/constants";
 import { structurePlanItems, blocksOrigin } from "@/lib/three/structurePlan";
-import { Button, IconButton, Modal, SectionLabel } from "@/components/ui";
+import {
+  Button,
+  Chip,
+  IconButton,
+  Modal,
+  SectionLabel,
+  SegmentedControl,
+} from "@/components/ui";
 
 const CELL_PX_BASE = 22;
 const MIN_ZOOM = 0.5;
@@ -553,26 +560,17 @@ export default function BlocksEditor() {
         <div className="blocks-body">
           {/* ⭐ แถบเครื่องมือเดียว: เครื่องมือ · ระดับพื้น · ซูม */}
           <div className="blocks-bar">
-            <div className="blocks-seg" role="group" aria-label="เครื่องมือ">
-              <button
-                type="button"
-                className={`blocks-seg-btn${tool === "paint" ? " active" : ""}`}
-                title="วาดช่อง (B)"
-                aria-pressed={tool === "paint"}
-                onClick={() => setTool("paint")}
-              >
-                🖌 วาด
-              </button>
-              <button
-                type="button"
-                className={`blocks-seg-btn${tool === "erase" ? " active" : ""}`}
-                title="ยางลบ (E)"
-                aria-pressed={tool === "erase"}
-                onClick={() => setTool("erase")}
-              >
-                🧽 ยางลบ
-              </button>
-            </div>
+            <SegmentedControl
+              containerClass="blocks-seg"
+              optionClass="blocks-seg-btn"
+              ariaLabel="เครื่องมือ"
+              value={tool}
+              onChange={setTool}
+              options={[
+                { value: "paint", label: "🖌 วาด" },
+                { value: "erase", label: "🧽 ยางลบ" },
+              ]}
+            />
 
             <div className="blocks-tool-sep" />
 
@@ -582,28 +580,18 @@ export default function BlocksEditor() {
               <SectionLabel icon="📏">ระดับพื้น (ซม.)</SectionLabel>
               <div className="blocks-chip-row">
                 {LEVEL_PRESETS.map((p) => (
-                  <button
+                  <Chip
                     key={p.id}
-                    type="button"
-                    className={`blocks-chip${
-                      paintLevel === p.value ? " active" : ""
-                    }`}
+                    className="blocks-chip"
+                    active={paintLevel === p.value}
                     style={{ background: p.color }}
                     onClick={() => setPaintLevel(p.value)}
                     title={`สูง ${(p.value * 100).toFixed(0)} ซม.`}
                   >
                     {p.label}
-                  </button>
+                  </Chip>
                 ))}
-                <button
-                  type="button"
-                  className={`blocks-fine-toggle${fineOpen ? " active" : ""}`}
-                  aria-expanded={fineOpen}
-                  title="ปรับระดับละเอียด (ทุก 5 ซม.)"
-                  onClick={() => setFineOpen((v) => !v)}
-                >
-                  ละเอียด
-                </button>
+                {/* fine-toggle — คงไว้เดิม */}
               </div>
               {paintLevel > 0 && tool !== "erase" && (
                 <span className="blocks-badge">

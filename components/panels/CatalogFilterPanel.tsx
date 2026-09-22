@@ -20,7 +20,13 @@ import {
   type ThemeFacet,
 } from "@/lib/data/productSearch";
 import { useCatalogSearchResult } from "@/hooks/useCatalogSearchResult";
-import { IconButton, Panel, SectionLabel, EmptyState } from "@/components/ui";
+import {
+  IconButton,
+  Panel,
+  SectionLabel,
+  EmptyState,
+  Chip,
+} from "@/components/ui";
 
 export default function CatalogFilterPanel() {
   const filtersOpen = useRoomTwin((s) => s.catalogFiltersOpen);
@@ -87,17 +93,15 @@ export default function CatalogFilterPanel() {
           <SectionLabel>หมวดหมู่</SectionLabel>
           <div className="filter-chips">
             {CATEGORIES.filter((c) => c.id !== "zone").map((c) => (
-              <button
+              <Chip
                 key={c.id}
-                type="button"
-                className={`chip${filters.cats.includes(c.id) ? " active" : ""}`}
-                aria-pressed={filters.cats.includes(c.id)}
+                active={filters.cats.includes(c.id)}
                 onClick={() =>
                   setCatalogFilters({ cats: toggleInList(filters.cats, c.id) })
                 }
               >
                 {categoryLabel(c.id)}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -107,11 +111,9 @@ export default function CatalogFilterPanel() {
           <SectionLabel>ช่วงราคา</SectionLabel>
           <div className="filter-chips">
             {PRICE_BANDS.map((b) => (
-              <button
+              <Chip
                 key={b.id}
-                type="button"
-                className={`chip${filters.price === b.id ? " active" : ""}`}
-                aria-pressed={filters.price === b.id}
+                active={filters.price === b.id}
                 onClick={() =>
                   setCatalogFilters({
                     price: filters.price === b.id ? null : b.id,
@@ -119,7 +121,7 @@ export default function CatalogFilterPanel() {
                 }
               >
                 {b.label}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -129,21 +131,18 @@ export default function CatalogFilterPanel() {
           <SectionLabel>การติดตั้ง</SectionLabel>
           <div className="filter-chips">
             {MOUNT_OPTIONS.map((m) => (
-              <button
+              <Chip
                 key={m.id}
-                type="button"
-                className={`chip${
-                  filters.mounts.includes(m.id) ? " active" : ""
-                }`}
-                aria-pressed={filters.mounts.includes(m.id)}
+                active={filters.mounts.includes(m.id)}
+                icon={m.icon}
                 onClick={() =>
                   setCatalogFilters({
                     mounts: toggleInList(filters.mounts, m.id),
                   })
                 }
               >
-                {m.icon} {m.label}
-              </button>
+                {m.label}
+              </Chip>
             ))}
           </div>
         </div>
@@ -158,16 +157,14 @@ export default function CatalogFilterPanel() {
           )}
           <div className="filter-chips">
             {themeFacetOptions().map((t) => (
-              <button
+              <Chip
                 key={t.id}
-                type="button"
-                className={`chip${filters.theme === t.id ? " active" : ""}`}
-                aria-pressed={filters.theme === t.id}
+                active={filters.theme === t.id}
                 disabled={isSwapping && t.id !== "base"}
                 onClick={() => setThemeFacet(t.id)}
               >
                 {t.label}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -176,15 +173,13 @@ export default function CatalogFilterPanel() {
         <div className="filter-group">
           <SectionLabel>ขนาด</SectionLabel>
           <div className="filter-chips">
-            <button
-              type="button"
-              className={`chip${filters.fitRoom ? " active" : ""}`}
-              aria-pressed={filters.fitRoom}
+            <Chip
+              active={filters.fitRoom}
               onClick={() => setCatalogFilters({ fitRoom: !filters.fitRoom })}
             >
               ✅ พอดีกับห้อง ({room.w.toFixed(1)}×{room.d.toFixed(1)}×
               {room.h.toFixed(1)} ม.)
-            </button>
+            </Chip>
           </div>
         </div>
 
@@ -210,18 +205,14 @@ export default function CatalogFilterPanel() {
       </div>
 
       <div className="cfp-foot">
-        <button
-          type="button"
-          className="chip"
+        <Chip
           disabled={filterCount === 0}
           title="ล้างตัวกรอง (คำค้นหายังอยู่)"
           onClick={() => setCatalogFilters(makeDefaultCatalogFilters())}
         >
           ล้างตัวกรอง
-        </button>
-        <button type="button" className="chip" onClick={close}>
-          ปิด
-        </button>
+        </Chip>
+        <Chip onClick={close}>ปิด</Chip>
       </div>
     </Panel>
   );

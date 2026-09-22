@@ -8,6 +8,7 @@
 import { matchSizePreset, sizePresetGroup } from "@/lib/data/sizePresets";
 import type { SizePreset } from "@/lib/data/sizePresets";
 import type { Params } from "@/lib/state/types";
+import { Chip } from "@/components/ui";
 
 interface Props {
   productId: string;
@@ -27,33 +28,47 @@ export default function SizePresetList({
 
   const active = matchSizePreset(productId, params);
 
+  // ── chips variant → ใช้ <Chip> (pattern เดียวกับ CatalogFilterPanel) ──
+  if (variant === "chips") {
+    return (
+      <div className="cz-presets">
+        {group.presets.map((preset) => {
+          const isActive = active?.id === preset.id;
+          return (
+            <Chip
+              key={preset.id}
+              active={isActive}
+              title={preset.sub}
+              onClick={() => onPick(preset)}
+            >
+              {preset.label}
+            </Chip>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ── menu variant → คงไว้เดิม (structure เฉพาะ: label + sub + check) ──
   return (
-    <div className={variant === "menu" ? "sm-list" : "cz-presets"}>
+    <div className="sm-list">
       {group.presets.map((preset) => {
         const isActive = active?.id === preset.id;
         return (
           <button
             key={preset.id}
             type="button"
-            className={
-              variant === "menu"
-                ? `size-opt${isActive ? " active" : ""}`
-                : `chip${isActive ? " active" : ""}`
-            }
+            className={`size-opt${isActive ? " active" : ""}`}
             title={preset.sub}
             aria-current={isActive ? "true" : undefined}
             onClick={() => onPick(preset)}
           >
-            {variant === "menu" ? (
-              <>
-                <span className="size-opt-main">
-                  <span className="size-opt-label">{preset.label}</span>
-                  <span className="size-opt-sub">{preset.sub}</span>
-                </span>
-                {isActive && <span className="size-opt-check">✓ ใช้อยู่</span>}
-              </>
-            ) : (
-              preset.label
+            <span className="size-opt-main">
+              <span className="size-opt-label">{preset.label}</span>
+              <span className="size-opt-sub">{preset.sub}</span>
+            </span>
+            {isActive && (
+              <span className="size-opt-check">✓ ใช้อยู่</span>
             )}
           </button>
         );

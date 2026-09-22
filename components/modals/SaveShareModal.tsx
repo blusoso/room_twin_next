@@ -36,7 +36,13 @@ import {
 import { showToast } from "@/lib/utils/toast";
 import { openConfirm, useSaveShareStore } from "./useModalStores";
 import RoomCard, { RoomCardSkeleton, RoomThumb } from "./RoomCard";
-import { Button, IconButton, Modal, EmptyState } from "@/components/ui";
+import {
+  Button,
+  IconButton,
+  Modal,
+  EmptyState,
+  SegmentedControl,
+} from "@/components/ui";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -497,22 +503,22 @@ export default function SaveShareModal() {
         )}
 
         {/* ===== 3) รายการห้อง (โหลดเฉพาะแท็บที่กำลังดู) ===== */}
-        <div className="ss-tabs">
-          <button
-            type="button"
-            className={`ss-tab${tab === "mine" ? " active" : ""}`}
-            onClick={() => switchTab("mine")}
-          >
-            ห้องของฉัน ({myRooms ? myRooms.length : "…"})
-          </button>
-          <button
-            type="button"
-            className={`ss-tab${tab === "templates" ? " active" : ""}`}
-            onClick={() => switchTab("templates")}
-          >
-            เทมเพลตสาธารณะ ({templates ? templates.length : "…"})
-          </button>
-        </div>
+        <SegmentedControl
+          containerClass="ss-tabs"
+          optionClass="ss-tab"
+          value={tab}
+          onChange={switchTab}
+          options={[
+            {
+              value: "mine",
+              label: `ห้องของฉัน (${myRooms ? myRooms.length : "…"})`,
+            },
+            {
+              value: "templates",
+              label: `เทมเพลตสาธารณะ (${templates ? templates.length : "…"})`,
+            },
+          ]}
+        />
 
         {tabError ? (
           <div className="ss-error">

@@ -25,6 +25,7 @@ import { useCardDrag } from "@/hooks/useCardDrag";
 import ProductCard from "./ProductCard";
 import ZoneCard from "./ZoneCard";
 import CatalogSearch, { CatalogEmptyState } from "./CatalogSearch";
+import { SegmentedControl } from "@/components/ui";
 
 export default function BuildPanel() {
   const activeCat = useRoomTwin((s) => s.activeCat);
@@ -49,12 +50,8 @@ export default function BuildPanel() {
     ? placedItems.find((i) => i.uid === swapTargetUid)
     : null;
 
-  const {
-    searchMode,
-    hits,
-    zones: zoneHits,
-    resultCount,
-  } = useCatalogSearchResult();
+  const { searchMode, hits, zones: zoneHits, resultCount } =
+    useCatalogSearchResult();
 
   const handleSwapSelect = (pid: string) => {
     if (!swapTargetUid) return;
@@ -67,7 +64,9 @@ export default function BuildPanel() {
   };
 
   const mainCat = useMemo<MainCategoryDef>(
-    () => MAIN_CATEGORIES.find((c) => c.id === activeCat) ?? MAIN_CATEGORIES[0],
+    () =>
+      MAIN_CATEGORIES.find((c) => c.id === activeCat) ??
+      MAIN_CATEGORIES[0],
     [activeCat],
   );
 
@@ -94,7 +93,8 @@ export default function BuildPanel() {
           <div className="swap-title" id="swapTitle">
             ⇄ กำลังเปลี่ยนสินค้า
             <small>
-              ตอนนี้: {PRODUCT_BY_ID.get(currentItem.productId)?.name || ""} •
+              ตอนนี้:{" "}
+              {PRODUCT_BY_ID.get(currentItem.productId)?.name || ""} •
               แตะการ์ดเพื่อแทนที่
             </small>
             <span className="swap-tip">
@@ -136,22 +136,19 @@ export default function BuildPanel() {
         </div>
       )}
 
-      {/* ===== Sub category row (ชั้นที่ 2) — wrap ลงมา ไม่มี count ===== */}
+      {/* ===== Sub category row (ชั้นที่ 2) — ผ่าน <SegmentedControl> ===== */}
       {!searchMode && mainCat.subs && mainCat.subs.length > 0 && (
-        <div className="sub-cat-row" role="tablist">
-          {mainCat.subs.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              role="tab"
-              aria-selected={activeSub === s.id}
-              className={`sub-cat-pill${activeSub === s.id ? " active" : ""}`}
-              onClick={() => setActiveSub(s.id)}
-            >
-              <span className="sc-label">{s.label}</span>
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          containerClass="sub-cat-row"
+          optionClass="sub-cat-pill"
+          ariaLabel="หมวดย่อย"
+          value={activeSub ?? ""}
+          onChange={(v) => setActiveSub(v)}
+          options={mainCat.subs.map((s) => ({
+            value: s.id,
+            label: <span className="sc-label">{s.label}</span>,
+          }))}
+        />
       )}
 
       {/* ===== Tips ===== */}
@@ -196,7 +193,9 @@ export default function BuildPanel() {
             {hits.length > 0 && (
               <section className="catalog-block">
                 <div className="catalog-section-head">
-                  <span className="csh-title">🛋️ สินค้า ({hits.length})</span>
+                  <span className="csh-title">
+                    🛋️ สินค้า ({hits.length})
+                  </span>
                 </div>
                 <HScroll>
                   {hits.map((h) => (
@@ -206,11 +205,15 @@ export default function BuildPanel() {
                       startDrag={startDrag}
                       themeId={h.themeId}
                       isSwapping={isSwapping}
-                      isCurrent={currentItem?.productId === h.product.id}
+                      isCurrent={
+                        currentItem?.productId === h.product.id
+                      }
                       onSwapClick={() => handleSwapSelect(h.product.id)}
                       catBadge={categoryLabel(h.product.cat)}
                       themeName={
-                        h.themeId ? THEME_BY_ID.get(h.themeId)?.name : undefined
+                        h.themeId
+                          ? THEME_BY_ID.get(h.themeId)?.name
+                          : undefined
                       }
                       query={catalogQuery}
                     />
@@ -219,7 +222,9 @@ export default function BuildPanel() {
               </section>
             )}
 
-            {resultCount === 0 && <CatalogEmptyState query={catalogQuery} />}
+            {resultCount === 0 && (
+              <CatalogEmptyState query={catalogQuery} />
+            )}
           </>
         ) : activeCat === "all" ? (
           <AllGrid
@@ -230,7 +235,6 @@ export default function BuildPanel() {
             onSeeAllZones={() => setActiveCat("zone")}
           />
         ) : activeCat === "zone" ? (
-          // ⭐ ชุดโซน → แสดงโซนทั้งหมด (ไม่มี sub)
           <ZoneGrid startDrag={startDrag} isSwapping={isSwapping} />
         ) : (
           <SubProductGrid
@@ -249,7 +253,6 @@ export default function BuildPanel() {
 
 /* ============================================================
    ⭐ helper: รวม product ids ของทุก sub ใน main cat
-   (ใช้ตอน sub = "all")
    ============================================================ */
 
 function unionSubProducts(mainCat: MainCategoryDef): string[] {
@@ -257,9 +260,11 @@ function unionSubProducts(mainCat: MainCategoryDef): string[] {
   const set = new Set<string>();
 
   mainCat.subs.forEach((s) => {
-    if (s.id === "all") return; // ข้าม sub "all" ตัวเอง
+    if (s.id === "all") return;
     s.cats?.forEach((c) => {
-      PRODUCTS.filter((p) => p.cat === c).forEach((p) => set.add(p.id));
+      PRODUCTS.filter((p) => p.cat === c).forEach((p) =>
+        set.add(p.id),
+      );
     });
     s.ids?.forEach((id) => set.add(id));
   });
@@ -268,7 +273,7 @@ function unionSubProducts(mainCat: MainCategoryDef): string[] {
 }
 
 /* ============================================================
-   ⭐ SubProductGrid — แสดงสินค้าตาม sub ที่เลือก
+   ⭐ SubProductGrid
    ============================================================ */
 
 function SubProductGrid({
@@ -288,7 +293,6 @@ function SubProductGrid({
 }) {
   if (!sub) return null;
 
-  // ⭐ ถ้า sub = "all" → union ของทุก sub ใน main cat
   const ids =
     sub.id === "all" ? unionSubProducts(mainCat) : productsForSub(sub);
   const products = PRODUCTS.filter((p) => ids.includes(p.id));
@@ -325,7 +329,7 @@ function SubProductGrid({
 }
 
 /* ============================================================
-   ⭐ ZoneGrid — แสดงโซนทั้งหมด (ไม่แยกหมวดย่อย)
+   ⭐ ZoneGrid
    ============================================================ */
 
 function ZoneGrid({
@@ -350,7 +354,7 @@ function ZoneGrid({
 }
 
 /* ============================================================
-   HScroll (ใช้ใน search mode + AllGrid)
+   HScroll
    ============================================================ */
 
 const OVERFLOW_EPS = 16;
@@ -438,7 +442,7 @@ function HScroll({ children }: { children: React.ReactNode }) {
 }
 
 /* ============================================================
-   AllGrid — แท็บ "ทั้งหมด" (เหมือนเดิม)
+   AllGrid
    ============================================================ */
 
 function AllGrid({
@@ -479,7 +483,8 @@ function AllGrid({
 
     const cRect = container.getBoundingClientRect();
     const sRect = section.getBoundingClientRect();
-    const offsetInContainer = sRect.top - cRect.top + container.scrollTop;
+    const offsetInContainer =
+      sRect.top - cRect.top + container.scrollTop;
 
     container.scrollTo({
       top: Math.max(0, offsetInContainer - 8),
@@ -507,7 +512,11 @@ function AllGrid({
     return (
       <>
         <div className="catalog-section-head expanded">
-          <button type="button" className="catalog-back" onClick={handleBack}>
+          <button
+            type="button"
+            className="catalog-back"
+            onClick={handleBack}
+          >
             ‹ ย้อนกลับ
           </button>
           <span className="csh-title">
