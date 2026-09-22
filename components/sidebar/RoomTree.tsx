@@ -147,6 +147,7 @@ function ZoneGroup({
     <div
       className={`tree-group${collapsed ? " collapsed" : ""}`}
       data-zone-uid={zuid}
+      style={{ "--zc": hexAlpha(zoneColor, 1) } as React.CSSProperties}
     >
       <div
         className="tree-group-head"
@@ -164,15 +165,7 @@ function ZoneGroup({
         }}
       >
         <span className="chevron">▼</span>
-        <span
-          className="group-icon"
-          style={{
-            background: hexAlpha(zoneColor, 0.13),
-            borderColor: hexAlpha(zoneColor, 0.35),
-          }}
-        >
-          {zoneIcon}
-        </span>
+        <span className="group-icon">{zoneIcon}</span>
         <span className="group-name">{zoneName}</span>
 
         {hasTheme && (
@@ -246,6 +239,7 @@ function StandaloneGroup({ items }: { items: PlacedItem[] }) {
     <div
       className={`tree-group${collapsed ? " collapsed" : ""}`}
       data-standalone="1"
+      style={{ "--zc": "#A39A89" } as React.CSSProperties}
     >
       <div
         className="tree-group-head"
@@ -259,12 +253,7 @@ function StandaloneGroup({ items }: { items: PlacedItem[] }) {
         }}
       >
         <span className="chevron">▼</span>
-        <span
-          className="group-icon"
-          style={{ background: "#a39a8922", borderColor: "#a39a8955" }}
-        >
-          📌
-        </span>
+        <span className="group-icon">📌</span>
         <span className="group-name">ของลอย (ไม่มีโซน)</span>
         <span className="group-count">{items.length}</span>
         <span className="group-actions" />

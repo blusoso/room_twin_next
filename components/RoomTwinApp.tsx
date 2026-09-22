@@ -1,6 +1,7 @@
 // components/RoomTwinApp.tsx
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import ToastHost from "./ToastHost";
 import ThemeGuard from "./ThemeGuard";
 import Header from "./Header";
 import { Sidebar } from "./sidebar";
@@ -51,6 +52,7 @@ export default function RoomTwinApp({ shareId }: { shareId?: string }) {
 
   return (
     <>
+      <ToastHost />
       <ThemeGuard />
       {/* <Header /> */}
       <ShareBanner />
