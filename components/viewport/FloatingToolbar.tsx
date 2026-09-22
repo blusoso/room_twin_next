@@ -7,10 +7,7 @@ import { camera, renderer, objectsByUid } from "@/lib/three/scene";
 import { getZoneBounds } from "@/lib/three/zoneBounds";
 import { rotateItemBy90 } from "@/lib/three/gizmo";
 import { removeZoneFull } from "@/lib/three/zoneActions";
-import {
-  reinstantiateItem,
-  instantiate,
-} from "@/lib/three/instantiate";
+import { reinstantiateItem, instantiate } from "@/lib/three/instantiate";
 import { deleteItemTree } from "@/lib/three/itemTree";
 import { resolveRestHeights, footprintOf } from "@/lib/three/placement";
 import { targetOfItem } from "@/lib/three/wallPlacement";
@@ -30,6 +27,7 @@ import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
+import { FloatingToolbarBtn } from "./FloatingToolbarBtn";
 
 export default function FloatingToolbar() {
   const [pos, setPos] = useState({ x: 0, y: 0, show: false });
@@ -242,21 +240,16 @@ export default function FloatingToolbar() {
 
   const handleZoneDelete = () => {
     if (!selectedZoneUid) return;
-    const zoneItems = placedItems.filter(
-      (i) => i.zoneUid === selectedZoneUid,
-    );
+    const zoneItems = placedItems.filter((i) => i.zoneUid === selectedZoneUid);
     const zoneName = resolveZoneDisplay(selectedZoneUid).name;
-    openConfirm(
-      `ลบทั้งโซน "${zoneName}" (${zoneItems.length} ชิ้น)?`,
-      () => {
-        const hasDoor = zoneItems.some((i) => i.productId === "door");
-        removeZoneFull(selectedZoneUid);
-        closeItemPanel();
-        deselectZone();
-        if (hasDoor) rebuildBaseboards();
-        saveState();
-      },
-    );
+    openConfirm(`ลบทั้งโซน "${zoneName}" (${zoneItems.length} ชิ้น)?`, () => {
+      const hasDoor = zoneItems.some((i) => i.productId === "door");
+      removeZoneFull(selectedZoneUid);
+      closeItemPanel();
+      deselectZone();
+      if (hasDoor) rebuildBaseboards();
+      saveState();
+    });
   };
 
   if (!pos.show) {
@@ -275,157 +268,156 @@ export default function FloatingToolbar() {
       {/* ===== Item mode ===== */}
       {/* ⭐ ขนาดสำเร็จรูป — ปุ่มซ้ายสุด แสดงขนาดปัจจุบันเป็นตัวอักษร (ไม่ใช่ icon ลอย ๆ) */}
       {item && canSize && (
-        <button
-          type="button"
-          className={`ft-btn item-btn size${sizeOpen ? " active" : ""}`}
+        <FloatingToolbarBtn
+          label={`ขนาด — เลือกขนาดสำเร็จรูป (ตอนนี้: ${sizeLabel})`}
           id="ftSize"
-          title={`ขนาด — เลือกขนาดสำเร็จรูป (ตอนนี้: ${sizeLabel})`}
+          className="item-btn"
+          wide
+          active={sizeOpen}
+          icon="📐"
           onClick={() => setSizeOpen((v) => !v)}
         >
-          <span className="ft-size-icon">📐</span>
-          <span className="ft-size-text">{sizeLabel}</span>
-        </button>
+          {sizeLabel}
+        </FloatingToolbarBtn>
       )}
-      <button
-        type="button"
-        className="ft-btn item-btn"
+
+      <FloatingToolbarBtn
+        label="หมุนซ้าย 90°"
         id="ftRotLeft"
-        title="หมุนซ้าย 90°"
+        className="item-btn"
         onClick={handleRotLeft}
         style={item?.locked ? { display: "none" } : undefined}
       >
         ⟲
-      </button>
-      <button
-        type="button"
-        className="ft-btn item-btn"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label="หมุนขวา 90°"
         id="ftRotRight"
-        title="หมุนขวา 90°"
+        className="item-btn"
         onClick={handleRotRight}
         style={item?.locked ? { display: "none" } : undefined}
       >
         ⟳
-      </button>
-      <button
-        type="button"
-        className={`ft-btn item-btn${item?.locked ? " locked" : ""}`}
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label={item?.locked ? "ปลดล็อก" : "ล็อก"}
         id="ftLock"
-        title={item?.locked ? "ปลดล็อก" : "ล็อก"}
+        variant={item?.locked ? "lock" : "default"}
+        className="item-btn"
         onClick={handleLock}
       >
         {item?.locked ? "🔒" : "🔓"}
-      </button>
-      <button
-        type="button"
-        className="ft-btn item-btn customize"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label="ปรับแต่ง"
         id="ftCustomize"
-        title="ปรับแต่ง"
+        variant="customize"
+        className="item-btn"
         onClick={() => selectedUid && setCustomizeTarget(selectedUid)}
       >
         🎨
-      </button>
-      <button
-        type="button"
-        className={`ft-btn item-btn swap${swapMode ? " active" : ""}`}
-        id="ftSwap"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label={
+          swapMode
+            ? "กำลังเปลี่ยนสินค้า — เลือกการ์ดในแถบด้านข้าง"
+            : "เปลี่ยนสินค้า"
+        }
         title={
           swapMode
             ? "กำลังเปลี่ยนสินค้า — เลือกการ์ดในแถบด้านข้าง (คลิก object อื่นเพื่อยกเลิก)"
             : "เปลี่ยนสินค้า"
         }
+        id="ftSwap"
+        variant="swap"
+        active={swapMode}
+        className="item-btn"
         onClick={handleSwap}
       >
         ⇄
-      </button>
-      <button
-        type="button"
-        className="ft-btn item-btn"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label="ทำซ้ำ"
         id="ftDuplicate"
-        title="ทำซ้ำ"
+        className="item-btn"
         onClick={handleDuplicate}
       >
         ⧉
-      </button>
+      </FloatingToolbarBtn>
       {item?.zoneUid && (
-        <button
-          type="button"
-          className="ft-btn item-btn zone-btn"
+        <FloatingToolbarBtn
+          label="เลือกทั้งโซน"
           id="ftZone"
-          title="เลือกทั้งโซน"
+          variant="zone"
+          className="item-btn"
           onClick={handleZoneSelect}
         >
           📦
-        </button>
+        </FloatingToolbarBtn>
       )}
-      <button
-        type="button"
-        className="ft-btn item-btn danger"
+      <FloatingToolbarBtn
+        label="ลบ"
         id="ftDelete"
-        title="ลบ"
+        variant="danger"
+        className="item-btn"
         onClick={handleDelete}
       >
         🗑
-      </button>
+      </FloatingToolbarBtn>
 
       {/* ===== Zone mode ===== */}
-      <button
-        type="button"
-        className="ft-btn zone-only theme"
+      <FloatingToolbarBtn
+        label="เลือกธีมโซน"
         id="ftZoneTheme"
-        title="เลือกธีมโซน"
+        variant="theme"
+        className="zone-only"
         onClick={() =>
           window.dispatchEvent(new CustomEvent("roomtwin:openZoneTheme"))
         }
       >
         ✨
-      </button>
-      <button
-        type="button"
-        className="ft-btn zone-only"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label="หมุนทั้งโซนซ้าย 90°"
         id="ftZoneRotLeft"
-        title="หมุนทั้งโซนซ้าย 90°"
+        className="zone-only"
         onClick={() => handleZoneRotate(-1)}
       >
         ⟲
-      </button>
-      <button
-        type="button"
-        className="ft-btn zone-only"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label="หมุนทั้งโซนขวา 90°"
         id="ftZoneRotRight"
-        title="หมุนทั้งโซนขวา 90°"
+        className="zone-only"
         onClick={() => handleZoneRotate(1)}
       >
         ⟳
-      </button>
-      <button
-        type="button"
-        className="ft-btn zone-only"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label="แก้ไขโซน"
         id="ftZoneEdit"
-        title="แก้ไขโซน"
-        onClick={() =>
-          selectedZoneUid && openZoneEditDialog(selectedZoneUid)
-        }
+        className="zone-only"
+        onClick={() => selectedZoneUid && openZoneEditDialog(selectedZoneUid)}
       >
         ✏️
-      </button>
-      <button
-        type="button"
-        className="ft-btn zone-only danger"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label="ลบทั้งโซน"
         id="ftZoneDelete"
-        title="ลบทั้งโซน"
+        variant="danger"
+        className="zone-only"
         onClick={handleZoneDelete}
       >
         🗑
-      </button>
-      <button
-        type="button"
-        className="ft-btn zone-only"
+      </FloatingToolbarBtn>
+      <FloatingToolbarBtn
+        label="ปิด"
         id="ftZoneExit"
-        title="ปิด"
+        className="zone-only"
         onClick={() => deselectZone()}
       >
         ✕
-      </button>
+      </FloatingToolbarBtn>
 
       {/* ===== ⭐ เมนูขนาดสำเร็จรูป =====
           เปิดขึ้นด้านบนเป็นค่าเริ่มต้น; ถ้า toolbar อยู่ชิดขอบบนจอ (pos.y น้อย)
@@ -437,7 +429,9 @@ export default function FloatingToolbar() {
           aria-label={sizeGroup ? sizeGroup.title : "เลือกขนาด"}
         >
           <div className="sm-head">
-            <span className="sm-title">📐 {sizeGroup ? sizeGroup.title : "ขนาด"}</span>
+            <span className="sm-title">
+              📐 {sizeGroup ? sizeGroup.title : "ขนาด"}
+            </span>
             <button
               type="button"
               className="sm-close"
@@ -577,11 +571,7 @@ function rotateZone(zuid: string, dir: -1 | 1) {
     changed = false;
     iter++;
     allItems.forEach((i) => {
-      if (
-        i.parentUid &&
-        groupUids.has(i.parentUid) &&
-        !groupUids.has(i.uid)
-      ) {
+      if (i.parentUid && groupUids.has(i.parentUid) && !groupUids.has(i.uid)) {
         groupUids.add(i.uid);
         changed = true;
       }
@@ -594,10 +584,7 @@ function rotateZone(zuid: string, dir: -1 | 1) {
   // ===== 3. Zone bbox center =====
   const floorItems = itemsToRotate.filter(
     (i) =>
-      !i.wallMount &&
-      !i.ceilingMount &&
-      i.x !== undefined &&
-      i.z !== undefined,
+      !i.wallMount && !i.ceilingMount && i.x !== undefined && i.z !== undefined,
   );
 
   let cx = 0;

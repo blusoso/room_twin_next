@@ -20,7 +20,7 @@ import {
   type ThemeFacet,
 } from "@/lib/data/productSearch";
 import { useCatalogSearchResult } from "@/hooks/useCatalogSearchResult";
-import { IconButton } from "@/components/ui";
+import { IconButton, Panel, SectionLabel, EmptyState } from "@/components/ui";
 
 export default function CatalogFilterPanel() {
   const filtersOpen = useRoomTwin((s) => s.catalogFiltersOpen);
@@ -65,20 +65,11 @@ export default function CatalogFilterPanel() {
   const filterCount = activeFilterCount(filters);
 
   return (
-    <aside
-      id="catalogFilterPanel"
-      role="region"
-      aria-label="ตัวกรองสินค้า"
-      className={`catalog-filter-panel${open ? " show" : ""}`}
-      aria-hidden={!open}
-      // ⭐ ปิดอยู่ = inert (React 19 รับ boolean) → โฟกัส/คลิกเข้าไม่ได้
-      //    หมายเหตุ: ห้ามใช้ inert="" (React 19 ตีความเป็น false + เตือนใน console)
-      inert={!open}
-      // ⭐ Inline styles — บังคับแม้ CSS ไม่โหลด (แพทเทิร์นเดียวกับ CustomizePanel)
-      style={{
-        visibility: open ? "visible" : "hidden",
-        pointerEvents: open ? "auto" : "none",
-      }}
+    <Panel
+      open={open}
+      onClose={close}
+      panelClass="catalog-filter-panel"
+      backdropClass=""
     >
       <div className="cfp-head">
         <div className="cfp-title">
@@ -93,7 +84,7 @@ export default function CatalogFilterPanel() {
       <div className="cfp-body">
         {/* ===== หมวดหมู่ ===== */}
         <div className="filter-group">
-          <span className="filter-label">หมวดหมู่</span>
+          <SectionLabel>หมวดหมู่</SectionLabel>
           <div className="filter-chips">
             {CATEGORIES.filter((c) => c.id !== "zone").map((c) => (
               <button
@@ -113,7 +104,7 @@ export default function CatalogFilterPanel() {
 
         {/* ===== ช่วงราคา ===== */}
         <div className="filter-group">
-          <span className="filter-label">ช่วงราคา</span>
+          <SectionLabel>ช่วงราคา</SectionLabel>
           <div className="filter-chips">
             {PRICE_BANDS.map((b) => (
               <button
@@ -135,7 +126,7 @@ export default function CatalogFilterPanel() {
 
         {/* ===== การติดตั้ง ===== */}
         <div className="filter-group">
-          <span className="filter-label">การติดตั้ง</span>
+          <SectionLabel>การติดตั้ง</SectionLabel>
           <div className="filter-chips">
             {MOUNT_OPTIONS.map((m) => (
               <button
@@ -159,7 +150,7 @@ export default function CatalogFilterPanel() {
 
         {/* ===== ธีม ===== */}
         <div className="filter-group">
-          <span className="filter-label">ธีม</span>
+          <SectionLabel>ธีม</SectionLabel>
           {isSwapping && (
             <span className="filter-note">
               โหมดเปลี่ยนสินค้าแสดงเฉพาะสินค้าพื้นฐาน
@@ -183,7 +174,7 @@ export default function CatalogFilterPanel() {
 
         {/* ===== พอดีกับห้อง ===== */}
         <div className="filter-group">
-          <span className="filter-label">ขนาด</span>
+          <SectionLabel>ขนาด</SectionLabel>
           <div className="filter-chips">
             <button
               type="button"
@@ -232,6 +223,6 @@ export default function CatalogFilterPanel() {
           ปิด
         </button>
       </div>
-    </aside>
+    </Panel>
   );
 }

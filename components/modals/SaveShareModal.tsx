@@ -36,7 +36,7 @@ import {
 import { showToast } from "@/lib/utils/toast";
 import { openConfirm, useSaveShareStore } from "./useModalStores";
 import RoomCard, { RoomCardSkeleton, RoomThumb } from "./RoomCard";
-import { Button, IconButton } from "@/components/ui";
+import { Button, IconButton, Modal, EmptyState } from "@/components/ui";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -358,233 +358,233 @@ export default function SaveShareModal() {
   const mineLoading = lists.mine === null;
 
   return (
-    <div
-      className={`save-share-overlay${open ? " show" : ""}`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) close();
-      }}
-      aria-hidden={!open}
+    <Modal
+      open={open}
+      onClose={close}
+      overlayClass="save-share-overlay"
+      boxClass="save-share-box"
     >
-      <div className="save-share-box" role="dialog" aria-modal="true">
-        <div className="ss-head">
-          <h3>💾 บันทึก / แชร์ห้อง</h3>
-          <IconButton label="ปิด" size="md" onClick={close}>
-            ✕
-          </IconButton>
-        </div>
+      <div className="ss-head">
+        <h3>💾 บันทึก / แชร์ห้อง</h3>
+        <IconButton label="ปิด" size="md" onClick={close}>
+          ✕
+        </IconButton>
+      </div>
 
-        <div className="ss-body" aria-busy={loadingTab !== null}>
-          {/* ===== 1) ห้องที่กำลังแก้ไข ===== */}
-          <section className="ss-hero">
-            <RoomThumb src={heroPreview} />
-            <div className="ss-hero-info">
-              <span className="ss-hero-title" title={heroName}>
-                {heroName}
+      <div className="ss-body" aria-busy={loadingTab !== null}>
+        {/* ===== 1) ห้องที่กำลังแก้ไข ===== */}
+        <section className="ss-hero">
+          <RoomThumb src={heroPreview} />
+          <div className="ss-hero-info">
+            <span className="ss-hero-title" title={heroName}>
+              {heroName}
+            </span>
+            {mineLoading && !sharedRoomId ? (
+              // ⭐ ระหว่างโหลดรายการ "ห้องของฉัน" — skeleton แทนข้อความที่อาจกระพริบผิด
+              <span className="ss-hero-skel rt-shimmer" aria-hidden="true" />
+            ) : (
+              <span
+                className="ss-meta"
+                title={activeRoom ? absoluteTimeTh(activeRoom.updatedAt) : ""}
+              >
+                {activeRoom
+                  ? `🕒 แก้ไขล่าสุด ${relativeTimeTh(activeRoom.updatedAt)} · ${activeRoom.itemCount} ชิ้น`
+                  : sharedRoomId
+                    ? "แก้ไขได้ แต่ต้องบันทึกเป็นสำเนาของตัวเอง"
+                    : "กดบันทึกเพื่อเก็บขึ้นเซิร์ฟเวอร์"}
               </span>
-              {mineLoading && !sharedRoomId ? (
-                // ⭐ ระหว่างโหลดรายการ "ห้องของฉัน" — skeleton แทนข้อความที่อาจกระพริบผิด
-                <span className="ss-hero-skel rt-shimmer" aria-hidden="true" />
-              ) : (
-                <span
-                  className="ss-meta"
-                  title={activeRoom ? absoluteTimeTh(activeRoom.updatedAt) : ""}
+            )}
+
+            <input
+              className="ss-input"
+              value={name}
+              maxLength={MAX_ROOM_NAME}
+              placeholder="ตั้งชื่อไฟล์ เช่น ห้องนอน 3x4"
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            <div className="ss-actions">
+              {sharedRoomId ? (
+                <Button
+                  variant="copper"
+                  size="md"
+                  disabled={busy}
+                  onClick={handleSaveCopyOfShared}
                 >
-                  {activeRoom
-                    ? `🕒 แก้ไขล่าสุด ${relativeTimeTh(activeRoom.updatedAt)} · ${activeRoom.itemCount} ชิ้น`
-                    : sharedRoomId
-                      ? "แก้ไขได้ แต่ต้องบันทึกเป็นสำเนาของตัวเอง"
-                      : "กดบันทึกเพื่อเก็บขึ้นเซิร์ฟเวอร์"}
-                </span>
-              )}
-
-              <input
-                className="ss-input"
-                value={name}
-                maxLength={MAX_ROOM_NAME}
-                placeholder="ตั้งชื่อไฟล์ เช่น ห้องนอน 3x4"
-                onChange={(e) => setName(e.target.value)}
-              />
-
-              <div className="ss-actions">
-                {sharedRoomId ? (
+                  📄 บันทึกเป็นสำเนาของฉัน
+                </Button>
+              ) : activeCloudRoomId ? (
+                <>
                   <Button
                     variant="copper"
                     size="md"
                     disabled={busy}
-                    onClick={handleSaveCopyOfShared}
+                    onClick={handleSaveOver}
                   >
-                    📄 บันทึกเป็นสำเนาของฉัน
+                    💾 บันทึกทับ
                   </Button>
-                ) : activeCloudRoomId ? (
-                  <>
-                    <Button
-                      variant="copper"
-                      size="md"
-                      disabled={busy}
-                      onClick={handleSaveOver}
-                    >
-                      💾 บันทึกทับ
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      disabled={busy}
-                      onClick={handleSaveNew}
-                    >
-                      ＋ บันทึกเป็นไฟล์ใหม่
-                    </Button>
-                  </>
-                ) : (
                   <Button
-                    variant="copper"
+                    variant="secondary"
                     size="md"
                     disabled={busy}
                     onClick={handleSaveNew}
                   >
-                    💾 บันทึกห้องนี้
+                    ＋ บันทึกเป็นไฟล์ใหม่
                   </Button>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* ===== 2) ลิงก์แชร์ ===== */}
-          {activeCloudRoomId ? (
-            <section className="ss-linkbox">
-              <span className="ss-linkbox-label">🔗 ลิงก์แชร์ให้เพื่อน</span>
-              <div className="ss-linkrow">
-                <input
-                  className="ss-input"
-                  readOnly
-                  value={shareUrlOf(activeCloudRoomId)}
-                  onFocus={(e) => e.currentTarget.select()}
-                />
+                </>
+              ) : (
                 <Button
                   variant="copper"
                   size="md"
-                  onClick={() =>
-                    handleCopyLink({
-                      id: activeCloudRoomId,
-                    } as CloudRoomSummary)
-                  }
+                  disabled={busy}
+                  onClick={handleSaveNew}
                 >
-                  คัดลอก
+                  💾 บันทึกห้องนี้
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() =>
-                    window.open(shareUrlOf(activeCloudRoomId), "_blank")
-                  }
-                >
-                  เปิด
-                </Button>
-              </div>
-              {activeRoom && (
-                <label className="ss-check">
-                  <input
-                    type="checkbox"
-                    checked={activeRoom.isTemplate}
-                    disabled={busy}
-                    onChange={() => handleToggleTemplate(activeRoom)}
-                  />
-                  ★ ให้ทุกคนเห็นเป็นเทมเพลตสาธารณะ
-                </label>
               )}
-            </section>
-          ) : (
-            <section className="ss-linkbox disabled">
-              🔒 บันทึกห้องก่อน แล้วลิงก์แชร์จะขึ้นที่นี่
-            </section>
-          )}
-
-          {/* ===== 3) รายการห้อง (โหลดเฉพาะแท็บที่กำลังดู) ===== */}
-          <div className="ss-tabs">
-            <button
-              type="button"
-              className={`ss-tab${tab === "mine" ? " active" : ""}`}
-              onClick={() => switchTab("mine")}
-            >
-              ห้องของฉัน ({myRooms ? myRooms.length : "…"})
-            </button>
-            <button
-              type="button"
-              className={`ss-tab${tab === "templates" ? " active" : ""}`}
-              onClick={() => switchTab("templates")}
-            >
-              เทมเพลตสาธารณะ ({templates ? templates.length : "…"})
-            </button>
+            </div>
           </div>
+        </section>
 
-          {tabError ? (
-            <div className="ss-error">
-              <span className="ss-error-text">⚠️ {tabError.message}</span>
+        {/* ===== 2) ลิงก์แชร์ ===== */}
+        {activeCloudRoomId ? (
+          <section className="ss-linkbox">
+            <span className="ss-linkbox-label">🔗 ลิงก์แชร์ให้เพื่อน</span>
+            <div className="ss-linkrow">
+              <input
+                className="ss-input"
+                readOnly
+                value={shareUrlOf(activeCloudRoomId)}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <Button
+                variant="copper"
+                size="md"
+                onClick={() =>
+                  handleCopyLink({
+                    id: activeCloudRoomId,
+                  } as CloudRoomSummary)
+                }
+              >
+                คัดลอก
+              </Button>
               <Button
                 variant="secondary"
-                size="sm"
-                onClick={() => loadTab(tab, { force: true })}
+                size="md"
+                onClick={() =>
+                  window.open(shareUrlOf(activeCloudRoomId), "_blank")
+                }
               >
-                ลองอีกครั้ง
+                เปิด
               </Button>
             </div>
-          ) : tabLoading ? (
-            // ⭐ skeleton การ์ดห้อง 4 ใบ ระหว่างโหลดรายการ
-            <div className="ss-grid" aria-hidden="true">
-              <RoomCardSkeleton />
-              <RoomCardSkeleton />
-              <RoomCardSkeleton />
-              <RoomCardSkeleton />
-            </div>
-          ) : tab === "mine" ? (
-            (currentList ?? []).length === 0 ? (
-              <div className="ss-empty">
-                ยังไม่มีห้องที่บันทึกไว้ — ตั้งชื่อด้านบนแล้วกด
-                &quot;บันทึกห้องนี้&quot;
-              </div>
-            ) : (
-              <div className="ss-grid">
-                {(currentList ?? []).map((room) => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    owned
-                    busy={busy}
-                    opening={openingId === room.id}
-                    active={room.id === activeCloudRoomId}
-                    onOpen={handleOpen}
-                    onCopyLink={handleCopyLink}
-                    onRename={handleRenameSubmit}
-                    onToggleTemplate={handleToggleTemplate}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            )
-          ) : (currentList ?? []).length === 0 ? (
-            <div className="ss-empty">
-              ยังไม่มีเทมเพลตสาธารณะ — ติ๊ก ★ ให้ห้องของคุณเพื่อเผยแพร่
-            </div>
+            {activeRoom && (
+              <label className="ss-check">
+                <input
+                  type="checkbox"
+                  checked={activeRoom.isTemplate}
+                  disabled={busy}
+                  onChange={() => handleToggleTemplate(activeRoom)}
+                />
+                ★ ให้ทุกคนเห็นเป็นเทมเพลตสาธารณะ
+              </label>
+            )}
+          </section>
+        ) : (
+          <section className="ss-linkbox disabled">
+            🔒 บันทึกห้องก่อน แล้วลิงก์แชร์จะขึ้นที่นี่
+          </section>
+        )}
+
+        {/* ===== 3) รายการห้อง (โหลดเฉพาะแท็บที่กำลังดู) ===== */}
+        <div className="ss-tabs">
+          <button
+            type="button"
+            className={`ss-tab${tab === "mine" ? " active" : ""}`}
+            onClick={() => switchTab("mine")}
+          >
+            ห้องของฉัน ({myRooms ? myRooms.length : "…"})
+          </button>
+          <button
+            type="button"
+            className={`ss-tab${tab === "templates" ? " active" : ""}`}
+            onClick={() => switchTab("templates")}
+          >
+            เทมเพลตสาธารณะ ({templates ? templates.length : "…"})
+          </button>
+        </div>
+
+        {tabError ? (
+          <div className="ss-error">
+            <span className="ss-error-text">⚠️ {tabError.message}</span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => loadTab(tab, { force: true })}
+            >
+              ลองอีกครั้ง
+            </Button>
+          </div>
+        ) : tabLoading ? (
+          // ⭐ skeleton การ์ดห้อง 4 ใบ ระหว่างโหลดรายการ
+          <div className="ss-grid" aria-hidden="true">
+            <RoomCardSkeleton />
+            <RoomCardSkeleton />
+            <RoomCardSkeleton />
+            <RoomCardSkeleton />
+          </div>
+        ) : tab === "mine" ? (
+          (currentList ?? []).length === 0 ? (
+            <EmptyState
+              icon="💾"
+              title="ยังไม่มีห้องที่บันทึกไว้"
+              sub='ตั้งชื่อด้านบนแล้วกด "บันทึกห้องนี้"'
+            />
           ) : (
             <div className="ss-grid">
               {(currentList ?? []).map((room) => (
                 <RoomCard
                   key={room.id}
                   room={room}
+                  owned
                   busy={busy}
                   opening={openingId === room.id}
+                  active={room.id === activeCloudRoomId}
                   onOpen={handleOpen}
                   onCopyLink={handleCopyLink}
+                  onRename={handleRenameSubmit}
+                  onToggleTemplate={handleToggleTemplate}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
-          )}
+          )
+        ) : (currentList ?? []).length === 0 ? (
+          <EmptyState
+            icon="⭐"
+            title="ยังไม่มีเทมเพลตสาธารณะ"
+            sub="ติ๊ก ★ ให้ห้องของคุณเพื่อเผยแพร่"
+          />
+        ) : (
+          <div className="ss-grid">
+            {(currentList ?? []).map((room) => (
+              <RoomCard
+                key={room.id}
+                room={room}
+                busy={busy}
+                opening={openingId === room.id}
+                onOpen={handleOpen}
+                onCopyLink={handleCopyLink}
+              />
+            ))}
+          </div>
+        )}
 
-          <p className="ss-note">
-            ℹ️ เพื่อนที่เปิดลิงก์จะแก้ไขได้ แต่การแก้ไขจะไม่ทับห้องของคุณ
-            จนกว่าเพื่อนจะกด &quot;บันทึกเป็นสำเนาของฉัน&quot;
-          </p>
-        </div>
+        <p className="ss-note">
+          ℹ️ เพื่อนที่เปิดลิงก์จะแก้ไขได้ แต่การแก้ไขจะไม่ทับห้องของคุณ
+          จนกว่าเพื่อนจะกด &quot;บันทึกเป็นสำเนาของฉัน&quot;
+        </p>
       </div>
-    </div>
+    </Modal>
   );
 }

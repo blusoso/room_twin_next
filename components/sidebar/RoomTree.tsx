@@ -14,7 +14,7 @@ import { useTreeItemDrag } from "@/hooks/useTreeItemDrag";
 import ThumbIcon from "./ThumbIcon";
 import { removeZoneFull, moveItemOutOfZoneFull } from "@/lib/three/zoneActions";
 import type { PlacedItem } from "@/lib/state/types";
-import { IconButton } from "@/components/ui";
+import { EmptyState, IconButton } from "@/components/ui";
 
 // ============================================================
 // Root
@@ -26,13 +26,11 @@ export default function RoomTree() {
   if (placedItems.length === 0) {
     return (
       <div className="room-tree">
-        <div className="room-tree-empty">
-          ยังไม่มีของในห้อง
-          <br />
-          <small>
-            ไปที่แท็บ &quot;🛒 สร้างห้อง&quot; แล้วลากไอเทมหรือโซนมาวางก่อน
-          </small>
-        </div>
+        <EmptyState
+          icon="🪑"
+          title="ยังไม่มีของในห้อง"
+          sub='ไปที่แท็บ "สร้างห้อง" แล้วลากไอเทมหรือโซนมาวางก่อน'
+        />
       </div>
     );
   }

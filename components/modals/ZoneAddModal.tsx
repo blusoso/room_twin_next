@@ -19,7 +19,7 @@ import { useZoneAddStore } from "./useModalStores";
 import ZoneEditIconPicker from "./ZoneEditIconPicker";
 import ZoneEditColorPicker from "./ZoneEditColorPicker";
 import ThumbIcon from "@/components/sidebar/ThumbIcon";
-import { Button } from "@/components/ui";
+import { Button, Modal } from "@/components/ui";
 
 // ============================================================
 // Defaults — เลือกค่าที่ "ไม่ชนกับโซนเดิม" ให้ก่อน
@@ -170,168 +170,160 @@ export default function ZoneAddModal() {
   };
 
   return (
-    <div
-      className={`zone-edit-overlay${open ? " show" : ""}`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) close();
-      }}
-      aria-hidden={!open}
+    <Modal
+      open={open}
+      onClose={close}
+      overlayClass="zone-edit-overlay"
+      boxClass="zone-edit-box"
     >
-      <div className="zone-edit-box" role="dialog" aria-modal="true">
-        {mode === "choose" ? (
-          <>
-            <div className="zone-edit-title">เพิ่มโซน</div>
+      {mode === "choose" ? (
+        <>
+          <div className="zone-edit-title">เพิ่มโซน</div>
 
-            <button
-              type="button"
-              className="zone-add-choice"
-              onClick={() => setMode("create")}
+          <button
+            type="button"
+            className="zone-add-choice"
+            onClick={() => setMode("create")}
+          >
+            <span className="zone-add-choice-icon">🎨</span>
+            <span className="zone-add-choice-body">
+              <b>สร้างโซนเอง</b>
+              <small>ตั้งชื่อ เลือกไอคอน/สี แล้วเลือกของที่จะอยู่ในโซน</small>
+            </span>
+          </button>
+
+          <button type="button" className="zone-add-choice" onClick={goCatalog}>
+            <span className="zone-add-choice-icon">🛒</span>
+            <span className="zone-add-choice-body">
+              <b>เลือกจากโซนสำเร็จรูปใน catalog</b>
+              <small>โซนพร้อมเฟอร์นิเจอร์ เช่น โซนนอน โซนทำงาน</small>
+            </span>
+          </button>
+
+          <div className="zone-edit-actions">
+            <Button
+              variant="secondary"
+              size="md"
+              style={{ flex: 1 }}
+              onClick={close}
             >
-              <span className="zone-add-choice-icon">🎨</span>
-              <span className="zone-add-choice-body">
-                <b>สร้างโซนเอง</b>
-                <small>ตั้งชื่อ เลือกไอคอน/สี แล้วเลือกของที่จะอยู่ในโซน</small>
-              </span>
-            </button>
+              ยกเลิก
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="zone-edit-title">สร้างโซนเอง</div>
 
-            <button
-              type="button"
-              className="zone-add-choice"
-              onClick={goCatalog}
+          <label className="zone-edit-label">ชื่อโซน</label>
+          <input
+            type="text"
+            className={`zone-edit-input${error ? " error" : ""}`}
+            value={draft.name}
+            onChange={(e) => applyDraft({ name: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleCreate();
+              }
+            }}
+            maxLength={30}
+            placeholder="เช่น โซนอ่านหนังสือของฉัน"
+          />
+          <div className={`zone-edit-error${error ? " show" : ""}`}>
+            {error}
+          </div>
+          {!error && draft.name.trim().length === 0 && (
+            <div className="zone-add-hint">กรอกชื่อโซนก่อนสร้าง</div>
+          )}
+
+          <label className="zone-edit-label">ไอคอน</label>
+          <ZoneEditIconPicker
+            value={draft.icon}
+            onChange={(icon) => applyDraft({ icon })}
+          />
+
+          <label className="zone-edit-label">สีโซน</label>
+          <ZoneEditColorPicker
+            value={draft.color}
+            onChange={(color) => applyDraft({ color })}
+          />
+
+          <label className="zone-edit-label">
+            ของในโซน ({members.size} ชิ้น)
+          </label>
+
+          {eligible.length === 0 ? (
+            <div className="zone-add-hint">
+              ยังไม่มีของที่ใส่โซนได้ — ไปวางของในแท็บ &quot;🛒 สร้างห้อง&quot;
+              ก่อน หรือเลือกโซนสำเร็จรูปจาก catalog
+            </div>
+          ) : (
+            <div className="zone-add-members">
+              {eligible.map((it) => {
+                const p = PRODUCT_BY_ID.get(it.productId);
+                const name = it.displayName || p?.name || it.productId;
+                const from = it.zoneUid
+                  ? resolveZoneDisplay(it.zoneUid, { placedItems, zoneMeta })
+                      .name
+                  : null;
+
+                return (
+                  <label key={it.uid} className="zone-add-member">
+                    <input
+                      type="checkbox"
+                      checked={members.has(it.uid)}
+                      onChange={() => toggleMember(it.uid)}
+                    />
+                    <span className="zone-add-member-icon">
+                      <ThumbIcon productId={it.productId} />
+                    </span>
+                    <span className="zone-add-member-name">{name}</span>
+                    {from && (
+                      <span className="zone-add-member-from">{from}</span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {eligible.length > 0 && members.size === 0 && (
+            <div className="zone-add-hint">โซนต้องมีของอย่างน้อย 1 ชิ้น</div>
+          )}
+          {fromOtherZone > 0 && (
+            <div className="zone-add-hint">
+              ⚠️ มีของ {fromOtherZone} ชิ้นที่ถูกย้ายออกจากโซนเดิม —
+              ถ้าโซนเดิมไม่เหลือของ โซนนั้นจะหายไป
+            </div>
+          )}
+          {allWallOrCeiling && (
+            <div className="zone-add-hint">
+              ℹ️ ของที่เลือกแขวนผนัง/เพดานทั้งหมด — ขอบเขตโซนใน 3D จะยังไม่แสดง
+            </div>
+          )}
+
+          <div className="zone-edit-actions">
+            <Button
+              variant="secondary"
+              size="md"
+              style={{ flex: 1 }}
+              onClick={() => setMode("choose")}
             >
-              <span className="zone-add-choice-icon">🛒</span>
-              <span className="zone-add-choice-body">
-                <b>เลือกจากโซนสำเร็จรูปใน catalog</b>
-                <small>โซนพร้อมเฟอร์นิเจอร์ เช่น โซนนอน โซนทำงาน</small>
-              </span>
-            </button>
-
-            <div className="zone-edit-actions">
-              <Button
-                variant="secondary"
-                size="md"
-                style={{ flex: 1 }}
-                onClick={close}
-              >
-                ยกเลิก
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="zone-edit-title">สร้างโซนเอง</div>
-
-            <label className="zone-edit-label">ชื่อโซน</label>
-            <input
-              type="text"
-              className={`zone-edit-input${error ? " error" : ""}`}
-              value={draft.name}
-              onChange={(e) => applyDraft({ name: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleCreate();
-                }
-              }}
-              maxLength={30}
-              placeholder="เช่น โซนอ่านหนังสือของฉัน"
-            />
-            <div className={`zone-edit-error${error ? " show" : ""}`}>
-              {error}
-            </div>
-            {!error && draft.name.trim().length === 0 && (
-              <div className="zone-add-hint">กรอกชื่อโซนก่อนสร้าง</div>
-            )}
-
-            <label className="zone-edit-label">ไอคอน</label>
-            <ZoneEditIconPicker
-              value={draft.icon}
-              onChange={(icon) => applyDraft({ icon })}
-            />
-
-            <label className="zone-edit-label">สีโซน</label>
-            <ZoneEditColorPicker
-              value={draft.color}
-              onChange={(color) => applyDraft({ color })}
-            />
-
-            <label className="zone-edit-label">
-              ของในโซน ({members.size} ชิ้น)
-            </label>
-
-            {eligible.length === 0 ? (
-              <div className="zone-add-hint">
-                ยังไม่มีของที่ใส่โซนได้ — ไปวางของในแท็บ &quot;🛒
-                สร้างห้อง&quot; ก่อน หรือเลือกโซนสำเร็จรูปจาก catalog
-              </div>
-            ) : (
-              <div className="zone-add-members">
-                {eligible.map((it) => {
-                  const p = PRODUCT_BY_ID.get(it.productId);
-                  const name = it.displayName || p?.name || it.productId;
-                  const from = it.zoneUid
-                    ? resolveZoneDisplay(it.zoneUid, { placedItems, zoneMeta })
-                        .name
-                    : null;
-
-                  return (
-                    <label key={it.uid} className="zone-add-member">
-                      <input
-                        type="checkbox"
-                        checked={members.has(it.uid)}
-                        onChange={() => toggleMember(it.uid)}
-                      />
-                      <span className="zone-add-member-icon">
-                        <ThumbIcon productId={it.productId} />
-                      </span>
-                      <span className="zone-add-member-name">{name}</span>
-                      {from && (
-                        <span className="zone-add-member-from">{from}</span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-
-            {eligible.length > 0 && members.size === 0 && (
-              <div className="zone-add-hint">โซนต้องมีของอย่างน้อย 1 ชิ้น</div>
-            )}
-            {fromOtherZone > 0 && (
-              <div className="zone-add-hint">
-                ⚠️ มีของ {fromOtherZone} ชิ้นที่ถูกย้ายออกจากโซนเดิม —
-                ถ้าโซนเดิมไม่เหลือของ โซนนั้นจะหายไป
-              </div>
-            )}
-            {allWallOrCeiling && (
-              <div className="zone-add-hint">
-                ℹ️ ของที่เลือกแขวนผนัง/เพดานทั้งหมด — ขอบเขตโซนใน 3D
-                จะยังไม่แสดง
-              </div>
-            )}
-
-            <div className="zone-edit-actions">
-              <Button
-                variant="secondary"
-                size="md"
-                style={{ flex: 1 }}
-                onClick={() => setMode("choose")}
-              >
-                ย้อนกลับ
-              </Button>
-              <Button
-                variant="copper"
-                size="md"
-                style={{ flex: 1 }}
-                disabled={!canCreate}
-                onClick={handleCreate}
-              >
-                สร้างโซน
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+              ย้อนกลับ
+            </Button>
+            <Button
+              variant="copper"
+              size="md"
+              style={{ flex: 1 }}
+              disabled={!canCreate}
+              onClick={handleCreate}
+            >
+              สร้างโซน
+            </Button>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }

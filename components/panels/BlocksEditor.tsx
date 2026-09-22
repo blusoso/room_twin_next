@@ -11,7 +11,7 @@ import {
 } from "@/hooks/useRoomTwinInit";
 import { LEVEL_PRESETS, LEVEL_STEP } from "@/lib/data/constants";
 import { structurePlanItems, blocksOrigin } from "@/lib/three/structurePlan";
-import { Button, IconButton } from "@/components/ui";
+import { Button, IconButton, Modal, SectionLabel } from "@/components/ui";
 
 const CELL_PX_BASE = 22;
 const MIN_ZOOM = 0.5;
@@ -473,12 +473,11 @@ export default function BlocksEditor() {
   };
 
   return (
-    <div
-      className={`blocks-overlay${open ? " show" : ""}`}
-      aria-hidden={!open}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) setBlocksEditorOpen(false);
-      }}
+    <Modal
+      open={open}
+      onClose={() => setBlocksEditorOpen(false)}
+      overlayClass="blocks-overlay"
+      boxClass="blocks-box"
     >
       <div className="blocks-box">
         <div className="blocks-head">
@@ -580,7 +579,7 @@ export default function BlocksEditor() {
             <div
               className={`blocks-levels${tool === "erase" ? " is-dim" : ""}`}
             >
-              <span className="blocks-bar-label">ระดับพื้น (ซม.)</span>
+              <SectionLabel icon="📏">ระดับพื้น (ซม.)</SectionLabel>
               <div className="blocks-chip-row">
                 {LEVEL_PRESETS.map((p) => (
                   <button
@@ -826,6 +825,6 @@ export default function BlocksEditor() {
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

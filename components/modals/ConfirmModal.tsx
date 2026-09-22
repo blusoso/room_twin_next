@@ -1,7 +1,7 @@
 // components/modals/ConfirmModal.tsx
 "use client";
 import { useConfirmStore } from "./useModalStores";
-import { Button } from "@/components/ui";
+import { Button, Modal } from "@/components/ui";
 
 export default function ConfirmModal() {
   const open = useConfirmStore((s) => s.open);
@@ -10,37 +10,24 @@ export default function ConfirmModal() {
   const confirm = useConfirmStore((s) => s.confirm);
 
   return (
-    <div
-      className={`confirm-overlay${open ? " show" : ""}`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeConfirm();
-      }}
-      aria-hidden={!open}
+    <Modal
+      open={open}
+      onClose={closeConfirm}
+      overlayClass="confirm-overlay"
+      boxClass="confirm-box"
     >
-      <div className="confirm-box" role="dialog" aria-modal="true">
-        <div
-          className="confirm-msg"
-          dangerouslySetInnerHTML={{ __html: message }}
-        />
-        <div className="confirm-actions">
-          <Button
-            variant="secondary"
-            size="md"
-            style={{ flex: 1 }}
-            onClick={closeConfirm}
-          >
-            ยกเลิก
-          </Button>
-          <Button
-            variant="danger"
-            size="md"
-            style={{ flex: 1 }}
-            onClick={confirm}
-          >
-            ยืนยัน
-          </Button>
-        </div>
+      <div
+        className="confirm-msg"
+        dangerouslySetInnerHTML={{ __html: message }}
+      />
+      <div className="confirm-actions">
+        <Button variant="secondary" size="md" style={{ flex: 1 }} onClick={closeConfirm}>
+          ยกเลิก
+        </Button>
+        <Button variant="danger" size="md" style={{ flex: 1 }} onClick={confirm}>
+          ยืนยัน
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

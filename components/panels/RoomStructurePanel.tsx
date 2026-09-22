@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useRoomTwin } from "@/lib/state/store";
 
-import { Button, IconButton } from "@/components/ui";
+import { Button, IconButton, SectionLabel } from "@/components/ui";
 
 import {
   FLOOR_STYLES,
@@ -917,7 +917,7 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
         <>
           {/* ═══════════ วัสดุพื้น ═══════════ */}
           <div className="rsp-subsec">
-            <div className="rsp-subsec-title">🟫 วัสดุพื้น</div>
+            <SectionLabel icon="🟫">วัสดุพื้น</SectionLabel>
 
             <div className="floor-grid">
               {FLOOR_STYLES.map((st) => (
@@ -948,7 +948,7 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
 
           {/* ═══════════ ⭐ สีพื้น ═══════════ */}
           <div className="rsp-subsec">
-            <div className="rsp-subsec-title">🎨 สีพื้น</div>
+            <SectionLabel icon="🎨">สีพื้น</SectionLabel>
 
             <div className="wall-color-grid">
               {FLOOR_TINT_PALETTE.map((c) => (
@@ -1058,12 +1058,12 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
               </div>
             )}
 
-            <div className="rsp-subsec-title">
+            <SectionLabel icon="🎨">
               {surface.wallUniform
-                ? "🎨 สีทุกผนัง"
-                : `🎨 สีผนัง${WALL_SHORT[wallSel]}`}
-            </div>
-
+                ? "สีทุกผนัง"
+                : `สีผนัง${WALL_SHORT[wallSel]}`}
+            </SectionLabel>
+            
             <div className="wall-color-grid">
               {WALL_COLOR_PALETTE.map((c) => {
                 const isActive = surface.wallUniform
@@ -1123,7 +1123,7 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
 
           {/* ═══════════ สีเพดาน ═══════════ */}
           <div className="rsp-subsec">
-            <div className="rsp-subsec-title">⬜ สีเพดาน</div>
+            <SectionLabel icon="⬜">สีเพดาน</SectionLabel>
 
             <div className="wall-color-grid">
               {CEILING_COLOR_PALETTE.map((c) => (
@@ -1158,7 +1158,7 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
 
           {/* ═══════════ ⭐ สีบัว ═══════════ */}
           <div className="rsp-subsec">
-            <div className="rsp-subsec-title">📏 สีบัว</div>
+            <SectionLabel icon="📏">สีบัว</SectionLabel>
 
             <div className="wall-color-grid is-4">
               {BASEBOARD_COLOR_PALETTE.map((c) => (

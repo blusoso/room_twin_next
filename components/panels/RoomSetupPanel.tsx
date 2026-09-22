@@ -11,7 +11,7 @@ import { resolveRestHeights } from "@/lib/three/placement";
 import { openConfirm } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
-import { IconButton } from "@/components/ui";
+import { IconButton, Panel } from "@/components/ui";
 
 type GroupId = "walls" | "doors" | "windows" | "columns" | "partitions";
 
@@ -237,14 +237,11 @@ export default function RoomSetupPanel() {
   // Render
   // ============================================================
   return (
-    <aside
-      className={`room-setup-panel${open ? " show" : ""}`}
-      aria-hidden={!open}
-      style={{
-        visibility: open ? "visible" : "hidden",
-        pointerEvents: open ? "auto" : "none",
-      }}
-      inert={!open}
+    <Panel
+      open={open}
+      onClose={() => setOpen(false)}
+      panelClass="room-setup-panel"
+      backdropClass="" // ไม่มี backdrop
     >
       <div className="rsu-head">
         <div className="rsu-title">
@@ -333,6 +330,6 @@ export default function RoomSetupPanel() {
           );
         })}
       </div>
-    </aside>
+    </Panel>
   );
 }

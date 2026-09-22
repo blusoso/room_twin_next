@@ -2745,8 +2745,8 @@ mark.hl {
 
 .zone-edit-input {
   width: 100%;
-   height: 42px;  
-  padding: 0 14px;   
+   height: 42px;
+  padding: 0 14px;
   border: 1.5px solid var(--panel-line);
   border-radius: 14px;
   font-family: inherit;
@@ -3831,7 +3831,6 @@ mark.hl {
 }
 
 /* ─── mobile: ย่อลงเล็กน้อย ─── */
-@media (max-width: 820px) {}
 
 .rsp-note {
   font-size: 10.5px;
@@ -5423,13 +5422,6 @@ mark.hl {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.cz-section-label::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--panel-line), transparent);
 }
 
 /* ⭐ chip row ของขนาดสำเร็จรูป — อยู่เหนือสไลเดอร์ขนาดในแผงปรับแต่ง */

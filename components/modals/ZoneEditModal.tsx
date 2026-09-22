@@ -12,7 +12,7 @@ import { ZONE_FALLBACK } from "@/lib/data/zones";
 import { useZoneEditStore } from "./useModalStores";
 import ZoneEditIconPicker from "./ZoneEditIconPicker";
 import ZoneEditColorPicker from "./ZoneEditColorPicker";
-import { Button } from "@/components/ui";
+import { Button, Modal } from "@/components/ui";
 
 // ============================================================
 // Draft + validation
@@ -139,58 +139,57 @@ export default function ZoneEditModal() {
   };
 
   return (
-    <div
-      className={`zone-edit-overlay${open ? " show" : ""}`}
-      onClick={handleBackdrop}
-      aria-hidden={!open}
+    <Modal
+      open={open}
+      onClose={handleCancel}
+      overlayClass="zone-edit-overlay"
+      boxClass="zone-edit-box"
     >
-      <div className="zone-edit-box" role="dialog" aria-modal="true">
-        <div className="zone-edit-title">แก้ไขโซน</div>
+      <div className="zone-edit-title">แก้ไขโซน</div>
 
-        <label className="zone-edit-label">ชื่อโซน</label>
-        <input
-          ref={nameInputRef}
-          type="text"
-          className={`zone-edit-input${error ? " error" : ""}`}
-          value={draft.name}
-          onChange={(e) => applyDraft({ name: e.target.value })}
-          onKeyDown={handleKeyDown}
-          maxLength={30}
-          placeholder="เช่น โซนนอน"
-        />
-        <div className={`zone-edit-error${error ? " show" : ""}`}>{error}</div>
+      <label className="zone-edit-label">ชื่อโซน</label>
+      <input
+        ref={nameInputRef}
+        type="text"
+        className={`zone-edit-input${error ? " error" : ""}`}
+        value={draft.name}
+        onChange={(e) => applyDraft({ name: e.target.value })}
+        onKeyDown={handleKeyDown}
+        maxLength={30}
+        placeholder="เช่น โซนนอน"
+      />
+      <div className={`zone-edit-error${error ? " show" : ""}`}>{error}</div>
 
-        <label className="zone-edit-label">ไอคอน</label>
-        <ZoneEditIconPicker
-          value={draft.icon}
-          onChange={(icon) => applyDraft({ icon })}
-        />
+      <label className="zone-edit-label">ไอคอน</label>
+      <ZoneEditIconPicker
+        value={draft.icon}
+        onChange={(icon) => applyDraft({ icon })}
+      />
 
-        <label className="zone-edit-label">สีโซน</label>
-        <ZoneEditColorPicker
-          value={draft.color}
-          onChange={(color) => applyDraft({ color })}
-        />
+      <label className="zone-edit-label">สีโซน</label>
+      <ZoneEditColorPicker
+        value={draft.color}
+        onChange={(color) => applyDraft({ color })}
+      />
 
-        <div className="zone-edit-actions">
-          <Button
-            variant="secondary"
-            size="md"
-            style={{ flex: 1 }}
-            onClick={handleCancel}
-          >
-            ยกเลิก
-          </Button>
-          <Button
-            variant="copper"
-            size="md"
-            style={{ flex: 1 }}
-            onClick={handleSave}
-          >
-            บันทึก
-          </Button>
-        </div>
+      <div className="zone-edit-actions">
+        <Button
+          variant="secondary"
+          size="md"
+          style={{ flex: 1 }}
+          onClick={handleCancel}
+        >
+          ยกเลิก
+        </Button>
+        <Button
+          variant="copper"
+          size="md"
+          style={{ flex: 1 }}
+          onClick={handleSave}
+        >
+          บันทึก
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

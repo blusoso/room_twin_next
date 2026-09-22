@@ -16,7 +16,7 @@ import SizePresetList from "./SizePresetList";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
 import type { DimDef, ColorDef, BoolDef } from "@/lib/data/schemas";
-import { Button, IconButton } from "@/components/ui";
+import { Button, IconButton, Panel, SectionLabel } from "@/components/ui";
 
 export default function CustomizePanel() {
   const targetUid = useRoomTwin((s) => s.customizeTargetUid);
@@ -46,46 +46,31 @@ export default function CustomizePanel() {
   }, [open, close]);
 
   return (
-    <>
-      {/* ⭐ Backdrop — render เฉพาะตอน open */}
-      {open && (
-        <div
-          className="panel-backdrop z-29 show"
-          onClick={close}
-          aria-hidden="true"
-        />
-      )}
-
-      <aside
-        className={`customize-panel${open ? " show" : ""}`}
-        aria-hidden={!open}
-        // ⭐ Inline styles — บังคับแม้ CSS ไม่โหลด
-        style={{
-          visibility: open ? "visible" : "hidden",
-          pointerEvents: open ? "auto" : "none",
-        }}
-        // ⭐ inert — block ทุก interaction เมื่อปิด
-        {...(!open ? { inert: "" as any } : {})}
-      >
-        <div className="cz-head">
-          <div className="cz-head-main">
-            <div className="cz-title">
-              {item
-                ? `🎨 ${item.displayName || PRODUCT_BY_ID.get(item.productId)?.name || ""}`
-                : "ปรับแต่ง"}
-            </div>
-            <div className="cz-subtitle">
-              ปรับขนาด สี และตัวเลือก — เห็นผลทันทีในห้อง
-            </div>
+    <Panel
+      open={open}
+      onClose={close}
+      panelClass="customize-panel"
+      backdropClass="panel-backdrop"
+      backdropZ="z-29"
+    >
+      <div className="cz-head">
+        <div className="cz-head-main">
+          <div className="cz-title">
+            {item
+              ? `🎨 ${item.displayName || PRODUCT_BY_ID.get(item.productId)?.name || ""}`
+              : "ปรับแต่ง"}
           </div>
-          <IconButton label="ปิด" size="sm" onClick={close}>
-            ✕
-          </IconButton>
+          <div className="cz-subtitle">
+            ปรับขนาด สี และตัวเลือก — เห็นผลทันทีในห้อง
+          </div>
         </div>
+        <IconButton label="ปิด" size="sm" onClick={close}>
+          ✕
+        </IconButton>
+      </div>
 
-        {item && <CustomizeBody item={item} onSave={close} />}
-      </aside>
-    </>
+      {item && <CustomizeBody item={item} onSave={close} />}
+    </Panel>
   );
 }
 
@@ -126,7 +111,7 @@ function CustomizeBody({
       <div className="cz-body">
         {hasDims && (
           <div className="cz-section">
-            <div className="cz-section-label">📐 ขนาด</div>
+            <SectionLabel icon="📐">ขนาด</SectionLabel>
             {/* ⭐ ขนาดสำเร็จรูป — แตะเดียวได้ขนาดที่รู้จักชื่อ (รายการเดียวกับปุ่ม 📐 บน toolbar) */}
             {hasSizePresets(item.productId) && (
               <SizePresetList
@@ -149,7 +134,8 @@ function CustomizeBody({
 
         {hasColors && (
           <div className="cz-section">
-            <div className="cz-section-label">🎨 สี</div>
+            <SectionLabel icon="🎨">สี</SectionLabel>
+
             {schema.colors!.map((def) => (
               <ColorRow key={def.key} item={item} def={def} />
             ))}
@@ -158,7 +144,7 @@ function CustomizeBody({
 
         {hasBools && (
           <div className="cz-section">
-            <div className="cz-section-label">⚙️ ตัวเลือกเพิ่มเติม</div>
+            <SectionLabel icon="⚙️">ตัวเลือกเพิ่มเติม</SectionLabel>
             {schema.bools!.map((def) => (
               <BoolRow key={def.key} item={item} def={def} />
             ))}

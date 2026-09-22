@@ -10,7 +10,7 @@ import CartItemRow from "./CartItemRow";
 import CartEmpty from "./CartEmpty";
 import CartSummary from "./CartSummary";
 import ConfirmDialog from "./ConfirmDialog";
-import { IconButton } from "@/components/ui";
+import { IconButton, EmptyState  } from "@/components/ui";
 
 export default function CartDrawer() {
   const [open, setOpen] = useState(false);

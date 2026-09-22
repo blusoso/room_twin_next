@@ -9,7 +9,7 @@ import { reinstantiateItem } from "@/lib/three/instantiate";
 import { applyThemeToItem } from "@/lib/three/themeApply";
 import { resolveRestHeights } from "@/lib/three/placement";
 import { useSaveState } from "@/hooks/useSaveState";
-import { Button, IconButton } from "@/components/ui";
+import { Button, IconButton, Panel } from "@/components/ui";
 
 // ============================================================
 // Theme Apply / Reset
@@ -137,16 +137,11 @@ export default function ZoneThemePanel() {
     <>
       {/* ⭐ ZoneThemePanel ไม่มี backdrop — user ต้องการให้ปิดเมื่อ deselect zone เท่านั้น */}
 
-      <aside
-        className={`zone-theme-panel${open ? " show" : ""}`}
-        aria-hidden={!open}
-        // ⭐ Inline styles — บังคับแม้ CSS ไม่โหลด
-        style={{
-          visibility: open ? "visible" : "hidden",
-          pointerEvents: open ? "auto" : "none",
-        }}
-        // ⭐ inert — block ทุก interaction เมื่อปิด
-        {...(!open ? { inert: "" as any } : {})}
+      <Panel
+        open={open}
+        onClose={close}
+        panelClass="zone-theme-panel"
+        backdropClass="" // ไม่มี backdrop
       >
         <div className="ztp-head">
           <div className="ztp-title">
@@ -204,7 +199,7 @@ export default function ZoneThemePanel() {
             </button>
           ))}
         </div>
-      </aside>
+      </Panel>
     </>
   );
 }
