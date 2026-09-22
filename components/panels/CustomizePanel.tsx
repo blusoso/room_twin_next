@@ -16,6 +16,7 @@ import SizePresetList from "./SizePresetList";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
 import type { DimDef, ColorDef, BoolDef } from "@/lib/data/schemas";
+import { Button, IconButton } from "@/components/ui";
 
 export default function CustomizePanel() {
   const targetUid = useRoomTwin((s) => s.customizeTargetUid);
@@ -23,9 +24,7 @@ export default function CustomizePanel() {
   const placedItems = useRoomTwin((s) => s.placedItems);
   const { saveState } = useSaveState();
 
-  const item = targetUid
-    ? placedItems.find((i) => i.uid === targetUid)
-    : null;
+  const item = targetUid ? placedItems.find((i) => i.uid === targetUid) : null;
   const open = !!item;
 
   const close = useCallback(() => {
@@ -79,14 +78,9 @@ export default function CustomizePanel() {
               ปรับขนาด สี และตัวเลือก — เห็นผลทันทีในห้อง
             </div>
           </div>
-          <button
-            type="button"
-            className="cz-close"
-            onClick={close}
-            title="ปิด"
-          >
+          <IconButton label="ปิด" size="sm" onClick={close}>
             ✕
-          </button>
+          </IconButton>
         </div>
 
         {item && <CustomizeBody item={item} onSave={close} />}
@@ -173,20 +167,12 @@ function CustomizeBody({
       </div>
 
       <div className="cz-foot">
-        <button
-          type="button"
-          className="cz-reset"
-          onClick={handleReset}
-        >
+        <Button variant="secondary" size="md" onClick={handleReset}>
           คืนค่าเดิม
-        </button>
-        <button
-          type="button"
-          className="cz-save"
-          onClick={onSave}
-        >
+        </Button>
+        <Button variant="copper" size="md" onClick={onSave}>
           เสร็จสิ้น
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -249,9 +235,7 @@ function ColorRow({ item, def }: { item: PlacedItem; def: ColorDef }) {
           value={hexOf(value)}
           onChange={(e) => applyParamEdit(item, def.key, numOf(e.target.value))}
         />
-        <span className="cz-color-hex">
-          {hexOf(value).toUpperCase()}
-        </span>
+        <span className="cz-color-hex">{hexOf(value).toUpperCase()}</span>
       </div>
     </div>
   );
@@ -267,9 +251,7 @@ function BoolRow({ item, def }: { item: PlacedItem; def: BoolDef }) {
           <input
             type="checkbox"
             checked={checked}
-            onChange={(e) =>
-              applyParamEdit(item, def.key, e.target.checked)
-            }
+            onChange={(e) => applyParamEdit(item, def.key, e.target.checked)}
           />
           <span className="cz-toggle-track" />
         </label>

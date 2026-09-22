@@ -1,0 +1,165 @@
+/* ============================================================
+   UI Primitives — Button / IconButton
+   ใช้คู่กับ components/ui/*.tsx
+   ============================================================ */
+
+/* ─── Base button ─── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    transform 0.12s,
+    box-shadow 0.15s;
+}
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn-block { width: 100%; }
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05em;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.btn-label { display: inline-flex; align-items: center; }
+
+/* ─── Sizes ─── */
+.btn-sm { height: 30px; padding: 0 12px; font-size: 12.5px; border-radius: 15px; }
+.btn-md { height: 36px; padding: 0 14px; font-size: 13px; border-radius: 18px; }
+.btn-lg { height: 52px; padding: 0 26px; font-size: 16px; border-radius: 26px; }
+
+/* ─── Variants ─── */
+.btn-primary {
+  background: var(--ink);
+  color: var(--ink-inv);
+  box-shadow: 0 10px 20px -10px rgba(42, 35, 51, 0.6);
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--panel-line);
+}
+.btn-secondary:hover:not(:disabled) { background: var(--surface-2); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--panel-line);
+}
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+
+.btn-floating {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--panel-line);
+  box-shadow: var(--shadow);
+}
+.btn-floating:hover:not(:disabled) { background: var(--surface-2); }
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+.btn-danger:hover:not(:disabled) { filter: brightness(1.08); }
+
+.btn-copper {
+  background: var(--ochre);
+  color: #fff;
+  border-color: var(--ochre);
+}
+.btn-copper:hover:not(:disabled) {
+  background: var(--ochre-deep);
+  border-color: var(--ochre-deep);
+}
+
+.btn-sage {
+  background: var(--sage);
+  color: #fff;
+  border-color: var(--sage);
+}
+.btn-sage:hover:not(:disabled) {
+  background: var(--sage-deep);
+  border-color: var(--sage-deep);
+}
+
+/* ─── Icon button ─── */
+.icon-btn {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--panel-line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s,
+    transform 0.12s;
+}
+.icon-btn:disabled { opacity: 0.32; cursor: default; }
+.icon-btn:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
+.icon-btn:active:not(:disabled) { transform: scale(0.94); }
+.icon-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--dash);
+}
+
+/* Sizes */
+.icon-btn-xs { width: 22px; height: 22px; border-radius: 7px; font-size: 11px; }
+.icon-btn-sm { width: 26px; height: 26px; border-radius: 8px; font-size: 12px; }
+.icon-btn-md { width: 34px; height: 34px; border-radius: 11px; font-size: 15px; }
+.icon-btn-lg { width: 52px; height: 52px; border-radius: 50%; font-size: 22px; }
+
+/* Tones */
+.icon-btn-on {
+  background: var(--ink);
+  color: var(--ink-inv);
+  border-color: var(--ink);
+}
+.icon-btn-on:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--ink-inv);
+}
+
+.icon-btn-danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--panel-line));
+}
+.icon-btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+/* corner-views container — เก็บ grid layout ไว้ */
+.corner-views {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.corner-view-wide {
+  grid-column: span 2;
+  width: auto;
+}

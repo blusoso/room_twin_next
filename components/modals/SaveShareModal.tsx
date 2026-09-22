@@ -36,6 +36,7 @@ import {
 import { showToast } from "@/lib/utils/toast";
 import { openConfirm, useSaveShareStore } from "./useModalStores";
 import RoomCard, { RoomCardSkeleton, RoomThumb } from "./RoomCard";
+import { Button, IconButton } from "@/components/ui";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -79,9 +80,10 @@ export default function SaveShareModal() {
    * ⭐ รายการแยกต่อแท็บ — null = ยังไม่โหลด
    *    โหลดเฉพาะแท็บที่ผู้ใช้กำลังดู (เดิมยิง listRooms + listTemplates พร้อมกันทุกครั้งที่เปิด)
    */
-  const [lists, setLists] = useState<
-    Record<Tab, CloudRoomSummary[] | null>
-  >({ mine: null, templates: null });
+  const [lists, setLists] = useState<Record<Tab, CloudRoomSummary[] | null>>({
+    mine: null,
+    templates: null,
+  });
   const [loadingTab, setLoadingTab] = useState<Tab | null>(null);
   const [listError, setListError] = useState<{
     tab: Tab;
@@ -188,7 +190,11 @@ export default function SaveShareModal() {
     const preview = shot();
     setBusy(true);
     try {
-      const room = await createRoom({ name: finalName, data: serialize(), preview });
+      const room = await createRoom({
+        name: finalName,
+        data: serialize(),
+        preview,
+      });
       setActiveCloudRoomId(room.id);
       setStoredActiveRoomId(room.id);
       saveToStorage(serialize());
@@ -318,10 +324,7 @@ export default function SaveShareModal() {
     }
   };
 
-  const handleRenameSubmit = async (
-    room: CloudRoomSummary,
-    value: string,
-  ) => {
+  const handleRenameSubmit = async (room: CloudRoomSummary, value: string) => {
     const finalName = normalizeRoomName(value, room.name);
     setBusy(true);
     try {
@@ -365,14 +368,9 @@ export default function SaveShareModal() {
       <div className="save-share-box" role="dialog" aria-modal="true">
         <div className="ss-head">
           <h3>💾 บันทึก / แชร์ห้อง</h3>
-          <button
-            type="button"
-            className="ss-close"
-            onClick={close}
-            title="ปิด"
-          >
+          <IconButton label="ปิด" size="md" onClick={close}>
             ✕
-          </button>
+          </IconButton>
         </div>
 
         <div className="ss-body" aria-busy={loadingTab !== null}>
@@ -385,10 +383,7 @@ export default function SaveShareModal() {
               </span>
               {mineLoading && !sharedRoomId ? (
                 // ⭐ ระหว่างโหลดรายการ "ห้องของฉัน" — skeleton แทนข้อความที่อาจกระพริบผิด
-                <span
-                  className="ss-hero-skel rt-shimmer"
-                  aria-hidden="true"
-                />
+                <span className="ss-hero-skel rt-shimmer" aria-hidden="true" />
               ) : (
                 <span
                   className="ss-meta"
@@ -412,42 +407,42 @@ export default function SaveShareModal() {
 
               <div className="ss-actions">
                 {sharedRoomId ? (
-                  <button
-                    type="button"
-                    className="ss-btn primary"
+                  <Button
+                    variant="copper"
+                    size="md"
                     disabled={busy}
                     onClick={handleSaveCopyOfShared}
                   >
                     📄 บันทึกเป็นสำเนาของฉัน
-                  </button>
+                  </Button>
                 ) : activeCloudRoomId ? (
                   <>
-                    <button
-                      type="button"
-                      className="ss-btn primary"
+                    <Button
+                      variant="copper"
+                      size="md"
                       disabled={busy}
                       onClick={handleSaveOver}
                     >
                       💾 บันทึกทับ
-                    </button>
-                    <button
-                      type="button"
-                      className="ss-btn"
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="md"
                       disabled={busy}
                       onClick={handleSaveNew}
                     >
                       ＋ บันทึกเป็นไฟล์ใหม่
-                    </button>
+                    </Button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    className="ss-btn primary"
+                  <Button
+                    variant="copper"
+                    size="md"
                     disabled={busy}
                     onClick={handleSaveNew}
                   >
                     💾 บันทึกห้องนี้
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -464,24 +459,26 @@ export default function SaveShareModal() {
                   value={shareUrlOf(activeCloudRoomId)}
                   onFocus={(e) => e.currentTarget.select()}
                 />
-                <button
-                  type="button"
-                  className="ss-btn primary"
+                <Button
+                  variant="copper"
+                  size="md"
                   onClick={() =>
-                    handleCopyLink({ id: activeCloudRoomId } as CloudRoomSummary)
+                    handleCopyLink({
+                      id: activeCloudRoomId,
+                    } as CloudRoomSummary)
                   }
                 >
                   คัดลอก
-                </button>
-                <button
-                  type="button"
-                  className="ss-btn"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="md"
                   onClick={() =>
                     window.open(shareUrlOf(activeCloudRoomId), "_blank")
                   }
                 >
                   เปิด
-                </button>
+                </Button>
               </div>
               {activeRoom && (
                 <label className="ss-check">
@@ -522,13 +519,13 @@ export default function SaveShareModal() {
           {tabError ? (
             <div className="ss-error">
               <span className="ss-error-text">⚠️ {tabError.message}</span>
-              <button
-                type="button"
-                className="ss-btn"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => loadTab(tab, { force: true })}
               >
                 ลองอีกครั้ง
-              </button>
+              </Button>
             </div>
           ) : tabLoading ? (
             // ⭐ skeleton การ์ดห้อง 4 ใบ ระหว่างโหลดรายการ

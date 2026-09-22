@@ -8,6 +8,7 @@
 //    - <InlineSpinner/>   = spinner ตัวเล็กสำหรับปุ่ม/การ์ด
 "use client";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui";
 
 export interface LoadingScreenProps {
   /** ข้อความสถานะหลัก (ไทย) */
@@ -117,17 +118,17 @@ export function LoadingOverlay({
             <strong className="rt-overlay-title">เปิดห้องไม่สำเร็จ</strong>
             <p className="rt-overlay-msg">{error}</p>
             <div className="rt-overlay-actions">
-              {onRetry ? (
-                <button type="button" className="rt-btn primary" onClick={onRetry}>
-                  ลองอีกครั้ง
-                </button>
-              ) : null}
-              {onBackHome ? (
-                <button type="button" className="rt-btn" onClick={onBackHome}>
-                  ไปห้องของฉัน
-                </button>
-              ) : null}
-            </div>
+  {onRetry ? (
+    <Button variant="copper" size="sm" onClick={onRetry}>
+      ลองอีกครั้ง
+    </Button>
+  ) : null}
+  {onBackHome ? (
+    <Button variant="secondary" size="sm" onClick={onBackHome}>
+      ไปห้องของฉัน
+    </Button>
+  ) : null}
+</div>
           </>
         ) : (
           <>

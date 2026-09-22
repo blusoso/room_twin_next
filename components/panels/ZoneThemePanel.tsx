@@ -9,6 +9,7 @@ import { reinstantiateItem } from "@/lib/three/instantiate";
 import { applyThemeToItem } from "@/lib/three/themeApply";
 import { resolveRestHeights } from "@/lib/three/placement";
 import { useSaveState } from "@/hooks/useSaveState";
+import { Button, IconButton } from "@/components/ui";
 
 // ============================================================
 // Theme Apply / Reset
@@ -155,25 +156,20 @@ export default function ZoneThemePanel() {
             </span>
           </div>
           {showReset && (
-            <button
-              type="button"
-              className="ztp-reset"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 resetZoneTheme(selectedZoneUid);
                 saveState();
               }}
             >
               ↺ คืนค่าเดิม
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
-            className="ztp-close"
-            onClick={close}
-            title="ปิด"
-          >
+          <IconButton label="ปิด" size="sm" onClick={close}>
             ✕
-          </button>
+          </IconButton>
         </div>
 
         <div className="ztp-themes">

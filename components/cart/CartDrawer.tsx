@@ -10,6 +10,7 @@ import CartItemRow from "./CartItemRow";
 import CartEmpty from "./CartEmpty";
 import CartSummary from "./CartSummary";
 import ConfirmDialog from "./ConfirmDialog";
+import { IconButton } from "@/components/ui";
 
 export default function CartDrawer() {
   const [open, setOpen] = useState(false);
@@ -100,14 +101,14 @@ export default function CartDrawer() {
         onClick={handleBackdropClick}
       >
         <div className="cart-panel">
-          <button
-            type="button"
-            className="cart-close"
+          <IconButton
+            label="ปิด"
+            size="sm"
+            style={{ position: "absolute", top: 14, right: 14, zIndex: 2 }}
             onClick={close}
-            aria-label="ปิด"
           >
             ✕
-          </button>
+          </IconButton>
 
           <div className="cart-paper-body">
             <CartHeader date={dateString} receiptNumber={receiptNumber} />

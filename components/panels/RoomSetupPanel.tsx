@@ -11,6 +11,7 @@ import { resolveRestHeights } from "@/lib/three/placement";
 import { openConfirm } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import type { PlacedItem } from "@/lib/state/types";
+import { IconButton } from "@/components/ui";
 
 type GroupId = "walls" | "doors" | "windows" | "columns" | "partitions";
 
@@ -66,9 +67,9 @@ export default function RoomSetupPanel() {
         walls.push({
           uid: `wall-${id}`,
           label: WALL_LABEL_FULL[id],
-          sublabel: `${
-            room[id === "back" || id === "front" ? "w" : "d"].toFixed(1)
-          } ม.`,
+          sublabel: `${room[
+            id === "back" || id === "front" ? "w" : "d"
+          ].toFixed(1)} ม.`,
           isWall: true,
           wallId: id,
         });
@@ -250,14 +251,9 @@ export default function RoomSetupPanel() {
           🏗️ Room Setup
           <span className="rsu-count">{totalCount}</span>
         </div>
-        <button
-          type="button"
-          className="rsu-close"
-          onClick={() => setOpen(false)}
-          title="ปิด"
-        >
+        <IconButton label="ปิด" size="sm" onClick={() => setOpen(false)}>
           ✕
-        </button>
+        </IconButton>
       </div>
 
       <div className="rsu-body">
@@ -279,28 +275,25 @@ export default function RoomSetupPanel() {
                 className="rsu-group-head"
                 onClick={() => toggleGroup(group.id)}
               >
-                <span
-                  className={`rsu-chevron${isExpanded ? " open" : ""}`}
-                >
+                <span className={`rsu-chevron${isExpanded ? " open" : ""}`}>
                   ▶
                 </span>
                 <span className="rsu-group-icon">{group.icon}</span>
                 <span className="rsu-group-name">{group.label}</span>
                 <span className="rsu-group-count">{count}</span>
                 {group.addable && (
-                  <button
-                    type="button"
-                    className="rsu-add-btn"
+                  <IconButton
+                    label={`เพิ่ม${group.label}`}
+                    size="xs"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleAdd(
                         group.id === "columns" ? "column" : "partition",
                       );
                     }}
-                    title={`เพิ่ม${group.label}`}
                   >
                     +
-                  </button>
+                  </IconButton>
                 )}
               </div>
 
@@ -317,23 +310,19 @@ export default function RoomSetupPanel() {
                         }${si.isWall ? " wall" : ""}`}
                         onClick={() => handleSelect(si)}
                       >
-                        <span className="rsu-item-name">
-                          {si.label}
-                        </span>
+                        <span className="rsu-item-name">{si.label}</span>
                         {si.sublabel && (
-                          <span className="rsu-item-sub">
-                            {si.sublabel}
-                          </span>
+                          <span className="rsu-item-sub">{si.sublabel}</span>
                         )}
                         {si.item && (
-                          <button
-                            type="button"
-                            className="rsu-del-btn"
+                          <IconButton
+                            label={`ลบ ${si.label}`}
+                            size="xs"
+                            tone="danger"
                             onClick={(e) => handleDelete(si, e)}
-                            title="ลบ"
                           >
                             ✕
-                          </button>
+                          </IconButton>
                         )}
                       </div>
                     ))

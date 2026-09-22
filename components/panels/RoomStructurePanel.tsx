@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useRoomTwin } from "@/lib/state/store";
 
+import { Button, IconButton } from "@/components/ui";
+
 import {
   FLOOR_STYLES,
   FLOOR_TINT_PALETTE,
@@ -912,76 +914,74 @@ function SurfacesTab({ section }: { section: "floor" | "wall" }) {
   return (
     <div className="rsp-tab-panel active">
       {showFloor && (
-  <>
-    {/* ═══════════ วัสดุพื้น ═══════════ */}
-    <div className="rsp-subsec">
-      <div className="rsp-subsec-title">🟫 วัสดุพื้น</div>
+        <>
+          {/* ═══════════ วัสดุพื้น ═══════════ */}
+          <div className="rsp-subsec">
+            <div className="rsp-subsec-title">🟫 วัสดุพื้น</div>
 
-      <div className="floor-grid">
-        {FLOOR_STYLES.map((st) => (
-          <div
-            key={st.id}
-            className={`floor-swatch${
-              surface.floor === st.id ? " active" : ""
-            }`}
-            style={{
-              backgroundImage: `url(${makeFloorCanvas(
-                st.id,
-                96,
-              ).toDataURL()})`,
-              backgroundColor: hexOf(currentFloorTint),
-              backgroundBlendMode: "multiply",
-            }}
-            onClick={() =>
-              commit({
-                floor: st.id,
-              })
-            }
-          >
-            <div className="fl-name">{st.name}</div>
+            <div className="floor-grid">
+              {FLOOR_STYLES.map((st) => (
+                <div
+                  key={st.id}
+                  className={`floor-swatch${
+                    surface.floor === st.id ? " active" : ""
+                  }`}
+                  style={{
+                    backgroundImage: `url(${makeFloorCanvas(
+                      st.id,
+                      96,
+                    ).toDataURL()})`,
+                    backgroundColor: hexOf(currentFloorTint),
+                    backgroundBlendMode: "multiply",
+                  }}
+                  onClick={() =>
+                    commit({
+                      floor: st.id,
+                    })
+                  }
+                >
+                  <div className="fl-name">{st.name}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
 
-    {/* ═══════════ ⭐ สีพื้น ═══════════ */}
-    <div className="rsp-subsec">
-      <div className="rsp-subsec-title">🎨 สีพื้น</div>
+          {/* ═══════════ ⭐ สีพื้น ═══════════ */}
+          <div className="rsp-subsec">
+            <div className="rsp-subsec-title">🎨 สีพื้น</div>
 
-      <div className="wall-color-grid">
-        {FLOOR_TINT_PALETTE.map((c) => (
-          <div
-            key={c}
-            className={`wall-color-chip${
-              currentFloorTint === c ? " active" : ""
-            }`}
-            style={{ background: hexOf(c) }}
-            onClick={() => commit({ floorTint: c })}
-            role="button"
-            tabIndex={0}
-            aria-pressed={currentFloorTint === c}
-          />
-        ))}
-      </div>
+            <div className="wall-color-grid">
+              {FLOOR_TINT_PALETTE.map((c) => (
+                <div
+                  key={c}
+                  className={`wall-color-chip${
+                    currentFloorTint === c ? " active" : ""
+                  }`}
+                  style={{ background: hexOf(c) }}
+                  onClick={() => commit({ floorTint: c })}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={currentFloorTint === c}
+                />
+              ))}
+            </div>
 
-      <label className="cz-row">
-        <input
-          type="color"
-          className="cz-color-input"
-          value={hexOf(currentFloorTint)}
-          onChange={(e) =>
-            commit({ floorTint: numOf(e.target.value) })
-          }
-          aria-label="เลือกสีพื้นเอง"
-        />
-        <span className="cz-row-label">เลือกสีเอง</span>
-        <span className="cz-color-hex">
-          {hexOf(currentFloorTint).toUpperCase()}
-        </span>
-      </label>
-    </div>
-  </>
-)}
+            <label className="cz-row">
+              <input
+                type="color"
+                className="cz-color-input"
+                value={hexOf(currentFloorTint)}
+                onChange={(e) => commit({ floorTint: numOf(e.target.value) })}
+                aria-label="เลือกสีพื้นเอง"
+              />
+              <span className="cz-row-label">เลือกสีเอง</span>
+              <span className="cz-color-hex">
+                {hexOf(currentFloorTint).toUpperCase()}
+              </span>
+            </label>
+          </div>
+        </>
+      )}
 
       {showWall && (
         <>
@@ -1496,7 +1496,6 @@ export default function RoomStructurePanel({
           >
             ‹
           </button>
-
           <button type="button" className="rsp-cta" onClick={handleNext}>
             {ROOM_SETUP_CTA_LABEL[stepIdx]}
           </button>
@@ -1539,10 +1538,9 @@ export default function RoomStructurePanel({
       >
         <div className="rsp-header">
           <b>🏗️ ปรับแต่งโครงสร้างห้อง</b>
-
-          <button type="button" className="rsp-close" onClick={closePanel}>
+          <IconButton label="ปิด" size="md" onClick={closePanel}>
             ✕
-          </button>
+          </IconButton>
         </div>
 
         <div className="rsp-tabs">

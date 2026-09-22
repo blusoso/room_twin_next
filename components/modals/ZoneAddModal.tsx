@@ -4,10 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRoomTwin } from "@/lib/state/store";
 import { ZONE_FALLBACK } from "@/lib/data/zones";
 import { ZONE_COLOR_CHOICES } from "@/lib/data/constants";
-import {
-  PRODUCT_BY_ID,
-  isAutoZoneExcludedProduct,
-} from "@/lib/data/products";
+import { PRODUCT_BY_ID, isAutoZoneExcludedProduct } from "@/lib/data/products";
 import { ZONE_ICON_CATEGORIES } from "@/lib/data/icons";
 import {
   resolveZoneDisplay,
@@ -22,6 +19,7 @@ import { useZoneAddStore } from "./useModalStores";
 import ZoneEditIconPicker from "./ZoneEditIconPicker";
 import ZoneEditColorPicker from "./ZoneEditColorPicker";
 import ThumbIcon from "@/components/sidebar/ThumbIcon";
+import { Button } from "@/components/ui";
 
 // ============================================================
 // Defaults — เลือกค่าที่ "ไม่ชนกับโซนเดิม" ให้ก่อน
@@ -110,8 +108,7 @@ export default function ZoneAddModal() {
   const selected = eligible.filter((i) => members.has(i.uid));
   const fromOtherZone = selected.filter((i) => i.zoneUid).length;
   const allWallOrCeiling =
-    selected.length > 0 &&
-    selected.every((i) => i.wallMount || i.ceilingMount);
+    selected.length > 0 && selected.every((i) => i.wallMount || i.ceilingMount);
 
   const liveError = validateZoneIdentity(draft, null, { live: true });
   const canCreate =
@@ -143,7 +140,8 @@ export default function ZoneAddModal() {
       return;
     }
     if (members.size === 0) {
-      setError("เลือกของเข้าโซนอย่างน้อย 1 ชิ้น");      return;
+      setError("เลือกของเข้าโซนอย่างน้อย 1 ชิ้น");
+      return;
     }
 
     const res = createCustomZoneFull({
@@ -209,13 +207,14 @@ export default function ZoneAddModal() {
             </button>
 
             <div className="zone-edit-actions">
-              <button
-                type="button"
-                className="zone-edit-cancel"
+              <Button
+                variant="secondary"
+                size="md"
+                style={{ flex: 1 }}
                 onClick={close}
               >
                 ยกเลิก
-              </button>
+              </Button>
             </div>
           </>
         ) : (
@@ -262,8 +261,8 @@ export default function ZoneAddModal() {
 
             {eligible.length === 0 ? (
               <div className="zone-add-hint">
-                ยังไม่มีของที่ใส่โซนได้ — ไปวางของในแท็บ &quot;🛒 สร้างห้อง&quot;
-                ก่อน หรือเลือกโซนสำเร็จรูปจาก catalog
+                ยังไม่มีของที่ใส่โซนได้ — ไปวางของในแท็บ &quot;🛒
+                สร้างห้อง&quot; ก่อน หรือเลือกโซนสำเร็จรูปจาก catalog
               </div>
             ) : (
               <div className="zone-add-members">
@@ -296,38 +295,39 @@ export default function ZoneAddModal() {
             )}
 
             {eligible.length > 0 && members.size === 0 && (
-              <div className="zone-add-hint">
-                โซนต้องมีของอย่างน้อย 1 ชิ้น
-              </div>
+              <div className="zone-add-hint">โซนต้องมีของอย่างน้อย 1 ชิ้น</div>
             )}
             {fromOtherZone > 0 && (
               <div className="zone-add-hint">
-                ⚠️ มีของ {fromOtherZone} ชิ้นที่ถูกย้ายออกจากโซนเดิม — ถ้าโซนเดิมไม่เหลือของ
-                โซนนั้นจะหายไป
+                ⚠️ มีของ {fromOtherZone} ชิ้นที่ถูกย้ายออกจากโซนเดิม —
+                ถ้าโซนเดิมไม่เหลือของ โซนนั้นจะหายไป
               </div>
             )}
             {allWallOrCeiling && (
               <div className="zone-add-hint">
-                ℹ️ ของที่เลือกแขวนผนัง/เพดานทั้งหมด — ขอบเขตโซนใน 3D จะยังไม่แสดง
+                ℹ️ ของที่เลือกแขวนผนัง/เพดานทั้งหมด — ขอบเขตโซนใน 3D
+                จะยังไม่แสดง
               </div>
             )}
 
             <div className="zone-edit-actions">
-              <button
-                type="button"
-                className="zone-edit-cancel"
+              <Button
+                variant="secondary"
+                size="md"
+                style={{ flex: 1 }}
                 onClick={() => setMode("choose")}
               >
                 ย้อนกลับ
-              </button>
-              <button
-                type="button"
-                className="zone-edit-save"
+              </Button>
+              <Button
+                variant="copper"
+                size="md"
+                style={{ flex: 1 }}
                 disabled={!canCreate}
                 onClick={handleCreate}
               >
                 สร้างโซน
-              </button>
+              </Button>
             </div>
           </>
         )}

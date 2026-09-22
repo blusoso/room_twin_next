@@ -1462,17 +1462,6 @@ mark.hl {
     border-color 0.12s;
 }
 
-.tree-action-btn:hover {
-  background: #f0ead9;
-  color: var(--ink);
-}
-
-.tree-action-btn.danger:hover {
-  background: var(--danger);
-  color: #fff;
-  border-color: var(--danger);
-}
-
 .add-zone-btn {
   margin: 8px 14px 12px 14px;
   padding: 10px;
@@ -2100,41 +2089,6 @@ mark.hl {
   z-index: var(--z-viewport-ui);
 }
 
-.corner-view-btn {
-  width: 44px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-line);
-  background: rgba(248, 244, 235, 0.92);
-  color: var(--ink);
-  font-size: 13px;
-  letter-spacing: -1px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(42, 35, 48, 0.14);
-  touch-action: manipulation;
-}
-
-.corner-view-btn:hover {
-  background: #fff;
-  transform: translateY(-1px);
-}
-
-.corner-view-btn:active {
-  transform: translateY(0) scale(0.94);
-}
-
-.corner-view-btn.wide {
-  grid-column: span 2;
-  width: auto;
-  gap: 6px;
-  font-size: 12px;
-  letter-spacing: 0;
-  padding: 0 10px;
-}
-
 .drag-ghost {
   position: fixed;
   top: 0;
@@ -2246,40 +2200,11 @@ mark.hl {
   font-weight: 600;
 }
 
-.ip-close {
-  border: none;
-  background: transparent;
-  color: var(--ink-soft);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px;
-  touch-action: manipulation;
-}
-
 .ip-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 14px;
-}
-
-.buy-btn {
-  flex: 1;
-  background: var(--ochre);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 11px 14px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
-  touch-action: manipulation;
-}
-
-.buy-btn:hover {
-  background: var(--ochre-deep);
 }
 
 /* ============================================================
@@ -2771,28 +2696,6 @@ mark.hl {
   margin-top: 18px;
 }
 
-.confirm-actions button {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-family: inherit;
-  cursor: pointer;
-  border: 1px solid var(--panel-line);
-  touch-action: manipulation;
-}
-
-.confirm-cancel {
-  background: #fbf8f2;
-  color: var(--ink);
-}
-
-.confirm-ok {
-  background: var(--danger);
-  color: #fff;
-  border-color: var(--danger);
-}
-
 /* ============================================================
    Zone Edit Dialog
    ============================================================ */
@@ -2997,38 +2900,6 @@ mark.hl {
 .zone-edit-actions {
   display: flex;
   gap: 10px;
-}
-
-.zone-edit-actions button {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-family: inherit;
-  cursor: pointer;
-  border: 1px solid var(--panel-line);
-}
-
-.zone-edit-cancel {
-  background: #fbf8f2;
-  color: var(--ink);
-}
-
-.zone-edit-save {
-  background: var(--ochre);
-  color: #fff;
-  border-color: var(--ochre);
-  font-weight: 600;
-}
-
-.zone-edit-save:hover {
-  background: var(--ochre-deep);
-  border-color: var(--ochre-deep);
-}
-
-.zone-edit-save:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* ============================================================
@@ -4847,19 +4718,9 @@ mark.hl {
   font-weight: 600;
 }
 
-.blocks-icon-btn:hover {
-  background: #f0ead9;
-  color: var(--ink);
-}
-
 .blocks-icon-btn:disabled {
   opacity: 0.42;
   cursor: not-allowed;
-}
-
-.blocks-icon-btn:disabled:hover {
-  background: #fff;
-  color: var(--ink-soft);
 }
 
 .blocks-close {
@@ -4874,11 +4735,6 @@ mark.hl {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.blocks-close:hover {
-  background: rgba(42, 35, 48, 0.16);
-  color: var(--ink);
 }
 
 /* ⭐ ปุ่มข้อความ (วิธีใช้ / งานก้อนใหญ่) */
@@ -4900,25 +4756,11 @@ mark.hl {
   transition: all 0.12s;
 }
 
-.blocks-ghost-btn:hover {
-  background: #f0ead9;
-  color: var(--ink);
-}
-
-.blocks-ghost-btn[aria-expanded="true"] {
-  background: #f0ead9;
-  color: var(--ink);
-  border-color: var(--ochre);
-}
-
-.blocks-ghost-btn:focus-visible,
-.blocks-icon-btn:focus-visible,
-.blocks-close:focus-visible,
 .blocks-seg-btn:focus-visible,
 .blocks-chip:focus-visible,
 .blocks-fine-toggle:focus-visible,
 .blocks-legend-item:focus-visible,
-.blocks-apply:focus-visible {
+.blocks-apply:focus-visible{
   outline: 2px solid var(--ochre);
   outline-offset: 2px;
 }
@@ -5463,17 +5305,6 @@ mark.hl {
   gap: 6px;
 }
 
-.blocks-apply:hover:not(:disabled) {
-  background: var(--ochre-deep);
-  border-color: var(--ochre-deep);
-  transform: translateY(-1px);
-}
-
-.blocks-apply:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 /* ============================================================
    Customize Panel
    ============================================================ */
@@ -5779,29 +5610,15 @@ mark.hl {
   touch-action: manipulation;
 }
 
-.cz-foot button:active {
-  transform: scale(0.97);
-}
-
 .cz-reset {
   background: #fff;
   color: var(--ink-soft);
-}
-
-.cz-reset:hover {
-  background: #f0ead9;
-  color: var(--ink);
 }
 
 .cz-save {
   background: var(--ochre);
   color: #fff;
   border-color: var(--ochre);
-}
-
-.cz-save:hover {
-  background: var(--ochre-deep);
-  border-color: var(--ochre-deep);
 }
 
 /* ============================================================
@@ -5889,12 +5706,6 @@ mark.hl {
     color 0.12s,
     border-color 0.12s;
   touch-action: manipulation;
-}
-
-.ztp-reset:hover {
-  background: #f0ead9;
-  color: var(--ink);
-  border-color: #c9bea3;
 }
 
 .ztp-themes {
@@ -6221,11 +6032,6 @@ mark.hl {
   flex-shrink: 0;
   z-index: var(--z-inside);
   touch-action: manipulation;
-}
-
-.cart-close:hover {
-  background: rgba(42, 35, 48, 0.16);
-  color: var(--ink);
 }
 
 .cart-list {
@@ -6744,16 +6550,6 @@ mark.hl {
     left: 10px;
     gap: 5px;
   }
-  .corner-view-btn {
-    width: 48px;
-    height: 42px;
-    font-size: 14px;
-  }
-  .corner-view-btn.wide {
-    font-size: 13px;
-    height: 38px;
-    padding: 0 12px;
-  }
   .sidebar-hint {
     display: none;
   }
@@ -6771,10 +6567,6 @@ mark.hl {
   }
   .ip-price {
     font-size: 16px;
-  }
-  .buy-btn {
-    padding: 14px;
-    font-size: 15px;
   }
   .floating-toolbar .ft-btn {
     width: 40px;
@@ -7185,12 +6977,6 @@ mark.hl {
   transition: all 0.12s;
 }
 
-.rsu-add-btn:hover {
-  background: var(--sage);
-  color: #fff;
-  border-color: var(--sage);
-}
-
 .rsu-items {
   padding: 2px 0 4px 22px;
 }
@@ -7266,15 +7052,6 @@ mark.hl {
     opacity 0.12s,
     background 0.12s;
   flex-shrink: 0;
-}
-
-.rsu-item:hover .rsu-del-btn {
-  opacity: 1;
-}
-
-.rsu-del-btn:hover {
-  background: var(--danger);
-  color: #fff;
 }
 
 @media (max-width: 820px) {
@@ -8061,18 +7838,10 @@ mark.hl {
   touch-action: manipulation;
 }
 
-.rt-btn:hover {
-  background: #f4ede0;
-}
-
 .rt-btn.primary {
   background: var(--ochre);
   border-color: var(--ochre);
   color: #fff;
-}
-
-.rt-btn.primary:hover {
-  background: var(--ochre-deep);
 }
 
 /* ===== spinner ===== */
@@ -9684,18 +9453,9 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   transition: border-color 0.15s;
 }
 
-.rsp-fb:hover:not(:disabled) {
-  border-color: #d3c09b; /* mockup --dash */
-}
-
 .rsp-fb:disabled {
   opacity: 0.35;
   cursor: default;
-}
-
-.rsp-fb:focus-visible {
-  outline: 2px solid #a5631f;
-  outline-offset: 2px;
 }
 
 /* ─── ปุ่ม CTA (mockup: .cta) ─── */
@@ -9716,19 +9476,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 
   box-shadow: 0 10px 20px -10px rgba(42, 35, 51, 0.6);
   transition: transform 0.12s;
-}
-
-.rsp-cta:hover {
-  transform: translateY(-1px);
-}
-
-.rsp-cta:active {
-  transform: translateY(0) scale(0.98);
-}
-
-.rsp-cta:focus-visible {
-  outline: 2px solid #a5631f;
-  outline-offset: 2px;
 }
 
 /* ─── ข้อความ hint ใต้ CTA (mockup: .ctahint) ─── */
@@ -10535,10 +10282,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   border-color: var(--panel-line);
 }
 
-:root[data-theme="dark"] .ip-close:hover {
-  background: var(--surface-2);
-}
-
 /* ─── Floating toolbar ─── */
 :root[data-theme="dark"] .ft-btn {
   background: var(--surface);
@@ -10554,16 +10297,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   background: var(--surface);
   color: var(--ink);
   border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .corner-view-btn {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .corner-view-btn:hover {
-  background: var(--surface-2);
 }
 
 /* ─── Room Setup Panel (Right-side inspector) ─── */
@@ -11708,11 +11441,6 @@ code,
 .cz-close:hover,
 .ztp-close:hover,
 .rsu-close:hover,
-.cfp-close:hover {
-  background: var(--surface-2);
-  border-color: var(--dash);
-  color: var(--ink);
-}
 
 .icon-header-btn:disabled {
   opacity: 0.32;

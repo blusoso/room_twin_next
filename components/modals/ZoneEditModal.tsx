@@ -12,6 +12,7 @@ import { ZONE_FALLBACK } from "@/lib/data/zones";
 import { useZoneEditStore } from "./useModalStores";
 import ZoneEditIconPicker from "./ZoneEditIconPicker";
 import ZoneEditColorPicker from "./ZoneEditColorPicker";
+import { Button } from "@/components/ui";
 
 // ============================================================
 // Draft + validation
@@ -157,9 +158,7 @@ export default function ZoneEditModal() {
           maxLength={30}
           placeholder="เช่น โซนนอน"
         />
-        <div className={`zone-edit-error${error ? " show" : ""}`}>
-          {error}
-        </div>
+        <div className={`zone-edit-error${error ? " show" : ""}`}>{error}</div>
 
         <label className="zone-edit-label">ไอคอน</label>
         <ZoneEditIconPicker
@@ -174,20 +173,22 @@ export default function ZoneEditModal() {
         />
 
         <div className="zone-edit-actions">
-          <button
-            type="button"
-            className="zone-edit-cancel"
+          <Button
+            variant="secondary"
+            size="md"
+            style={{ flex: 1 }}
             onClick={handleCancel}
           >
             ยกเลิก
-          </button>
-          <button
-            type="button"
-            className="zone-edit-save"
+          </Button>
+          <Button
+            variant="copper"
+            size="md"
+            style={{ flex: 1 }}
             onClick={handleSave}
           >
             บันทึก
-          </button>
+          </Button>
         </div>
       </div>
     </div>

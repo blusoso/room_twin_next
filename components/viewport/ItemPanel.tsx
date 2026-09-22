@@ -7,6 +7,7 @@ import { matchSizePreset } from "@/lib/data/sizePresets";
 import { resolveZoneDisplay } from "@/lib/data/zoneResolve";
 import { priceStr, hexOf, affiliateUrl } from "@/lib/utils/format";
 import { trackAffiliateClick } from "@/lib/state/storage";
+import { Button, IconButton } from "@/components/ui";
 
 export default function ItemPanel() {
   const selectedUid = useRoomTwin((s) => s.selectedUid);
@@ -75,15 +76,9 @@ export default function ItemPanel() {
   };
 
   return (
-    <div
-      className={`item-panel${visible ? " show" : ""}`}
-      id="itemPanel"
-    >
+    <div className={`item-panel${visible ? " show" : ""}`} id="itemPanel">
       <div className="ip-top">
-        <div
-          className="ip-swatch"
-          style={{ background: hexOf(p.color) }}
-        />
+        <div className="ip-swatch" style={{ background: hexOf(p.color) }} />
 
         <div className="ip-info">
           <div className="ip-name">
@@ -96,13 +91,9 @@ export default function ItemPanel() {
           <div className="ip-price">{priceStr(product.price)}</div>
         </div>
 
-        <button
-          type="button"
-          className="ip-close"
-          onClick={closeItemPanel}
-        >
+        <IconButton label="ปิด" size="sm" onClick={closeItemPanel}>
           ✕
-        </button>
+        </IconButton>
       </div>
 
       {clearanceText && (
@@ -115,27 +106,18 @@ export default function ItemPanel() {
       )}
 
       <div className="ip-actions">
-        <button
-          type="button"
-          className="buy-btn"
-          style={{
-            background: "var(--sage)",
-            flex: "0 0 auto",
-            paddingLeft: 16,
-            paddingRight: 16,
-          }}
+        <Button
+          variant="sage"
+          size="md"
+          icon="🎨"
           onClick={() => setCustomizeTarget(item.uid)}
         >
-          🎨 ปรับแต่ง
-        </button>
+          ปรับแต่ง
+        </Button>
 
-        <button
-          type="button"
-          className="buy-btn"
-          onClick={handleOpenStore}
-        >
+        <Button variant="copper" size="md" block onClick={handleOpenStore}>
           ไปดูที่ร้าน
-        </button>
+        </Button>
       </div>
     </div>
   );

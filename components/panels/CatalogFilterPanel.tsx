@@ -20,6 +20,7 @@ import {
   type ThemeFacet,
 } from "@/lib/data/productSearch";
 import { useCatalogSearchResult } from "@/hooks/useCatalogSearchResult";
+import { IconButton } from "@/components/ui";
 
 export default function CatalogFilterPanel() {
   const filtersOpen = useRoomTwin((s) => s.catalogFiltersOpen);
@@ -84,15 +85,9 @@ export default function CatalogFilterPanel() {
           ⚙ ตัวกรองสินค้า
           <span className="cfp-count">พบ {resultCount} รายการ</span>
         </div>
-        <button
-          type="button"
-          className="cfp-close"
-          onClick={close}
-          title="ปิดตัวกรอง"
-          aria-label="ปิดตัวกรอง"
-        >
+        <IconButton label="ปิดตัวกรอง" size="sm" onClick={close}>
           ✕
-        </button>
+        </IconButton>
       </div>
 
       <div className="cfp-body">
@@ -229,9 +224,7 @@ export default function CatalogFilterPanel() {
           className="chip"
           disabled={filterCount === 0}
           title="ล้างตัวกรอง (คำค้นหายังอยู่)"
-          onClick={() =>
-            setCatalogFilters(makeDefaultCatalogFilters())
-          }
+          onClick={() => setCatalogFilters(makeDefaultCatalogFilters())}
         >
           ล้างตัวกรอง
         </button>

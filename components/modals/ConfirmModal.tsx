@@ -1,6 +1,7 @@
 // components/modals/ConfirmModal.tsx
 "use client";
 import { useConfirmStore } from "./useModalStores";
+import { Button } from "@/components/ui";
 
 export default function ConfirmModal() {
   const open = useConfirmStore((s) => s.open);
@@ -22,20 +23,22 @@ export default function ConfirmModal() {
           dangerouslySetInnerHTML={{ __html: message }}
         />
         <div className="confirm-actions">
-          <button
-            type="button"
-            className="confirm-cancel"
+          <Button
+            variant="secondary"
+            size="md"
+            style={{ flex: 1 }}
             onClick={closeConfirm}
           >
             ยกเลิก
-          </button>
-          <button
-            type="button"
-            className="confirm-ok"
+          </Button>
+          <Button
+            variant="danger"
+            size="md"
+            style={{ flex: 1 }}
             onClick={confirm}
           >
             ยืนยัน
-          </button>
+          </Button>
         </div>
       </div>
     </div>

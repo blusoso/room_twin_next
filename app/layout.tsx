@@ -10,6 +10,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import "./roomtwin.css";
+import "./ui.css";     
 
 const fraunces = Fraunces({
   subsets: ["latin"],

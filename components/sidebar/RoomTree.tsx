@@ -12,11 +12,9 @@ import { openConfirm, openZoneEditDialog } from "@/components/modals";
 import { useSaveState } from "@/hooks/useSaveState";
 import { useTreeItemDrag } from "@/hooks/useTreeItemDrag";
 import ThumbIcon from "./ThumbIcon";
-import {
-  removeZoneFull,
-  moveItemOutOfZoneFull,
-} from "@/lib/three/zoneActions";
+import { removeZoneFull, moveItemOutOfZoneFull } from "@/lib/three/zoneActions";
 import type { PlacedItem } from "@/lib/state/types";
+import { IconButton } from "@/components/ui";
 
 // ============================================================
 // Root
@@ -81,13 +79,7 @@ function RoomTreeContent() {
 // Zone group
 // ============================================================
 
-function ZoneGroup({
-  zuid,
-  items,
-}: {
-  zuid: string;
-  items: PlacedItem[];
-}) {
+function ZoneGroup({ zuid, items }: { zuid: string; items: PlacedItem[] }) {
   const [collapsed, setCollapsed] = useState(false);
   const selectZone = useRoomTwin((s) => s.selectZone);
   // ⭐ subscribe zoneMeta เพื่อ re-render เมื่อ user แก้ชื่อ/ไอคอน/สี
@@ -134,13 +126,10 @@ function ZoneGroup({
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openConfirm(
-      `ลบทั้งโซน "${zoneName}" (${items.length} ชิ้น)?`,
-      () => {
-        removeZoneFull(zuid);
-        saveState();
-      },
-    );
+    openConfirm(`ลบทั้งโซน "${zoneName}" (${items.length} ชิ้น)?`, () => {
+      removeZoneFull(zuid);
+      saveState();
+    });
   };
 
   return (
@@ -180,42 +169,23 @@ function ZoneGroup({
         <span className="group-count">{items.length}</span>
 
         <span className="group-actions">
-          <button
-            type="button"
-            className="tree-action-btn"
-            data-act="focus"
-            title="โฟกัสโซน"
-            onClick={handleFocus}
-          >
+          <IconButton label="โฟกัสโซน" size="sm" onClick={handleFocus}>
             ◎
-          </button>
-          <button
-            type="button"
-            className="tree-action-btn"
-            data-act="theme"
-            title="เลือกธีม"
-            onClick={handleTheme}
-          >
+          </IconButton>
+          <IconButton label="เลือกธีม" size="sm" onClick={handleTheme}>
             ✨
-          </button>
-          <button
-            type="button"
-            className="tree-action-btn"
-            data-act="edit"
-            title="แก้ไขโซน"
-            onClick={handleEdit}
-          >
+          </IconButton>
+          <IconButton label="แก้ไขโซน" size="sm" onClick={handleEdit}>
             ✏️
-          </button>
-          <button
-            type="button"
-            className="tree-action-btn danger"
-            data-act="delzone"
-            title="ลบทั้งโซน"
+          </IconButton>
+          <IconButton
+            label="ลบทั้งโซน"
+            size="sm"
+            tone="danger"
             onClick={handleDelete}
           >
             🗑
-          </button>
+          </IconButton>
         </span>
       </div>
 
@@ -272,13 +242,7 @@ function StandaloneGroup({ items }: { items: PlacedItem[] }) {
 // Item row
 // ============================================================
 
-function TreeItem({
-  item,
-  inZone,
-}: {
-  item: PlacedItem;
-  inZone: boolean;
-}) {
+function TreeItem({ item, inZone }: { item: PlacedItem; inZone: boolean }) {
   const selectedUid = useRoomTwin((s) => s.selectedUid);
   const selectItem = useRoomTwin((s) => s.selectItem);
   const { saveState } = useSaveState();
@@ -307,11 +271,9 @@ function TreeItem({
 
       <span className="item-actions">
         {inZone && (
-          <button
-            type="button"
-            className="tree-action-btn"
-            data-act="unzone"
-            title="ย้ายออกจากโซน"
+          <IconButton
+            label="ย้ายออกจากโซน"
+            size="sm"
             onClick={(e) => {
               e.stopPropagation();
               moveItemOutOfZoneFull(item.uid);
@@ -319,19 +281,16 @@ function TreeItem({
             }}
           >
             ↗
-          </button>
+          </IconButton>
         )}
-
-        <button
-          type="button"
-          className="tree-action-btn danger"
-          data-act="del"
-          title="ลบ"
+        <IconButton
+          label="ลบ"
+          size="sm"
+          tone="danger"
           onClick={(e) => {
             e.stopPropagation();
             openConfirm(`ลบ "${displayName}" ออกจากห้อง?`, () => {
               const wasDoor = item.productId === "door";
-              // ⭐ ลบ item + ของที่แขวนอยู่กับพื้ นผิวของมัน (3D + state)
               deleteItemTree(item.uid);
               if (wasDoor) rebuildBaseboards();
               saveState();
@@ -339,7 +298,7 @@ function TreeItem({
           }}
         >
           🗑
-        </button>
+        </IconButton>
       </span>
     </div>
   );

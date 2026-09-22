@@ -10,10 +10,8 @@ import {
   remapOrphanedWallItems,
 } from "@/hooks/useRoomTwinInit";
 import { LEVEL_PRESETS, LEVEL_STEP } from "@/lib/data/constants";
-import {
-  structurePlanItems,
-  blocksOrigin,
-} from "@/lib/three/structurePlan";
+import { structurePlanItems, blocksOrigin } from "@/lib/three/structurePlan";
+import { Button, IconButton } from "@/components/ui";
 
 const CELL_PX_BASE = 22;
 const MIN_ZOOM = 0.5;
@@ -58,10 +56,7 @@ function sameSnap(a: DraftSnap, b: DraftSnap) {
 }
 
 // ⭐ ตัดระดับพื้นของช่องที่ไม่มีอยู่ในชุดบล็อกแล้ว (กัน cellLevels ค้าง)
-function pruneLevels(
-  blocks: Set<string>,
-  levels: Record<string, number>,
-) {
+function pruneLevels(blocks: Set<string>, levels: Record<string, number>) {
   let changed = false;
   const next: Record<string, number> = {};
   Object.keys(levels).forEach((k) => {
@@ -93,7 +88,10 @@ function initBlocksFromRect(w: number, d: number, cellSize: number) {
 
 function computeBBox(blocks: Set<string>, cellSize: number) {
   if (blocks.size === 0) return null;
-  let minI = Infinity, maxI = -Infinity, minJ = Infinity, maxJ = -Infinity;
+  let minI = Infinity,
+    maxI = -Infinity,
+    minJ = Infinity,
+    maxJ = -Infinity;
   blocks.forEach((k) => {
     const [i, j] = k.split(",").map(Number);
     minI = Math.min(minI, i);
@@ -102,7 +100,10 @@ function computeBBox(blocks: Set<string>, cellSize: number) {
     maxJ = Math.max(maxJ, j);
   });
   return {
-    minI, maxI, minJ, maxJ,
+    minI,
+    maxI,
+    minJ,
+    maxJ,
     w: (maxI - minI + 1) * cellSize,
     d: (maxJ - minJ + 1) * cellSize,
   };
@@ -153,14 +154,11 @@ export default function BlocksEditor() {
     () => structurePlanItems(placedItems),
     [placedItems],
   );
-  const structOrigin = useMemo(
-    () => {
-      if (room.shape === "blocks" && room.blocks && room.blocks.size > 0)
-        return blocksOrigin(room.blocks);
-      return blocksOrigin(draft);
-    },
-    [room.shape, room.blocks, draft],
-  );
+  const structOrigin = useMemo(() => {
+    if (room.shape === "blocks" && room.blocks && room.blocks.size > 0)
+      return blocksOrigin(room.blocks);
+    return blocksOrigin(draft);
+  }, [room.shape, room.blocks, draft]);
 
   // ===== Draft history =====
   const resetDraftHistory = useCallback(() => {
@@ -493,41 +491,41 @@ export default function BlocksEditor() {
             </span>
           </div>
           <div className="blocks-head-actions">
-            <button
-              type="button"
-              className="blocks-ghost-btn"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTipsOpen((v) => !v)}
               aria-expanded={tipsOpen}
               title="วิธีใช้ + คีย์ลัด"
-              onClick={() => setTipsOpen((v) => !v)}
             >
               ? วิธีใช้
-            </button>
-            <button
-              type="button"
-              className="blocks-icon-btn"
-              title="ย้อนกลับ (Ctrl+Z)"
-              disabled={past.length === 0}
+            </Button>
+            <IconButton
+              label="ย้อนกลับ"
+              size="md"
               onClick={undoDraft}
+              disabled={past.length === 0}
+              title="ย้อนกลับ (Ctrl+Z)"
             >
               ↩
-            </button>
-            <button
-              type="button"
-              className="blocks-icon-btn"
-              title="ทำซ้ำ (Ctrl+Shift+Z)"
-              disabled={future.length === 0}
+            </IconButton>
+            <IconButton
+              label="ทำซ้ำ"
+              size="md"
               onClick={redoDraft}
+              disabled={future.length === 0}
+              title="ทำซ้ำ (Ctrl+Shift+Z)"
             >
               ↪
-            </button>
-            <button
-              type="button"
-              className="blocks-close"
-              title="ปิด (Esc)"
+            </IconButton>
+            <IconButton
+              label="ปิด"
+              size="md"
               onClick={() => setBlocksEditorOpen(false)}
+              title="ปิด (Esc)"
             >
               ✕
-            </button>
+            </IconButton>
           </div>
         </div>
 
@@ -536,17 +534,19 @@ export default function BlocksEditor() {
           <div className="blocks-tips">
             <ul>
               <li>
-                เลือกระดับพื้น (ซม.) แล้ววาดช่องบนผัง — ช่องที่วาดจะยกพื้นสูงตามระดับ
+                เลือกระดับพื้น (ซม.) แล้ววาดช่องบนผัง —
+                ช่องที่วาดจะยกพื้นสูงตามระดับ
               </li>
               <li>ลบด้วย 🧽 ยางลบ หรือกด E • กลับมาโหมดวาดด้วย B</li>
               <li>ย้อน/ทำซ้ำได้ด้วย ↩ ↪ หรือ Ctrl+Z / Ctrl+Shift+Z</li>
               <li>
-                เสร็จแล้วกด ✓ ใช้รูปทรงนี้ — ประตู/หน้าต่างเดิมจะถูกจัดตำแหน่งให้อัตโนมัติ
+                เสร็จแล้วกด ✓ ใช้รูปทรงนี้ —
+                ประตู/หน้าต่างเดิมจะถูกจัดตำแหน่งให้อัตโนมัติ
               </li>
             </ul>
             <div className="blocks-tips-keys">
-              B = วาด · E = ยางลบ · Ctrl+Z = ย้อนกลับ · Ctrl+Shift+Z =
-              ทำซ้ำ · Esc = ปิด
+              B = วาด · E = ยางลบ · Ctrl+Z = ย้อนกลับ · Ctrl+Shift+Z = ทำซ้ำ ·
+              Esc = ปิด
             </div>
           </div>
         )}
@@ -557,9 +557,7 @@ export default function BlocksEditor() {
             <div className="blocks-seg" role="group" aria-label="เครื่องมือ">
               <button
                 type="button"
-                className={`blocks-seg-btn${
-                  tool === "paint" ? " active" : ""
-                }`}
+                className={`blocks-seg-btn${tool === "paint" ? " active" : ""}`}
                 title="วาดช่อง (B)"
                 aria-pressed={tool === "paint"}
                 onClick={() => setTool("paint")}
@@ -568,9 +566,7 @@ export default function BlocksEditor() {
               </button>
               <button
                 type="button"
-                className={`blocks-seg-btn${
-                  tool === "erase" ? " active" : ""
-                }`}
+                className={`blocks-seg-btn${tool === "erase" ? " active" : ""}`}
                 title="ยางลบ (E)"
                 aria-pressed={tool === "erase"}
                 onClick={() => setTool("erase")}
@@ -582,9 +578,7 @@ export default function BlocksEditor() {
             <div className="blocks-tool-sep" />
 
             <div
-              className={`blocks-levels${
-                tool === "erase" ? " is-dim" : ""
-              }`}
+              className={`blocks-levels${tool === "erase" ? " is-dim" : ""}`}
             >
               <span className="blocks-bar-label">ระดับพื้น (ซม.)</span>
               <div className="blocks-chip-row">
@@ -604,9 +598,7 @@ export default function BlocksEditor() {
                 ))}
                 <button
                   type="button"
-                  className={`blocks-fine-toggle${
-                    fineOpen ? " active" : ""
-                  }`}
+                  className={`blocks-fine-toggle${fineOpen ? " active" : ""}`}
                   aria-expanded={fineOpen}
                   title="ปรับระดับละเอียด (ทุก 5 ซม.)"
                   onClick={() => setFineOpen((v) => !v)}
@@ -628,9 +620,7 @@ export default function BlocksEditor() {
                     step={LEVEL_STEP}
                     value={paintLevel}
                     aria-label="ระดับพื้นละเอียด"
-                    onChange={(e) =>
-                      setPaintLevel(parseFloat(e.target.value))
-                    }
+                    onChange={(e) => setPaintLevel(parseFloat(e.target.value))}
                   />
                   <span className="blocks-badge">
                     {Math.round(paintLevel * 100)} ซม.
@@ -642,30 +632,15 @@ export default function BlocksEditor() {
             <div className="blocks-tool-sep" />
 
             <div className="blocks-zoom">
-              <button
-                type="button"
-                className="blocks-icon-btn"
-                title="ย่อ"
-                onClick={handleZoomOut}
-              >
+              <IconButton label="ย่อ" size="md" onClick={handleZoomOut}>
                 −
-              </button>
-              <button
-                type="button"
-                className="blocks-icon-btn"
-                title="พอดีจอ"
-                onClick={handleZoomFit}
-              >
+              </IconButton>
+              <IconButton label="พอดีจอ" size="md" onClick={handleZoomFit}>
                 ⛶
-              </button>
-              <button
-                type="button"
-                className="blocks-icon-btn"
-                title="ขยาย"
-                onClick={handleZoomIn}
-              >
+              </IconButton>
+              <IconButton label="ขยาย" size="md" onClick={handleZoomIn}>
                 +
-              </button>
+              </IconButton>
             </div>
           </div>
 
@@ -804,9 +779,7 @@ export default function BlocksEditor() {
             <span className="blocks-stat">
               ขนาด{" "}
               <b>
-                {bbox
-                  ? `${bbox.w.toFixed(1)}×${bbox.d.toFixed(1)}`
-                  : "0×0"}
+                {bbox ? `${bbox.w.toFixed(1)}×${bbox.d.toFixed(1)}` : "0×0"}
               </b>{" "}
               ม.
             </span>
@@ -814,43 +787,42 @@ export default function BlocksEditor() {
               <b>{draft.size}</b> ช่อง
             </span>
             <span className="blocks-stat">
-              ใช้สอย <b>{bbox ? (bbox.w * bbox.d).toFixed(1) : "0"}</b>{" "}
-              ตร.ม.
+              ใช้สอย <b>{bbox ? (bbox.w * bbox.d).toFixed(1) : "0"}</b> ตร.ม.
             </span>
           </div>
           <div className="blocks-actions">
-            <button
-              type="button"
-              className="blocks-ghost-btn"
-              title="เติมช่องเป็นสี่เหลี่ยมเท่าขนาดห้องปัจจุบัน"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleRect}
+              title="เติมช่องเป็นสี่เหลี่ยมเท่าขนาดห้องปัจจุบัน"
             >
               ⬜ เติมทั้งห้อง
-            </button>
-            <button
-              type="button"
-              className="blocks-ghost-btn"
-              title="ลบทุกช่อง (ย้อนกลับได้)"
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleClear}
+              title="ลบทุกช่อง (ย้อนกลับได้)"
             >
               🗑 ล้าง
-            </button>
-            <button
-              type="button"
-              className="blocks-ghost-btn"
-              title="เริ่มจากสี่เหลี่ยมขนาดห้อง + ล้างระดับพื้น + คืนซูม"
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleReset}
+              title="เริ่มจากสี่เหลี่ยมขนาดห้อง + ล้างระดับพื้น + คืนซูม"
             >
               ↺ เริ่มใหม่
-            </button>
-            <button
-              type="button"
-              className="blocks-apply"
+            </Button>
+            <Button
+              variant="copper"
+              size="md"
               disabled={draft.size === 0}
               onClick={handleApply}
             >
               ✓ ใช้รูปทรงนี้
-            </button>
+            </Button>
           </div>
         </div>
       </div>
