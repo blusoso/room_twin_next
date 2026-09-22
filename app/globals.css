@@ -7,6 +7,7 @@
    ============================================================ */
 
 :root {
+   /* ============ App legacy (คงไว้ — ที่ component เก่าใช้) ============ */
   --bg: #ece4d4;
   --panel: #f8f4eb;
   --panel-line: #dcd1ba;
@@ -17,10 +18,25 @@
   --sage: #5f7a63;
   --sage-deep: #47604b;
   --danger: #a6473f;
-  --radius-card: 14px;
-  --radius-pill: 999px;
   --tab: #e9dfcd;
   --tile: #d4a0a0;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+
+  /* ============ DS canonical — alias ไปหาค่าเดิม ============ */
+  --surface: #fffdf9;
+  --surface-2: #fbf1df;
+  --line: var(--panel-line);
+  --dash: #d3c09b;
+  --muted: var(--ink-soft);
+  --copper: var(--ochre);
+  --copper-ink: #fff8ee;
+  --canvas: #eee6d4;
+  --ok: #4e8b62;
+  --ink-inv: #fbf7ef;
+  --wall: #2a2333;
+  --dot: rgba(90, 60, 30, 0.16);
+  --shadow: 0 10px 22px -12px rgba(90, 60, 20, 0.45);
 
   /* ============================================================
      Layer Scale — ไล่จากล่างขึ้นบน (ทุกค่าใช้ var() เสมอ ห้าม hardcode)
@@ -11010,6 +11026,16 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   --canvas: #eee6d4;
   --ok: #4e8b62;
   --dot: rgba(90, 60, 30, 0.16);
+
+  /* ⭐ DS doc parity aliases */
+  --muted: var(--ink-soft);
+  --wall: var(--ink);
+  --shadow: 0 10px 22px -12px rgba(90, 60, 20, 0.45);
+
+  /* ⭐ Font role vars (ใช้คู่กับ .brand h1, .*hex, .*mono) */
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace,
+    Menlo, Consolas, monospace;
+  --font-hand: var(--font-gochi), var(--font-fraunces), cursive;
 }
 
 /* ─── Dark: ตาม system preference ─── */
@@ -12184,5 +12210,117 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   :root:not([data-theme="light"]) .brand img,
   :root:not([data-theme="light"]) .logo img {
     filter: brightness(0) invert(1);
+  }
+}
+
+/* ============================================================
+   ⭐ Font Roles — DS parity
+   - Gochi Hand → wordmark หลัก (Room Twin)
+   - JetBrains Mono → hex / code / ตัวเลขตาราง
+   ============================================================ */
+
+/* ─── Logo wordmark → Gochi Hand ─── */
+.brand h1 {
+  font-family: var(--font-hand);
+  font-weight: 400; /* Gochi Hand มีแค่ 400 */
+  letter-spacing: 0.02em;
+}
+
+/* ─── Mono display: hex / ราคา / ขนาด / code ─── */
+code,
+.mono,
+.zone-edit-color-hex,
+.cart-item-detail,
+.cart-count-row,
+.cart-total-row,
+.cart-code,
+.rsu-item-sub,
+.opening-head .oi-sub,
+.blocks-chip,
+.blocks-tips-keys,
+.blocks-badge,
+.rsp-structure-label,
+.blocks-structure-label,
+.rsp-subsec .cz-color-hex {
+  font-family: var(--font-mono);
+}
+
+/* ─── Theme toggle button ─── */
+.theme-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-line);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+  touch-action: manipulation;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s,
+    opacity 0.15s;
+  opacity: 0;
+}
+.theme-toggle[data-mounted="1"] {
+  opacity: 1;
+}
+.theme-toggle:hover {
+  background: #00000008;
+}
+.theme-toggle:active {
+  transform: scale(0.94);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* ⭐ ดวงจันทร์หมุน — light = 0° / dark = 180° */
+.theme-toggle .theme-icon {
+  display: block;
+  font-size: 17px;
+  line-height: 1;
+  transform: rotate(0deg);
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* transition เปิดเฉพาะหลังผู้ใช้ interacted — กันหมุนตอนโหลด */
+.theme-toggle[data-animate="1"] .theme-icon {
+  transition: transform 0.55s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.theme-toggle[data-theme-state="dark"] .theme-icon {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle .theme-icon {
+    transition: none !important;
+  }
+}
+
+/* ─── dark mode ─── */
+:root[data-theme="dark"] .theme-toggle {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--panel-line);
+}
+:root[data-theme="dark"] .theme-toggle:hover {
+  background: var(--surface-2);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-toggle {
+    background: var(--surface);
+    color: var(--ink);
+    border-color: var(--panel-line);
+  }
+  :root:not([data-theme]) .theme-toggle:hover {
+    background: var(--surface-2);
   }
 }

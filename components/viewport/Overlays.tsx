@@ -19,6 +19,7 @@ import { objectsByUid, camera, renderer, roomGroup } from "@/lib/three/scene";
 import { PRODUCT_BY_ID } from "@/lib/data/products";
 import { useSaveState } from "@/hooks/useSaveState";
 import { openConfirm, openSaveShareDialog } from "@/components/modals";
+import ThemeToggle from "../ThemeToggle";
 
 /* ⭐ Theme — persist + sync <html data-theme> */
 const THEME_KEY = "roomtwin_theme";
@@ -301,18 +302,7 @@ export default function Overlays() {
 
       <div className="viewport-toolbar viewport-toolbar-right">
         {/* ⭐ ปุ่ม toggle dark mode */}
-        <button
-          type="button"
-          className="vpt-btn vpt-btn-theme"
-          onClick={toggleTheme}
-          title={theme === "dark" ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด"}
-          aria-label={
-            theme === "dark" ? "สลับเป็นโหมดสว่าง" : "สลับเป็นโหมดมืด"
-          }
-          aria-pressed={theme === "dark"}
-        >
-          🌓
-        </button>
+        <ThemeToggle/>
 
         {/* ⭐ ปุ่ม save */}
         <button
