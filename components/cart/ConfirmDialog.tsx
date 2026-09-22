@@ -1,6 +1,8 @@
 // components/cart/ConfirmDialog.tsx
 "use client";
 
+import { Button, Modal } from "@/components/ui";
+
 interface Props {
   open: boolean;
   message: string;
@@ -15,34 +17,34 @@ export default function ConfirmDialog({
   onConfirm,
 }: Props) {
   return (
-    <div
-      className={`confirm-overlay${open ? " show" : ""}`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
+    <Modal
+      open={open}
+      onClose={onCancel}
+      overlayClass="confirm-overlay"
+      boxClass="confirm-box"
     >
-      <div className="confirm-box">
-        <div
-          className="confirm-msg"
-          dangerouslySetInnerHTML={{ __html: message }}
-        />
-        <div className="confirm-actions">
-          <button
-            type="button"
-            className="confirm-cancel"
-            onClick={onCancel}
-          >
-            ยกเลิก
-          </button>
-          <button
-            type="button"
-            className="confirm-ok"
-            onClick={onConfirm}
-          >
-            ยืนยัน
-          </button>
-        </div>
+      <div
+        className="confirm-msg"
+        dangerouslySetInnerHTML={{ __html: message }}
+      />
+      <div className="confirm-actions">
+        <Button
+          variant="secondary"
+          size="md"
+          style={{ flex: 1 }}
+          onClick={onCancel}
+        >
+          ยกเลิก
+        </Button>
+        <Button
+          variant="danger"
+          size="md"
+          style={{ flex: 1 }}
+          onClick={onConfirm}
+        >
+          ยืนยัน
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

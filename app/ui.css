@@ -249,3 +249,83 @@
   background: var(--surface-2);
   border-color: var(--dash);
 }
+
+/* ============================================================
+   Phase 3 — Dark QA Fixes
+   ============================================================ */
+
+/* ─── Blocks cell (fallback ถ้า inline ไม่ได้แก้) ─── */
+:root[data-theme="dark"] .blocks-cell {
+  background: var(--surface);
+}
+:root[data-theme="dark"] .blocks-cell:hover {
+  background: var(--surface-2);
+}
+:root[data-theme="dark"] .blocks-grid {
+  background: var(--line);
+}
+:root[data-theme="dark"] .blocks-cell.origin::after {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.15);
+}
+:root[data-theme="dark"] .blocks-cell.origin:not(.on)::after {
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
+/* ─── Structure labels on grid ─── */
+:root[data-theme="dark"] .blocks-structure-label {
+  background: rgba(43, 37, 52, 0.85);
+  color: var(--ink);
+}
+
+/* ─── Active states — ใช้ surface สว่าง + border copper ─── */
+:root[data-theme="dark"] .main-cat-card.active {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--ochre);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ochre) 28%, transparent);
+}
+:root[data-theme="dark"] .main-cat-card.active .mc-icon {
+  filter: none;
+}
+
+:root[data-theme="dark"] .sub-cat-pill.active {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--ochre);
+}
+:root[data-theme="dark"] .sub-cat-pill.active .sc-count {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .chip.active {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--ochre);
+}
+
+:root[data-theme="dark"] .chip.active.blocks-chip {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* ─── Product card badges (cnt) ─── */
+:root[data-theme="dark"] .item-card .tile .cnt {
+  background: rgba(43, 37, 52, 0.92);
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Grip (⠿) — ขาวใน dark ─── */
+:root[data-theme="dark"] .item-card .tile .grip {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ─── rsp-size-head area pill ─── */
+:root[data-theme="dark"] .rsp-size-head .area {
+  background: var(--surface-2);
+  border-color: var(--panel-line);
+  color: var(--ink);
+}

@@ -468,13 +468,12 @@ export default function BlocksEditor() {
     GRID_PAD + (world / cs + origin + extent) * pitch + cellPx / 2;
 
   // ⭐ Cell color from level
-  const getCellColor = (i: number, j: number) => {
+  const getCellColor = (i: number, j: number): string | undefined => {
     const key = cellKey(i, j);
     const on = draft.has(key);
-    if (!on) return "#fff";
+    if (!on) return undefined; // ⭐ ปล่อยให้ CSS .blocks-cell จัดการ
     const y = draftLevels[key] ?? 0;
     const t = Math.min(1, y / 1.5);
-    // HSL: lightest (cream) → darkest (brown)
     const lightness = 82 - t * 32;
     return `hsl(35, 45%, ${lightness}%)`;
   };
