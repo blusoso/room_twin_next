@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import ToastHost from "./ToastHost";
 import ThemeGuard from "./ThemeGuard";
-import Header from "./Header";
 import { Sidebar } from "./sidebar";
 import { Viewport } from "./viewport";
 import { CartDrawer } from "./cart";

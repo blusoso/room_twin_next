@@ -351,25 +351,6 @@ aside {
 }
 
 /* ===== Sizes ===== */
-.pill-sm {
-  height: 30px;
-  padding: 0 11px;
-  font-size: 12.5px;
-  gap: 5px;
-}
-
-.pill-md {
-  height: 34px;
-  padding: 0 13px;
-  font-size: 13px;
-}
-
-.pill-lg {
-  height: 38px;
-  padding: 0 15px;
-  font-size: 13.5px;
-  gap: 7px;
-}
 
 /* ===== Parts ===== */
 .pill-icon {
@@ -573,12 +554,6 @@ aside {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.catalog-search-icon {
-  font-size: 14px;
-  line-height: 1;
-  opacity: 0.75;
 }
 
 .catalog-search-input {
@@ -979,60 +954,13 @@ aside {
   margin-top: 10px;
 }
 
-.card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.cat-badge,
-.theme-badge,
-.size-badge {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
-}
-
-.cat-badge {
-  background: #f3efe6;
-  border: 1px solid var(--panel-line);
-  color: var(--ink-soft);
-}
-
-.theme-badge {
-  background: #f7ecd9;
-  border: 1px solid #e5d6b4;
-  color: #8a6a2f;
-}
-
 /* ⭐ สินค้ามีขนาดสำเร็จรูป (size presets) */
-.size-badge {
-  background: #eaf1ea;
-  border: 1px solid #c9dbcb;
-  color: var(--sage-deep);
-  font-weight: 600;
-}
 
 mark.hl {
   background: rgba(184, 117, 46, 0.22);
   color: inherit;
   border-radius: 3px;
   padding: 0 1px;
-}
-
-.item-swatch {
-  width: 100%;
-  height: 56px;
-  border-radius: 9px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  font-size: 28px;
 }
 
 .item-name {
@@ -1051,18 +979,6 @@ mark.hl {
   font-size: 10px;
   color: #a39a89;
   margin-top: 2px;
-}
-
-.zone-count-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: var(--ochre);
-  color: #fff;
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 999px;
 }
 
 /* ============================================================
@@ -2869,27 +2785,7 @@ mark.hl {
    Room Size Panel — Backdrop
    ============================================================ */
 
-.room-size-backdrop {
-  position: fixed;
-  inset: 0;
-  background: transparent; /* โปร่งใส — แค่จับคลิก */
-  z-index: var(--z-panel-backdrop); /* ต่ำกว่า panel (30) */
-  display: none;
-  opacity: 0;
-  transition: opacity 0.18s;
-}
-
-.room-size-backdrop.show {
-  display: block;
-  opacity: 1;
-}
-
 /* บนมือถือ — ใส่สีจางๆ เพื่อให้เห็นว่า panel แยกจาก bg */
-@media (max-width: 820px) {
-  .room-size-backdrop {
-    background: rgba(42, 35, 48, 0.18);
-  }
-}
 
 .rsp-header {
   display: flex;
@@ -2986,147 +2882,16 @@ mark.hl {
 }
 
 /* ===== Title / Subtitle ===== */
-.rsp-embedded-head {
-  padding: 4px 2px 10px;
-  flex-shrink: 0;
-}
-
-.rsp-embedded-title {
-  font-family: var(--font-fraunces), var(--font-noto), serif;
-  font-size: 19px;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0 0 2px;
-  letter-spacing: 0.1px;
-}
-
-.rsp-embedded-sub {
-  font-size: 12.5px;
-  color: var(--ink-soft);
-  margin: 0;
-  line-height: 1.4;
-}
 
 /* ===== Main Tabs Row (3 การ์ดเท่ากัน) ===== */
-.rsp-main-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-shrink: 0;
-}
-
-.rsp-main-tab {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 78px;
-  padding: 10px 6px;
-  border-radius: 14px;
-  border: 1.5px solid var(--panel-line);
-  background: #fff;
-  color: var(--ink-soft);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.15;
-  cursor: pointer;
-  touch-action: manipulation;
-  text-align: center;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s,
-    transform 0.12s,
-    box-shadow 0.15s;
-}
-
-.rsp-main-tab .rsp-mt-icon {
-  font-size: 22px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 24px;
-}
-
-.rsp-main-tab .rsp-mt-label {
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.rsp-main-tab:hover {
-  border-color: var(--ochre);
-  background: #fff;
-  color: var(--ink);
-}
-
-.rsp-main-tab.active {
-  background: var(--ink);
-  color: #fff;
-  border-color: var(--ink);
-  box-shadow: 0 4px 12px -4px rgba(42, 35, 48, 0.35);
-}
-
-.rsp-main-tab.active .rsp-mt-icon {
-  filter: brightness(1.2);
-}
-
-.rsp-main-tab:focus-visible {
-  outline: 2px solid var(--ochre);
-  outline-offset: 2px;
-}
 
 /* ============================================================
    ⭐ Main Tab — เลข 1 2 3
    ============================================================ */
 
-.rsp-main-tab .rsp-mt-num {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-
-  background: var(--ink);
-  color: #fff;
-  font-family: var(--font-fraunces), var(--font-noto), serif;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0;
-
-  transition:
-    background 0.15s,
-    color 0.15s;
-  z-index: 1;
-}
-
 /* ⭐ ตอน active — กลับสี (ขาวบนพื้นดำ) */
-.rsp-main-tab.active .rsp-mt-num {
-  background: #fff;
-  color: var(--ink);
-}
 
 /* ⭐ มือถือ — ย่อลง */
-@media (max-width: 820px) {
-  .rsp-main-tab .rsp-mt-num {
-    width: 20px;
-    height: 20px;
-    font-size: 11px;
-    top: 5px;
-    left: 5px;
-  }
-}
 
 /* ⭐ ปรับ .rsp-body ให้ scroll เฉพาะใน embedded mode */
 .rsp-embedded-wrap .rsp-body {
@@ -3181,21 +2946,6 @@ mark.hl {
     gap: 8px;
   }
 
-  .rsp-embedded-title {
-    font-size: 17px;
-  }
-  .rsp-main-tab {
-    height: 68px;
-    font-size: 11px;
-    border-radius: 12px;
-  }
-  .rsp-main-tab .rsp-mt-icon {
-    font-size: 20px;
-    height: 22px;
-  }
-  .rsp-main-tab .rsp-mt-label {
-    font-size: 11px;
-  }
 }
 
 .rsp-subsec {
@@ -3204,25 +2954,6 @@ mark.hl {
 
 .rsp-subsec:last-child {
   margin-bottom: 0;
-}
-
-.rsp-subsec-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rsp-subsec-title::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--panel-line), transparent);
 }
 
 .rsp-preview {
@@ -3258,35 +2989,6 @@ mark.hl {
 }
 
 /* ⭐ โครงสร้างห้องบน preview (ประตู/หน้าต่าง/เสา/ฉากกั้น) */
-.rsp-structure--door {
-  fill: rgba(196, 148, 88, 0.72);
-  stroke: #7c4a1e;
-  stroke-width: 1.4;
-}
-
-.rsp-structure--window {
-  fill: rgba(178, 210, 226, 0.72);
-  stroke: #4f7f97;
-  stroke-width: 1.4;
-}
-
-.rsp-structure--slidingdoor {
-  fill: rgba(158, 188, 206, 0.72);
-  stroke: #2f6074;
-  stroke-width: 1.4;
-}
-
-.rsp-structure--column {
-  fill: rgba(232, 220, 196, 0.92);
-  stroke: #7c4a1e;
-  stroke-width: 1.8;
-}
-
-.rsp-structure--partition {
-  fill: rgba(120, 112, 100, 0.55);
-  stroke: #4c463c;
-  stroke-width: 1.4;
-}
 
 .rsp-structure-label {
   font-size: 7px;
@@ -3310,17 +3012,6 @@ mark.hl {
 .rsp-dim.in-blocks {
   opacity: 0.5;
   pointer-events: none;
-}
-
-.rsp-dim-label {
-  display: block;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 700;
-  color: var(--ink);
 }
 
 /* ============================================================
@@ -3618,15 +3309,6 @@ mark.hl {
 }
 
 /* ─── mobile: ย่อลงเล็กน้อย ─── */
-
-.rsp-note {
-  font-size: 10.5px;
-  color: var(--ink-soft);
-  line-height: 1.6;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--panel-line);
-}
 
 /* ============================================================
    ⭐ Shape Picker — สี่เหลี่ยม / วาดบล็อก (mockup: .shps / .shp)
@@ -4179,241 +3861,7 @@ mark.hl {
   }
 }
 
-.wall-per-wall-custom .cz-row-label {
-  min-width: 52px;
-  font-size: 11px;
-}
-
-.wall-per-wall-custom .cz-color-input {
-  width: 28px;
-  height: 24px;
-}
-
 /* Openings */
-.opening-actions {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.opening-add-btn {
-  flex: 1;
-  padding: 8px;
-  border-radius: 9px;
-  border: 1.5px dashed #c9bea3;
-  background: transparent;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  cursor: pointer;
-  transition: all 0.15s;
-  touch-action: manipulation;
-}
-
-.opening-add-btn:hover {
-  border-color: var(--sage-deep);
-  color: var(--sage-deep);
-  background: rgba(95, 122, 99, 0.05);
-}
-
-.opening-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.opening-empty {
-  padding: 18px 12px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--ink-soft);
-  line-height: 1.6;
-  border: 1px dashed var(--panel-line);
-  border-radius: 10px;
-}
-
-.opening-item {
-  border: 1px solid var(--panel-line);
-  border-radius: 10px;
-  background: #fff;
-  overflow: hidden;
-}
-
-.opening-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
-.opening-head:hover {
-  background: #fbf8f2;
-}
-
-.opening-head .oi-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: #f8f4eb;
-  border: 1px solid rgba(42, 35, 48, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.opening-head .oi-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.opening-head .oi-name {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.opening-head .oi-sub {
-  font-size: 10.5px;
-  color: var(--ink-soft);
-  margin-top: 1px;
-  font-family: "Courier New", monospace;
-}
-
-.opening-head .oi-chev {
-  font-size: 10px;
-  color: var(--ink-soft);
-  transition: transform 0.2s;
-  flex-shrink: 0;
-}
-
-.opening-item.open .oi-chev {
-  transform: rotate(180deg);
-}
-
-.opening-body {
-  display: none;
-  padding: 0 10px 10px;
-  border-top: 1px solid var(--panel-line);
-  background: #fbf8f2;
-}
-
-.opening-item.open .opening-body {
-  display: block;
-}
-
-.opening-field {
-  margin-top: 9px;
-}
-
-.opening-field-label {
-  font-size: 11px;
-  color: var(--ink-soft);
-  font-weight: 600;
-  margin-bottom: 5px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.opening-field-label .val {
-  font-family: var(--font-fraunces), serif;
-  color: var(--ochre-deep);
-  font-weight: 700;
-}
-
-.wall-side-row {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.wall-side-btn {
-  flex: 1;
-  min-width: 44px;
-  padding: 6px 4px;
-  border: 1px solid var(--panel-line);
-  background: #fff;
-  border-radius: 7px;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--ink-soft);
-  transition: all 0.12s;
-}
-
-.wall-side-btn:hover {
-  background: #f0ead9;
-  color: var(--ink);
-}
-
-.wall-side-btn.active {
-  background: var(--sage);
-  color: #fff;
-  border-color: var(--sage);
-}
-
-.opening-slider {
-  width: 100%;
-  accent-color: var(--ochre);
-  height: 4px;
-}
-
-.opening-num-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.opening-num-row input[type="number"] {
-  width: 70px;
-  padding: 5px 8px;
-  border: 1px solid var(--panel-line);
-  border-radius: 7px;
-  font-family: inherit;
-  font-size: 12px;
-  color: var(--ink);
-  background: #fff;
-  text-align: right;
-}
-
-.opening-num-row input[type="number"]:focus {
-  outline: none;
-  border-color: var(--ochre);
-  box-shadow: 0 0 0 3px rgba(184, 117, 46, 0.12);
-}
-
-.opening-num-row .unit {
-  font-size: 10.5px;
-  color: var(--ink-soft);
-}
-
-.opening-remove {
-  margin-top: 10px;
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--danger);
-  background: transparent;
-  color: var(--danger);
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.12s;
-}
-
-.opening-remove:hover {
-  background: var(--danger);
-  color: #fff;
-}
 
 /* ============================================================
    Blocks Editor
@@ -4556,14 +4004,6 @@ mark.hl {
   flex-wrap: wrap;
 }
 
-.blocks-bar-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  letter-spacing: 0.2px;
-  white-space: nowrap;
-}
-
 .blocks-tool-sep {
   width: 1px;
   height: 22px;
@@ -4660,33 +4100,6 @@ mark.hl {
   box-shadow:
     inset 0 0 0 1px rgba(42, 35, 48, 0.08),
     0 0 0 3px rgba(184, 117, 46, 0.2);
-}
-
-.blocks-fine-toggle {
-  height: 30px;
-  padding: 0 10px;
-  border: 1px dashed var(--panel-line);
-  border-radius: 8px;
-  background: #fff;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  cursor: pointer;
-  transition: all 0.12s;
-  white-space: nowrap;
-}
-
-.blocks-fine-toggle:hover {
-  border-color: var(--ochre);
-  color: var(--ink);
-}
-
-.blocks-fine-toggle.active {
-  border-style: solid;
-  border-color: var(--ochre);
-  background: #f8efdd;
-  color: var(--ochre-deep);
 }
 
 .blocks-fine {
@@ -4837,42 +4250,6 @@ mark.hl {
   /* ⭐ สีกำหนดจาก custom property ต่อชนิด — chip ใน legend ใช้ค่าเดียวกัน */
   background: var(--sp-fill, rgba(196, 148, 88, 0.72));
   border: var(--sp-bw, 1.5px) solid var(--sp-line, #7c4a1e);
-}
-
-.blocks-structure--door {
-  --sp-fill: rgba(196, 148, 88, 0.72);
-  --sp-line: #7c4a1e;
-}
-
-.blocks-structure--window {
-  --sp-fill: rgba(178, 210, 226, 0.72);
-  --sp-line: #4f7f97;
-}
-
-.blocks-structure--slidingdoor {
-  --sp-fill: rgba(158, 188, 206, 0.72);
-  --sp-line: #2f6074;
-}
-
-.blocks-structure--column {
-  --sp-fill: rgba(232, 220, 196, 0.92);
-  --sp-line: #7c4a1e;
-  --sp-bw: 2px;
-}
-
-.blocks-structure--partition {
-  --sp-fill: rgba(120, 112, 100, 0.55);
-  --sp-line: #4c463c;
-}
-
-.blocks-structure--curtain {
-  --sp-fill: rgba(216, 183, 174, 0.72);
-  --sp-line: #a07060;
-}
-
-.blocks-structure--ac {
-  --sp-fill: rgba(200, 210, 220, 0.72);
-  --sp-line: #607080;
 }
 
 /* ⭐ ไฮไลต์โครงสร้างที่ hover จาก legend */
@@ -6020,24 +5397,7 @@ mark.hl {
     width: 22px;
     height: 22px;
   }
-  .reset-btn {
-    padding: 7px 10px;
-    font-size: 11.5px;
-  }
-  .cart-btn {
-    padding: 6px 9px 6px 8px;
-    font-size: 11.5px;
-    gap: 5px;
-  }
-  .cart-btn .cart-total {
-    min-width: 40px;
-    font-size: 11px;
-  }
-  .cart-btn .cart-count {
-    font-size: 9px;
-    min-width: 12px;
-    padding: 2px 3.5px;
-  }
+
   .cart-panel {
     width: 100%;
     max-height: 100%;
@@ -6303,10 +5663,7 @@ mark.hl {
   .ztp-title {
     font-size: 12.5px;
   }
-  .ztp-reset {
-    padding: 5px 9px;
-    font-size: 11px;
-  }
+
   .ztp-themes {
     padding: 10px;
     gap: 7px;
@@ -6700,17 +6057,6 @@ mark.hl {
   overflow-y: auto;
 }
 
-.ss-sec {
-  margin-bottom: 18px;
-}
-
-.ss-sec-title {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  margin-bottom: 8px;
-}
-
 .ss-input {
   width: 100%;
   border: 1px solid var(--panel-line);
@@ -6733,30 +6079,6 @@ mark.hl {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
-}
-
-.ss-btn {
-  border: 1px solid var(--panel-line);
-  background: #fbf8f2;
-  color: var(--ink);
-  border-radius: 10px;
-  padding: 9px 13px;
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.ss-btn.primary {
-  background: var(--ochre);
-  border-color: var(--ochre);
-  color: #fff;
-}
-
-.ss-btn:disabled,
-.ss-mini:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 /* ===== การ์ด "ห้องที่กำลังแก้ไข" (ด้านบนสุดของ modal) ===== */
@@ -7711,71 +7033,6 @@ mark.hl {
    ⭐ ปุ่ม "ดูทั้งหมด" ท้าย carousel — วงกลมลูกศรแบบ Canva
    ============================================================ */
 
-.zone-rail-see-all {
-  flex: 0 0 auto;
-  width: 130px;
-  min-width: 130px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  scroll-snap-align: end;
-  touch-action: manipulation;
-}
-
-.zone-rail-see-all .zr-sa-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 1.5px solid var(--panel-line);
-  background: #fff;
-  color: var(--ink);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1;
-  box-shadow: 0 2px 8px rgba(42, 35, 48, 0.08);
-  transition:
-    background 0.18s,
-    color 0.18s,
-    border-color 0.18s,
-    transform 0.15s,
-    box-shadow 0.18s;
-}
-
-.zone-rail-see-all .zr-sa-label {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  white-space: nowrap;
-  transition: color 0.18s;
-}
-
-.zone-rail-see-all:hover .zr-sa-circle {
-  background: var(--ink);
-  color: #fff;
-  border-color: var(--ink);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(42, 35, 48, 0.22);
-}
-
-.zone-rail-see-all:hover .zr-sa-label {
-  color: var(--ink);
-}
-
-.zone-rail-see-all:active .zr-sa-circle {
-  transform: translateY(0) scale(0.94);
-}
-
 /* ============================================================
    ⭐ Responsive — มือถือ
    ============================================================ */
@@ -7806,18 +7063,6 @@ mark.hl {
     right: -4px;
   }
 
-  .zone-rail-see-all {
-    width: 110px;
-    min-width: 110px;
-  }
-  .zone-rail-see-all .zr-sa-circle {
-    width: 48px;
-    height: 48px;
-    font-size: 20px;
-  }
-  .zone-rail-see-all .zr-sa-label {
-    font-size: 11.5px;
-  }
 }
 
 /* ============================================================
@@ -8676,22 +7921,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
     right: -4px;
   }
 
-  .zone-rail-see-all {
-    width: 110px;
-    min-width: 110px;
-  }
-  .zone-rail-see-all .zr-sa-circle {
-    width: 48px;
-    height: 48px;
-  }
-  .zone-rail-see-all .zr-sa-circle svg {
-    width: 20px;
-    height: 20px;
-  }
-  .zone-rail-see-all .zr-sa-label {
-    font-size: 11.5px;
-  }
-
   .item-card.zone-card.card-b {
     padding: 6px 6px 8px;
     border-radius: 14px;
@@ -9000,12 +8229,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
     gap: 8px;
   }
 
-  .rsp-fb {
-    width: 46px;
-    height: 46px;
-    font-size: 22px;
-  }
-
   .rsp-cta {
     height: 46px;
     border-radius: 23px;
@@ -9195,49 +8418,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 }
 
 /* ─── chips ของที่วางแล้ว ─── */
-.rsp-plc {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.rsp-pch {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 13px 0 9px;
-  border-radius: 18px;
-  border: 1.5px dashed #d3c09b;
-  background: #fffdf9;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: #2a2333;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.rsp-pch:hover {
-  border-style: solid;
-}
-
-.rsp-pch.on {
-  border-style: solid;
-  border-color: #a5631f;
-  background: #fbf1df;
-}
-
-.rsp-pch .e {
-  font-size: 16px;
-  display: grid;
-  place-items: center;
-}
-
-.rsp-pch small {
-  color: #6b6256;
-  font-weight: 500;
-}
 
 /* ─── mobile ─── */
 @media (max-width: 820px) {
@@ -9262,17 +8442,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
     font-size: 10.5px;
   }
 
-  .rsp-pch {
-    height: 32px;
-    padding: 0 11px 0 8px;
-    font-size: 12px;
-  }
-}
-
-.rsp-mute {
-  font-size: 12.5px;
-  color: #6b6256;
-  padding: 2px 2px 0;
 }
 
 /* ============================================================
@@ -9500,11 +8669,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 }
 
 /* ─── Roomside menu / chips ─── */
-:root[data-theme="dark"] .room-tree-empty,
-:root[data-theme="dark"] .sidebar-hint,
-:root[data-theme="dark"] .rsu-empty {
-  color: var(--ink-soft);
-}
 
 /* ⭐ ปุ่ม theme — hover เหมือน undo/redo/reset (ไม่ต้องเพิ่ม ก็ใช้ .vpt-btn:not(.vpt-btn-save) ได้) */
 /* ไม่ต้องเพิ่ม เพราะ :not(.vpt-btn-save) ครอบคลุมอยู่แล้ว */
@@ -9546,19 +8710,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 }
 
 /* ─── Header buttons ─── */
-:root[data-theme="dark"] .reset-btn,
-:root[data-theme="dark"] .cart-btn,
-:root[data-theme="dark"] .icon-header-btn {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .reset-btn:hover,
-:root[data-theme="dark"] .cart-btn:hover,
-:root[data-theme="dark"] .icon-header-btn:hover:not(:disabled) {
-  background: var(--surface-2);
-}
 
 /* ─── Main category cards ─── */
 :root[data-theme="dark"] .main-cat-card {
@@ -9767,18 +8918,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   background: var(--surface-2);
 }
 
-:root[data-theme="dark"] .zone-rail-see-all .zr-sa-circle {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .zone-rail-see-all:hover .zr-sa-circle {
-  background: var(--ink);
-  color: var(--bg);
-  border-color: var(--ink);
-}
-
 /* ─── Item panel ─── */
 :root[data-theme="dark"] .item-panel {
   background: var(--panel);
@@ -9821,11 +8960,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   color: var(--ink-soft);
 }
 
-:root[data-theme="dark"] .rsu-close:hover {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-
 :root[data-theme="dark"] .rsu-root {
   background: linear-gradient(135deg, var(--surface-2), var(--surface));
   border-color: var(--panel-line);
@@ -9839,17 +8973,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 
 :root[data-theme="dark"] .rsu-group-head:hover {
   background: var(--surface-2);
-}
-
-:root[data-theme="dark"] .rsu-add-btn {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .rsu-add-btn:hover {
-  background: var(--sage);
-  color: var(--bg);
 }
 
 :root[data-theme="dark"] .rsu-item:hover {
@@ -9873,10 +8996,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   border-color: var(--panel-line);
 }
 
-:root[data-theme="dark"] .rsp-close:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
 :root[data-theme="dark"] .rsp-tabs {
   background: var(--surface-2);
   border-color: var(--panel-line);
@@ -9885,14 +9004,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 :root[data-theme="dark"] .rsp-tab.active {
   background: var(--surface);
   color: var(--ink);
-}
-
-:root[data-theme="dark"] .rsp-subsec-title {
-  color: var(--ink-soft);
-}
-
-:root[data-theme="dark"] .rsp-subsec-title::after {
-  background: linear-gradient(90deg, var(--panel-line), transparent);
 }
 
 /* RSP card / shape picker / presets */
@@ -10067,16 +9178,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   border-color: var(--panel-line);
 }
 
-:root[data-theme="dark"] .rsp-fb {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .rsp-fb:hover:not(:disabled) {
-  border-color: var(--dash);
-}
-
 :root[data-theme="dark"] .rsp-cta {
   background: var(--ink);
   color: var(--bg);
@@ -10183,45 +9284,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 }
 
 /* ─── Opening items (structures tab) ─── */
-:root[data-theme="dark"] .opening-item {
-  background: var(--surface);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .opening-head:hover {
-  background: var(--surface-2);
-}
-
-:root[data-theme="dark"] .opening-body {
-  background: var(--surface-2);
-}
-
-:root[data-theme="dark"] .opening-head .oi-icon {
-  background: var(--surface);
-}
-
-:root[data-theme="dark"] .wall-side-btn {
-  background: var(--surface);
-  color: var(--ink-soft);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .wall-side-btn:hover {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-
-:root[data-theme="dark"] .wall-side-btn.active {
-  background: var(--sage);
-  color: var(--bg);
-  border-color: var(--sage);
-}
-
-:root[data-theme="dark"] .opening-num-row input[type="number"] {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--panel-line);
-}
 
 /* ─── Blocks Editor ─── */
 :root[data-theme="dark"] .blocks-box {
@@ -10232,25 +9294,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 :root[data-theme="dark"] .blocks-head {
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
   border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .blocks-icon-btn,
-:root[data-theme="dark"] .blocks-ghost-btn {
-  background: var(--surface);
-  color: var(--ink-soft);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .blocks-icon-btn:hover,
-:root[data-theme="dark"] .blocks-ghost-btn:hover {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-
-:root[data-theme="dark"] .blocks-ghost-btn[aria-expanded="true"] {
-  background: var(--surface-2);
-  color: var(--ink);
-  border-color: var(--ochre);
 }
 
 :root[data-theme="dark"] .blocks-tips {
@@ -10280,17 +9323,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 :root[data-theme="dark"] .blocks-seg-btn:hover {
   background: var(--surface-2);
   color: var(--ink);
-}
-
-:root[data-theme="dark"] .blocks-fine-toggle {
-  background: var(--surface);
-  color: var(--ink-soft);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .blocks-fine-toggle:hover {
-  color: var(--ink);
-  border-color: var(--ochre);
 }
 
 :root[data-theme="dark"] .blocks-canvas {
@@ -10359,18 +9391,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   color: var(--ink-soft);
 }
 
-:root[data-theme="dark"] .cz-close,
-:root[data-theme="dark"] .ztp-close {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--ink-soft);
-}
-
-:root[data-theme="dark"] .cz-close:hover,
-:root[data-theme="dark"] .ztp-close:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: var(--ink);
-}
-
 :root[data-theme="dark"] .cz-num-input {
   background: var(--surface);
   color: var(--ink);
@@ -10384,27 +9404,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 :root[data-theme="dark"] .cz-foot {
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
   border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .cz-reset {
-  background: var(--surface);
-  color: var(--ink-soft);
-}
-
-:root[data-theme="dark"] .cz-reset:hover {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-
-:root[data-theme="dark"] .ztp-reset {
-  background: var(--surface);
-  color: var(--ink-soft);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .ztp-reset:hover {
-  background: var(--surface-2);
-  color: var(--ink);
 }
 
 :root[data-theme="dark"] .ztp-card {
@@ -10446,16 +9445,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 
 :root[data-theme="dark"] .cart-head .cart-rule {
   border-top-color: var(--ink);
-}
-
-:root[data-theme="dark"] .cart-close {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--ink-soft);
-}
-
-:root[data-theme="dark"] .cart-close:hover {
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--ink);
 }
 
 :root[data-theme="dark"] .cart-item:hover {
@@ -10502,10 +9491,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 
 :root[data-theme="dark"] .ss-head {
   border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .ss-close {
-  color: var(--ink-soft);
 }
 
 :root[data-theme="dark"] .ss-input,
@@ -10593,16 +9578,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   background: #3a3245;
 }
 
-:root[data-theme="dark"] .rt-btn {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--panel-line);
-}
-
-:root[data-theme="dark"] .rt-btn:hover {
-  background: var(--surface-2);
-}
-
 :root[data-theme="dark"] .rt-skel-head,
 :root[data-theme="dark"] .rt-skel-side,
 :root[data-theme="dark"] .rt-skel-view {
@@ -10650,11 +9625,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   border-color: var(--panel-line);
 }
 
-:root[data-theme="dark"] .zone-edit-cancel {
-  background: var(--surface);
-  color: var(--ink);
-}
-
 /* ─── Zone Add Dialog ─── */
 :root[data-theme="dark"] .zone-add-choice {
   background: var(--surface);
@@ -10675,10 +9645,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 }
 
 /* ─── Sidebar sumbar (browse/room tab) ─── */
-:root[data-theme="dark"] .sumbar {
-  background: var(--ink);
-  color: var(--bg);
-}
 
 /* ─── Room Tree ─── */
 :root[data-theme="dark"] .tree-group {
@@ -10768,9 +9734,7 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
   :root[data-theme="dark"] .panel-backdrop {
     background: rgba(0, 0, 0, 0.42);
   }
-  :root[data-theme="dark"] .room-size-backdrop {
-    background: rgba(0, 0, 0, 0.32);
-  }
+
 }
 
 /* ─── Color-mix fallback ─── */
@@ -10804,23 +9768,6 @@ body.rt-pressing .item-card.zone-card.card-b:hover {
 /* ─── Logo wordmark → Gochi Hand ─── */
 
 /* ─── Mono display: hex / ราคา / ขนาด / code ─── */
-code,
-.mono,
-.zone-edit-color-hex,
-.cart-item-detail,
-.cart-count-row,
-.cart-total-row,
-.cart-code,
-.rsu-item-sub,
-.opening-head .oi-sub,
-.blocks-chip,
-.blocks-tips-keys,
-.blocks-badge,
-.rsp-structure-label,
-.blocks-structure-label,
-.rsp-subsec .cz-color-hex {
-  font-family: var(--font-mono);
-}
 
 /* ─── Theme toggle button ─── */
 .theme-toggle {
@@ -10912,28 +9859,6 @@ code,
    Standard: 34×34, radius 11px, border 1px line
    Variants: .ib.on (ink), .ib.danger (danger)
    ============================================================ */
-
-.icon-header-btn,
-.rsp-close,
-.cz-close,
-.ztp-close,
-.rsu-close,
-
-.icon-header-btn:hover:not(:disabled),
-.rsp-close:hover,
-.cz-close:hover,
-.ztp-close:hover,
-.rsu-close:hover,
-
-.icon-header-btn:focus-visible,
-.rsp-close:focus-visible,
-.cz-close:focus-visible,
-.ztp-close:focus-visible,
-.rsu-close:focus-visible,
-.cfp-close:focus-visible {
-  outline: 2px solid var(--ochre);
-  outline-offset: 2px;
-}
 
 /* ⭐ Compact IB — สำหรับ tree ที่ต้องเรียงหลายปุ่ม */
 

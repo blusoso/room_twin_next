@@ -22,10 +22,12 @@ function emptySerializedState(): SerializedState {
     zoneMeta: [],
     surface: {
       floor: "wood",
+      floorTint: 0xffffff,
       wallUniform: true,
       wallAll: WALL_COLORS[0],
       walls: {},
       ceiling: 0xf7f3ea,
+      baseboard: 0xfbf6ec,
     },
     room: {
       w: ROOM_DEFAULT.w,
